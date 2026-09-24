@@ -149,7 +149,9 @@ pub(crate) fn build_tray(app: &App) -> tauri::Result<()> {
     let quit_i = MenuItem::with_id(app, MENU_ID_QUIT, "終了", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&capture_i, &open_editor_i, &quit_i])?;
 
-    // メニューバー常駐アイコン: モノクロのオタマジャクシ(人間の要望)。
+    // メニューバー常駐アイコン: モノクロの「四隅のファインダー記号+テーパー矢印」
+    // (人間の要望。アプリアイコン案A `src-tauri/icons/app-icon.svg` と同じモチーフに揃えた。
+    // 2026-09-24、当初のオタマジャクシ案から変更)。
     //
     // アプリアイコン(Dock用、カラー)を流用していた従来実装をやめ、専用のテンプレート画像を
     // 使う。macOSのメニューバーでは黒+透明のみのテンプレート画像が標準で、`icon_as_template`
@@ -159,10 +161,10 @@ pub(crate) fn build_tray(app: &App) -> tauri::Result<()> {
     //
     // `Image::from_bytes` はPNGデコードに `image-png` feature を要求する(`Cargo.toml`)。
     // tray-icon crate(Tauriの内部実装)はアイコンをメニューバー上で18pt高へスケールしてから
-    // 描画するため(1xソースをそのまま渡すよりも)@2x相当(46x36px)の高解像度ソースを
+    // 描画するため(1xソースをそのまま渡すよりも)@2x相当(36x36px)の高解像度ソースを
     // 埋め込んだ方がRetinaできれいに表示される。ソースSVG・1x版PNGは
     // `src-tauri/icons/tray/` に同梱している(将来デザイン調整時の参照用)。
-    let tray_icon = Image::from_bytes(include_bytes!("../icons/tray/tadpole@2x.png"))?;
+    let tray_icon = Image::from_bytes(include_bytes!("../icons/tray/viewfinder-arrow@2x.png"))?;
 
     let builder = TrayIconBuilder::new()
         .menu(&menu)
