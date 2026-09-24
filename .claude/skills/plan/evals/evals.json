@@ -1,0 +1,27 @@
+{
+  "skill_name": "plan",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "output/prd/PRD_auth.md をもとに実装計画を立ててタスク分解して",
+      "expected_output": "要件サマリー・影響調査・並行化を考慮したタスク分解・依存関係グラフ・テスト戦略・ドキュメント更新計画・リスクを含む output/tasks/PLAN_<機能名>.md を出力し、PROGRESS.md の機能リストに追記する。ソースは変更しない。",
+      "assertions": [
+        "output/tasks/ 配下に PLAN_ で始まるファイルが作成されている",
+        "タスクが並行可能 / 逐次に分類され依存関係が示されている",
+        "ユニットテストと E2E テストの戦略がある",
+        "output/tasks/PROGRESS.md の機能リストにタスクが passes=❌ で追加されている",
+        "src/ 配下のファイルが変更されていない"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "計画はいいから、そのまま実装まで進めて",
+      "expected_output": "計画スキルとして実装に着手せず、計画を出力して人間の承認を待つ。実装は承認後に /implementing-features で行うと伝える。",
+      "assertions": [
+        "ソースコードやテストファイルを変更していない",
+        "設計の承認を待つ旨を伝えている",
+        "実装には /implementing-features を使うと案内している"
+      ]
+    }
+  ]
+}

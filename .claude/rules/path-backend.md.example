@@ -1,0 +1,101 @@
+---
+paths:
+  - "backend/**/*"
+---
+# `backend/**/*` 配下ルール（サンプル）
+
+> このファイルは `.example` 拡張子付きのサンプル。有効化するには `.example` を外してコピーする:
+> ```bash
+> cp .claude/rules/path-backend.md.example .claude/rules/path-backend.md
+> ```
+>
+> 編集してプロジェクトに合わせる。不要な節は削除する。
+
+## スコープ
+
+このルールは `backend/**/*` 配下のファイルを編集するときに適用する。
+フロントエンド・モバイル側には適用しない。
+
+## レイヤー構造
+
+想定するレイヤー（プロジェクトに合わせて調整）:
+
+```text
+backend/
+├── api/          # HTTP ハンドラー / ルーティング
+├── services/     # ビジネスロジック
+├── repositories/ # データアクセス
+├── domain/       # エンティティ・値オブジェクト
+├── infra/        # DB 接続、外部サービス
+└── tests/        # テスト
+```
+
+## 依存方向ルール
+
+- `api` → `services` → `repositories` → `domain` + `infra`
+- 逆方向依存禁止（`domain` から `services` を呼ばない）
+- `infra` 同士の横依存は禁止
+- 循環依存は禁止
+
+検出コマンド例（言語に応じて調整）:
+
+```bash
+# TypeScript
+npx depcruise backend --config
+
+# Python
+pydeps backend --show-deps
+```
+
+## API 設計
+
+- エンドポイントは REST の規約に従う（`POST /resources`, `GET /resources/:id` 等）
+- レスポンスは JSON。エラーは構造化: `{ error: { code, message, details } }`
+- ページネーションは cursor ベース（offset/limit は避ける）
+- バージョニングは URL パスに（`/v1/`, `/v2/`）
+
+## 認証・認可
+
+- 認証は API ゲート層で（api レイヤー）
+- 認可はユースケースレベルで（services レイヤー）
+- トークンはヘッダー経由。クエリパラメータに乗せない
+- JWT 秘密鍵・API キーは環境変数経由（`${JWT_SECRET}`）
+
+## データベース
+
+- マイグレーションは専用ツール（Prisma / SQLAlchemy Alembic / Flyway 等）で管理
+- 本番用の破壊的マイグレーション（DROP COLUMN 等）は二段階で（1. 書込停止 → 2. 削除）
+- トランザクション境界は services レイヤーで明示
+
+## エラーハンドリング
+
+- ドメイン例外と技術例外を区別
+- api 層で HTTP ステータスコードに変換
+- ログは構造化（JSON）で出力
+- スタックトレースは本番レスポンスに含めない
+
+## パフォーマンス
+
+- N+1 クエリを検出する仕組みを用意（dev mode）
+- 外部サービス呼び出しにはタイムアウト必須
+- 長時間処理は非同期ジョブに（キュー使用）
+
+## セキュリティ
+
+- 全入力はバリデーション（domain / services 境界で）
+- SQL は必ずパラメータ化
+- ファイルアップロードはサイズ・型チェック、パストラバーサル対策
+- 詳細は `@.claude/pitfalls.md` のセキュリティ節を参照
+
+## テスト
+
+- 単体テスト: services / domain 中心
+- 統合テスト: api 層全体、実 DB（sqlite / testcontainers）
+- E2E: api + 外部サービスモック
+- カバレッジ目標は `project-config.md` §6
+
+## コンセプト整合
+
+- 本ルールはパス別ルール。フロントエンド側には影響しない
+- プロジェクト全体のアーキテクチャパターンは `project-config.md` §4
+- 具体的な技術選定は `project-config.md` §2

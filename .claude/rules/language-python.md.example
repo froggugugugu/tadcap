@@ -1,0 +1,84 @@
+---
+paths:
+  - "**/*.py"
+---
+# Python 固有ルール（サンプル）
+
+> このファイルは `.example` 拡張子付きのサンプル。有効化するには `.example` を外してコピーする:
+> ```bash
+> cp .claude/rules/language-python.md.example .claude/rules/language-python.md
+> ```
+>
+> 編集してプロジェクトに合わせる。不要な節は削除する。
+
+## Python バージョン
+
+- Python 3.11 以上を前提
+- `match` 文、型パラメータ構文、exception groups を積極活用
+- 型ヒントの循環参照回避や遅延評価が必要な場合は `from __future__ import annotations` を使う（PEP 563 は PEP 649 に置き換えられ、Python 3.14 以降で動作が変わる予定。3.13 までは明示的に import すると遅延評価が有効化される）
+
+## 型ヒント
+
+- すべての関数・メソッドに型ヒント必須
+- 戻り値 `-> None` も明示
+- `typing.Any` は禁止。`object` か `TypeVar` を使う
+- `list[int]` / `dict[str, int]` の組み込みジェネリクス記法（3.9+）
+- `Optional[T]` より `T | None`（3.10+）
+
+## エラーハンドリング
+
+- 例外は具体的なクラス（`ValueError` や自作例外）— `except Exception` は最終手段
+- `except:` 単独（bare except）は禁止
+- 例外チェーンは `raise NewError(...) from original`
+- finally で例外を飲み込まない
+
+## 命名規則
+
+- モジュール / 関数 / 変数: `snake_case`
+- クラス: `PascalCase`
+- 定数: `UPPER_SNAKE_CASE`
+- プライベート: `_leading_underscore`（モジュール外へエクスポートしない）
+- 特殊メソッドのみ `__double_underscore__`
+
+## ファイル構成
+
+- 1 モジュール 1 責務。500 行を超えたら分割を検討
+- `__init__.py` は re-export のみ（副作用を書かない）
+- `tests/` か `test_*.py` パターンでテスト配置
+
+## 禁止パターン
+
+- `eval` / `exec`（ユーザー入力由来では絶対禁止）
+- グローバル可変状態（モジュールレベルの `list = []` 等）
+- `print` デバッグの本番残留（logger を使う）
+- `time.sleep` でのテスト同期（`pytest-asyncio`, `tenacity` を使う）
+
+## ロギング
+
+- 標準 `logging` モジュール or `structlog` 推奨
+- レベルは `DEBUG` / `INFO` / `WARNING` / `ERROR` / `CRITICAL`
+- ログに PII（個人情報）を出さない
+
+## テスト
+
+- `pytest` を標準に
+- fixture で setup / teardown
+- パラメータ化: `@pytest.mark.parametrize`
+- 非同期: `@pytest.mark.asyncio`
+- カバレッジ目標は `project-config.md` §6 に従う
+
+## 推奨ツール
+
+- `ruff`（lint + format、Black 互換）
+- `mypy` または `pyright` で型チェック
+- `uv` / `pip-tools` / `poetry` のいずれかで依存管理
+
+## 依存パッケージ
+
+- 新規追加は `project-config.md` §2 に記録
+- 脆弱性チェック: `pip-audit` / `safety` を定期実行（`/security-scan` skill で自動化）
+
+## コンセプト整合
+
+- プロジェクト全体の規約は `project-config.md` §2 / §6
+- 本ファイルは Python 固有の細部のみ

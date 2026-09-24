@@ -1,0 +1,27 @@
+{
+  "skill_name": "security-scan",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "リリース前にセキュリティスキャンして。依存の CVE とシークレット混入を中心に",
+      "expected_output": "ツール可用性を確認してスキャンし、CRITICAL〜INFO の重大度別に CVE/CWE・影響・修正案・偽陽性判定を記した output/reports/security/SECURITY_<日時>.md と、testreport/security/ の生データを出力する。",
+      "assertions": [
+        "output/reports/security/ 配下に SECURITY_ で始まるレポートがある",
+        "検出事項が CRITICAL / HIGH / MEDIUM / LOW / INFO で分類されている",
+        "各検出事項に影響・修正案・偽陽性判定がある",
+        "シークレットの値そのものをレポートに転記していない",
+        "使用したスキャンツールとバージョンが記載されている"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "npm audit が入ってない環境だけど、とりあえずスキャン結果を作って",
+      "expected_output": "ツールが使えないことを明記し、実行できた範囲(静的なパターン検索等)だけを報告する。実行していないスキャンの結果を捏造しない。",
+      "assertions": [
+        "利用できなかったツールを明記している",
+        "実行していないスキャンの結果を記載していない",
+        "ツールの導入方法(SETUP_GUIDE 等)を案内している"
+      ]
+    }
+  ]
+}

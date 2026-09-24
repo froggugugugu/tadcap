@@ -1,0 +1,25 @@
+{
+  "skill_name": "hig-compliance",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "src/features/ 配下の画面で、保存ボタンの文言とアイコンがバラバラ。HIG 準拠でチェックして",
+      "expected_output": "UI 用語集と照合し、HIG の 8 カテゴリで一貫性を確認し、MUST 指摘に統一案を付けたレポートを output/reports/review/HIG_COMPLIANCE_ に出力する。",
+      "assertions": [
+        "output/reports/review/ 配下に HIG_COMPLIANCE_ で始まるレポートがある",
+        "ボタン・アイコンのカテゴリで不整合が画面ごとに列挙されている",
+        "MUST 指摘すべてに統一案がある",
+        "HIG 準拠スコアが示されている"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "HIG チェックして、--fix で直して。テストは回さなくていい",
+      "expected_output": "--fix の修正後にテストを実行して結果を示す。テスト基盤が無い場合は N/A と理由を明記する。",
+      "assertions": [
+        "修正後のテスト結果、またはテスト基盤が無い理由付きの N/A がある",
+        "修正内容が指摘ごとに対応付けられている"
+      ]
+    }
+  ]
+}

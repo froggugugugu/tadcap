@@ -1,0 +1,132 @@
+---
+# Claude Code スキル CI（テンプレート）
+#
+# `claude -p`(headless) でブループリントのスキルを PR ごとに決定論的に実行する。
+#
+# claude-review.yml との違い:
+#   claude-review.yml   … `@claude` メンションに応答する対話型レビュー（人が起動）
+#   claude-skills-ci.yml … 毎 PR で /code-review と /security-scan を必ず回す（自動）
+#
+# 有効化手順:
+#   1. cp .github/workflows/claude-skills-ci.yml.template .github/workflows/claude-skills-ci.yml
+#   2. GitHub リポジトリの Secrets に ANTHROPIC_API_KEY を追加
+#   3. コスト上限を Claude Console で設定する（.github/CLAUDE_REVIEW_SETUP.md 参照）
+#
+# コスト目安: 1 PR あたり 2 スキル分の実行。--model と --max-turns で上限を制御する。
+#
+# セキュリティ:
+#   - PR タイトル/本文などの信頼できない入力を run: に展開しない（コマンドインジェクション対策）
+#   - --permission-mode dontAsk は allow ルールに無いものを全て自動拒否する
+#   - fork からの PR では secrets が渡らないため、このワークフローはスキップされる
+
+name: Claude Skills CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: claude-skills-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  skills:
+    # ドラフトと fork PR（secrets が無い）はスキップ
+    if: >
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # CI ではフックをパススルーにする（notify 系の外部送信を止め、実行時間も削る）
+      BLUEPRINT_HOOK_PROFILE: minimal
+      # 実行の再現性のため、セッションをまたぐ自動メモリを無効化する
+      CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1"
+      # スキルへ渡す共通の権限セット。dontAsk 下ではこれが唯一の許可リストになる。
+      CLAUDE_ALLOWED_TOOLS: >-
+        Read,Grep,Glob,
+        Bash(git diff *),Bash(git log *),Bash(git status *),Bash(git rev-parse *),
+        Edit(output/**),Edit(testreport/**)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # 差分レビューのためベースブランチまで取得する
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code@2
+
+      - name: Prepare output directories
+        run: mkdir -p output/reports/review output/reports/security testreport/security
+
+      # --bare は付けない。プロジェクトの .claude/(skills / settings / hooks) を
+      # 読み込ませる必要があるため。
+      - name: Run /code-review
+        run: |
+          claude -p "/code-review このPRの変更差分をレビューし、結果を output/reports/review/ に Markdown で保存してください。" \
+            --permission-mode dontAsk \
+            --allowedTools "${CLAUDE_ALLOWED_TOOLS}" \
+            --model sonnet \
+            --max-turns 30 \
+            --output-format text \
+            | tee output/reports/review/_ci-stdout.md
+
+      - name: Run /security-scan
+        run: |
+          claude -p "/security-scan このリポジトリの依存とコードを監査し、結果を output/reports/security/ に Markdown で保存してください。" \
+            --permission-mode dontAsk \
+            --allowedTools "${CLAUDE_ALLOWED_TOOLS}" \
+            --model sonnet \
+            --max-turns 30 \
+            --output-format text \
+            | tee output/reports/security/_ci-stdout.md
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-skill-reports
+          path: |
+            output/reports/
+            testreport/
+          retention-days: 14
+
+      - name: Compose PR comment
+        if: always()
+        run: |
+          {
+            echo "## 🤖 Claude Skills CI"
+            echo
+            echo "### /code-review"
+            echo
+            cat output/reports/review/_ci-stdout.md 2>/dev/null || echo "_(出力なし)_"
+            echo
+            echo "### /security-scan"
+            echo
+            cat output/reports/security/_ci-stdout.md 2>/dev/null || echo "_(出力なし)_"
+            echo
+            echo "---"
+            echo "詳細レポートは Actions の artifact \`claude-skill-reports\` を参照。"
+          } > /tmp/claude-ci-comment.md
+          # GitHub のコメント上限に収める
+          head -c 60000 /tmp/claude-ci-comment.md > /tmp/claude-ci-comment.trimmed.md
+
+      - name: Post PR comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR_NUMBER" --body-file /tmp/claude-ci-comment.trimmed.md

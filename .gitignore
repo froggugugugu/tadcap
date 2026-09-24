@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Secrets
+.env
+.env.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +26,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+testreport/
+.claude/settings.local.json
+.claude/worktrees/
+.claude/agent-memory-local/
+.claude/skills/*-workspace/
+
+# Test caches
+.vitest/

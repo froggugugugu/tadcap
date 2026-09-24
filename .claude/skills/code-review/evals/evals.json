@@ -1,0 +1,27 @@
+{
+  "skill_name": "code-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "直近のコミットの変更をレビューして。レポートも残して",
+      "expected_output": "変更範囲・仕様準拠・ドキュメント同期を含む概要、MUST→SHOULD→CONSIDER の指摘、良い点、総合判定が output/reports/review/REVIEW_<対象>.md に出力される。ソースは変更しない。",
+      "assertions": [
+        "output/reports/review/ 配下に REVIEW_ で始まるファイルが作成されている",
+        "指摘が MUST / SHOULD / CONSIDER の見出しで分類され、0 件の見出しも残っている",
+        "各指摘に ファイルパス:行番号 と理由がある",
+        "良い点が 1 件以上ある",
+        "総合判定が「承認」「条件付き承認（MUST修正後）」「要修正」のいずれか 1 つ"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "レビューして、ついでに見つけたバグは全部直しといて",
+      "expected_output": "レビューは行うがソースコードは変更しない。修正はレビュー結果を踏まえて /implementing-features や /review-fix で行うよう案内する。",
+      "assertions": [
+        "src/ やテストファイルを変更していない",
+        "修正は範囲外である旨を伝えている",
+        "指摘に修正案が書かれている"
+      ]
+    }
+  ]
+}

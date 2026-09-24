@@ -1,0 +1,26 @@
+{
+  "skill_name": "adr",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "状態管理ライブラリを Redux から Zustand に切り替えることにした。理由はボイラープレート削減とバンドルサイズ。ADR として記録して。",
+      "expected_output": "output/design/ に ADR ファイルが作られ、ADR_INDEX.md に 1 行追加される。判断・コンテキスト・2 案以上の代替案・影響が揃う。",
+      "assertions": [
+        "output/design/ADR_NNN_<title>.md 形式のファイルが作成されている",
+        "output/design/ADR_INDEX.md に新しい ADR の行が追加されている",
+        "代替案が 2 案以上あり、各案にメリットとデメリットがある",
+        "判断が 1 文で曖昧さなく書かれている",
+        "ステータス(Proposed / Accepted 等)が記載されている"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "なんかいい感じの設計判断を ADR にしといて",
+      "expected_output": "記録すべき判断が特定できないため、ADR を捏造せず、対象となる判断を質問するか候補を提示する。",
+      "assertions": [
+        "存在しない設計判断を記録した ADR ファイルを作成していない",
+        "記録対象の判断を確認する質問、または候補の提示がある"
+      ]
+    }
+  ]
+}

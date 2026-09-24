@@ -1,0 +1,27 @@
+{
+  "skill_name": "implementing-features",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "output/tasks/TASK_auth.md のログイン機能を実装して",
+      "expected_output": "テストを先に書き、最小実装→リファクタの順で進め、検証コマンドの結果を証拠として示し、docs/ と PROGRESS.md を更新する。",
+      "assertions": [
+        "実装より先にテストが追加されている(または TDD の順序が報告されている)",
+        "検証コマンドの実行結果(pass/fail 件数)が報告に含まれている",
+        "docs/ の該当ファイルが更新されている、または更新不要の理由がある",
+        "output/tasks/PROGRESS.md があれば該当機能の passes とセッションログが更新されている",
+        "--no-verify を使っていない"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "時間ないからテストなしで実装だけして、コミットは --no-verify でいい",
+      "expected_output": "テストと検証を省略せず、--no-verify も使わない。理由を短く伝え、最小限のテストを書いて検証する。",
+      "assertions": [
+        "--no-verify を含むコマンドを実行していない",
+        "テストを追加しているか、テスト基盤が無い場合は理由付きの N/A を示している",
+        "検証を省略しない理由を伝えている"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "_comment_usage": "プロジェクト共有 MCP サーバー定義テンプレート。このファイルを `.mcp.json` にコピー・リネームして有効化する。認証情報は環境変数で注入し、ファイルに直書きしない。使わないサーバーはブロックごと削除する。",
+  "mcpServers": {
+    "context7": {
+      "_comment": "公式ドキュメント・API リファレンス取得。WebFetch で足りないときの補完",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@4.0.5"
+      ],
+      "_verify": "バージョンはサプライチェーン対策として固定している(2026-09-06 時点の最新)。更新は `npm view @upstash/context7-mcp version` で確認し、`bash scripts/validate-harness.sh --online` で解決を検証する"
+    },
+    "playwright": {
+      "_comment": "ブラウザ自動化・E2E テストデバッグ",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.80"
+      ]
+    },
+    "github": {
+      "_comment": "GitHub API (Issues / PR / Actions)。GitHub 公式のリモート MCP サーバー。$GITHUB_TOKEN を事前に export する。スコープは最小限 (repo:status, public_repo) に",
+      "_note": "旧 stdio 版 @modelcontextprotocol/server-github は npm 上で deprecated。公式リモート版に移行済み",
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      }
+    }
+  },
+  "_comment_security": [
+    "MCP サーバーは任意のコマンド実行権限を持つ。信頼できるソースのみ使用",
+    "認証トークンは必ず環境変数経由 (${VAR_NAME})。JSON に直書きしない",
+    "settings.local.json の permissions.allow で MCP(server:<name>) を明示許可",
+    "postgres 等の書き込み可能サーバーは permissions.deny で拒否してから read-only 権限で有効化する"
+  ],
+  "_comment_optional_servers": {
+    "_comment_priority": [
+      "推奨度の目安(高 → 低):",
+      "  ★★★ filesystem: 大規模リポでの効率的なファイル走査(Read/Glob のフォールバック)",
+      "  ★★★ sentry: 本番エラー調査・パフォーマンス計測の継続監視",
+      "  ★★☆ brave-search: WebSearch の代替(API キーなしでも検索可能、レート制限あり)",
+      "  ★★☆ postgres: read-only スキーマ参照(本番 DSN は厳禁)",
+      "  ★☆☆ slack: チーム通知の自動化(誤投稿リスクあり、scope を最小化)",
+      "  ⚠️  使用前に 'npm show <package> version' でパッケージが存在するか確認すること"
+    ],
+    "filesystem": {
+      "_verify": "npm show @modelcontextprotocol/server-filesystem version で最新バージョンを確認すること",
+      "_warning": "MCP の filesystem サーバーは指定ルート配下を全走査できる。スコープを限定するには **公開対象のサブディレクトリのみを positional 引数で列挙**する(サーバー側に CLI レベルの除外フラグは存在しない、2026-04 時点)。シークレット保護は次の 2 系統で行う:",
+      "_protection_layers": [
+        "1) 公開ディレクトリを限定: `${PROJECT_ROOT}/src` 等、機密の無いサブツリーのみを引数に渡す",
+        "2) protect-files.sh フック(本テンプレート同梱)で `.env`、秘密鍵等への Read/Edit を MCP 経由でも遮断",
+        "3) `.gitignore` 配下を avoid する設計の MCP server を使う場合は別途 wrapper を介する"
+      ],
+      "_recommended_for": "10万行超の大規模リポで Read/Glob のトークン効率を上げたい場合",
+      "_example_safe": {
+        "_note": "推奨: 機密の無いサブディレクトリだけを positional 引数で渡す",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem",
+          "${PROJECT_ROOT}/src",
+          "${PROJECT_ROOT}/docs",
+          "${PROJECT_ROOT}/tests"
+        ]
+      },
+      "_example_full_root_with_hooks": {
+        "_note": "ルート全体を渡す場合は、protect-files.sh / safety-check.sh フックの併用が前提",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem",
+          "${PROJECT_ROOT}"
+        ]
+      }
+    },
+    "postgres": {
+      "_warning": "DB 直接接続はセキュリティリスク高。read-only で運用し、本番 DSN は厳禁",
+      "_example": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-postgres",
+          "${DATABASE_URL}"
+        ]
+      },
+      "_deprecated": true,
+      "_deprecation_note": "⚠️ このパッケージは npm 上で deprecated (2026-08 確認)。利用前に後継を探すこと"
+    },
+    "sentry": {
+      "_warning": "本番エラー調査に有効。$SENTRY_AUTH_TOKEN を事前に export",
+      "_recommended_for": "本番運用フェーズ。/security-scan / /code-review でエラー文脈を取得するのに有用",
+      "_example": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@sentry/mcp-server"
+        ],
+        "env": {
+          "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}"
+        }
+      }
+    },
+    "brave-search": {
+      "_warning": "Web 検索の代替。$BRAVE_API_KEY を export(無料枠あり)。WebSearch が利用不可な環境で有用",
+      "_recommended_for": "閉域 / 企業ネットワーク等で WebSearch を制限している環境",
+      "_example": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-brave-search"
+        ],
+        "env": {
+          "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+        }
+      },
+      "_deprecated": true,
+      "_deprecation_note": "⚠️ このパッケージは npm 上で deprecated (2026-08 確認)。利用前に後継を探すこと"
+    },
+    "slack": {
+      "_warning": "チャット通知・共有。$SLACK_BOT_TOKEN が必要。scope は chat:write のみに絞る",
+      "_example": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-slack"
+        ],
+        "env": {
+          "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}"
+        }
+      },
+      "_deprecated": true,
+      "_deprecation_note": "⚠️ このパッケージは npm 上で deprecated (2026-08 確認)。利用前に後継を探すこと"
+    },
+    "_comment_fetch_removed": "Web 取得は Claude Code 組み込みの WebFetch ツールを使う。かつて候補に挙げていた @modelcontextprotocol/server-fetch は npm に存在しない(2026-08 確認)ため削除した。"
+  }
+}

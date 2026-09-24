@@ -1,0 +1,27 @@
+{
+  "skill_name": "brainstorm",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "input/requirements/example.md の要求がふわっとしてるので、PRD の前に前提を整理したい",
+      "expected_output": "output/brainstorm/BRAINSTORM_<topic>_<YYYY-MM-DD>.md に、要求の核・前提の棚卸し・ステークホルダー・やる/やらない境界の候補・優先度付きの未解決質問・次のステップが出力される。",
+      "assertions": [
+        "output/brainstorm/ 配下に BRAINSTORM_ で始まるファイルが作成されている",
+        "暗黙の前提が明示的な前提と区別して列挙されている",
+        "やる/やらない境界の候補が 3 案以上ある",
+        "未解決の質問に優先度が付いている",
+        "/prd を実行できる状態かの判断が書かれている"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "ブレストついでに src/ のコードも直しておいて",
+      "expected_output": "読取専用のスキルとしてコード変更を断り、ブレストの成果物だけを出力する。コード修正は /implementing-features を案内する。",
+      "assertions": [
+        "src/ 配下のファイルを変更していない",
+        "コード変更は範囲外であると伝えている",
+        "実装が必要なら /implementing-features を使うよう案内している"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+---
+paths:
+  - "**/*.{ts,tsx}"
+---
+# TypeScript 固有ルール（サンプル）
+
+> このファイルは `.example` 拡張子付きのサンプル。有効化するには `.example` を外してコピーする:
+> ```bash
+> cp .claude/rules/language-typescript.md.example .claude/rules/language-typescript.md
+> ```
+>
+> 編集してプロジェクトに合わせる。不要な節は削除する。
+
+## 型戦略
+
+- `any` は禁止。やむを得ない場合は `unknown` + 型ガード
+- `as` キャストは最小限。`satisfies` を優先
+- 関数の引数・戻り値には**必ず型注釈**（推論任せにしない）
+- Union 型の判別には discriminated union（`kind: "a" | "b"`）
+
+## null / undefined の扱い
+
+- `strictNullChecks: true` 前提
+- オプショナル値は `T | undefined`（`null` は使わない、外部 API 由来を除く）
+- Nullish coalescing (`??`) と optional chaining (`?.`) を活用
+
+## エラーハンドリング
+
+- `throw` するのは Error インスタンスのみ（`throw "string"` 禁止）
+- カスタムエラーは `class FooError extends Error` で命名一貫
+- 非同期処理では `try / catch` または `.catch()` で必ずハンドリング
+- 例外の飲み込み禁止。ログ・再スロー・明示的な回復のいずれか
+
+## 命名規則
+
+- 型 / interface: `PascalCase`
+- 関数 / 変数: `camelCase`
+- 定数: `UPPER_SNAKE_CASE`（モジュールスコープの真の定数のみ）
+- boolean の prefix: `is / has / can / should`
+
+## ファイル構成
+
+- 1 ファイル 1 責務。300 行を超えたら分割を検討
+- 型定義は同じ機能ディレクトリの `types.ts` に集約 or 使用箇所に近い場所
+- index.ts は re-export のみ（ロジックを書かない）
+
+## 禁止パターン
+
+- `any`, `Function`, `Object`, `{}` 型
+- `@ts-ignore`（`@ts-expect-error + 理由コメント` は許可）
+- `eval`, `Function constructor`
+- `console.log` の本番コード残留（`console-warn.sh` フックで検出）
+
+## テスト
+
+- test ファイルは `*.test.ts(x)` または `__tests__/` 配下
+- describe / it は日本語 OK（プロジェクトの既定言語に合わせる）
+- モックは最小限。実装の詳細に依存しない
+
+## 推奨ツール
+
+- Biome（lint + format）または ESLint + Prettier
+- tsconfig: `strict: true`, `noUncheckedIndexedAccess: true`
+
+## コンセプト整合
+
+- プロジェクト全体の規約は `project-config.md` §2 / §6 に定義
+- 本ファイルは TypeScript 固有の細部のみ（他言語と混在しないように分離）
+- 規約違反を検出するコマンドは `project-config.md` §3 に記入

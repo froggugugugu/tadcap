@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "language": "ja",
+  "statusLine": {
+    "type": "command",
+    "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/statusline.sh",
+    "padding": 0
+  },
+  "plansDirectory": "./output/plans",
+  "fileCheckpointingEnabled": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/user-prompt-submit.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/safety-check.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-files.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/scan-harness.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/commit-quality.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/console-warn.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/verify-gate.sh track",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionDenied": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/permission-denied-log.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-failure-log.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent-audit.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent-audit.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/verify-gate.sh task",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-compact-backup.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-compact-restore.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-end.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/verify-gate.sh gate",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notify-claude.sh stop",
+            "async": true,
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notify-claude.sh notify",
+            "async": true,
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -fr *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -f *)",
+      "Bash(sudo *)",
+      "Bash(chmod 777 *)",
+      "Bash(dd if=*)",
+      "Bash(mkfs*)",
+      "Bash(* --no-verify)",
+      "Bash(* --no-verify *)",
+      "Skill(skill:deploy)",
+      "Skill(skill:deploy-*)",
+      "Skill(skill:*-deploy)",
+      "Skill(skill:production-*)",
+      "Skill(skill:*-production)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(.npmrc)",
+      "Read(credentials.json)",
+      "Read(service-account.json)",
+      "Read(id_rsa)",
+      "Read(id_ed25519)",
+      "Read(id_ecdsa)",
+      "Read(id_dsa)",
+      "Read(*.pem)",
+      "Read(*.key)",
+      "Read(*.p12)",
+      "Read(*.pfx)",
+      "Read(*.jks)",
+      "Read(*.keystore)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Edit(*.pem)",
+      "Edit(*.key)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh release *)",
+      "Bash(gh repo delete *)",
+      "Bash(npm publish *)",
+      "Bash(yarn publish *)",
+      "Bash(pnpm publish *)",
+      "Bash(docker push *)",
+      "Bash(kubectl apply *)",
+      "Bash(kubectl delete *)",
+      "Bash(terraform apply *)",
+      "Bash(terraform destroy *)",
+      "Bash(curl *)",
+      "Bash(wget *)"
+    ]
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "draw.io@claude-plugins-official": true,
+    "pr-review-toolkit@claude-plugins-official": true
+  }
+}

@@ -1,0 +1,130 @@
+---
+# Claude Code 定期監査（テンプレート）
+#
+# 週次で /security-scan と /legal-check を回し、結果を GitHub Issue に集約する。
+# PR 起点の claude-skills-ci.yml では拾えない「時間経過で増える問題」を検出する:
+#   - 依存パッケージの新規 CVE（コードが変わらなくても発生する）
+#   - ライセンス条件の変更・deprecated 化
+#
+# なぜ GitHub Actions か:
+#   Claude Code のセッション内スケジュール（/loop・CronCreate）は**セッションが
+#   起動中かつ idle のときだけ**発火し、recurring は 7 日で失効する。
+#   無人で恒久的に回す用途には向かない。リポジトリの定期監査は Actions の
+#   schedule トリガが適任（クラウドで恒久的に回したい場合は Routines も選べる）。
+#
+# 有効化手順:
+#   1. cp .github/workflows/claude-scheduled-audit.yml.template .github/workflows/claude-scheduled-audit.yml
+#   2. GitHub リポジトリの Secrets に ANTHROPIC_API_KEY を追加
+#   3. cron 時刻を自分のチームに合わせて調整する
+#
+# コスト目安: 週 1 回 × 2 スキル。PR ごとの CI より遥かに安い。
+
+name: Claude Scheduled Audit
+
+on:
+  schedule:
+    # 毎週月曜 03:17 UTC。:00 は Actions が混雑して遅延しやすいため、あえて外す。
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: claude-scheduled-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      BLUEPRINT_HOOK_PROFILE: minimal
+      CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1"
+      CLAUDE_ALLOWED_TOOLS: >-
+        Read,Grep,Glob,
+        Bash(git log *),Bash(git status *),
+        Bash(npm audit *),Bash(npm ls *),Bash(npm view *),
+        Edit(output/**),Edit(testreport/**)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code@2
+
+      - name: Prepare output directories
+        run: mkdir -p output/reports/security output/reports/legal testreport/security
+
+      - name: Run /security-scan
+        run: |
+          claude -p "/security-scan 依存パッケージの既知 CVE と、コード中の脆弱性パターンを監査してください。結果は output/reports/security/ に Markdown で保存し、CRITICAL / HIGH の指摘を要約して出力してください。" \
+            --permission-mode dontAsk \
+            --allowedTools "${CLAUDE_ALLOWED_TOOLS}" \
+            --model sonnet \
+            --max-turns 40 \
+            --output-format text \
+            | tee output/reports/security/_audit-stdout.md
+
+      - name: Run /legal-check
+        run: |
+          claude -p "/legal-check 依存パッケージの OSS ライセンス条件を監査し、非互換・deprecated・条件変更を洗い出してください。結果は output/reports/legal/ に Markdown で保存してください。" \
+            --permission-mode dontAsk \
+            --allowedTools "${CLAUDE_ALLOWED_TOOLS}" \
+            --model sonnet \
+            --max-turns 40 \
+            --output-format text \
+            | tee output/reports/legal/_audit-stdout.md
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-scheduled-audit
+          path: |
+            output/reports/
+            testreport/
+          retention-days: 90
+
+      - name: Compose issue body
+        if: always()
+        run: |
+          {
+            echo "定期監査の結果です。詳細レポートは Actions の artifact \`claude-scheduled-audit\` を参照してください。"
+            echo
+            echo "### /security-scan"
+            echo
+            cat output/reports/security/_audit-stdout.md 2>/dev/null || echo "_(出力なし)_"
+            echo
+            echo "### /legal-check"
+            echo
+            cat output/reports/legal/_audit-stdout.md 2>/dev/null || echo "_(出力なし)_"
+          } > /tmp/audit-body.md
+          head -c 60000 /tmp/audit-body.md > /tmp/audit-body.trimmed.md
+
+      # 毎週 Issue を新規作成すると溜まるため、既存の open Issue があればコメントを足す。
+      - name: Open or update the audit issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: "🔍 Claude 定期監査"
+        run: |
+          existing="$(gh issue list --state open --label claude-audit --limit 1 --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file /tmp/audit-body.trimmed.md
+          else
+            gh label create claude-audit --description "Claude による定期監査" --color 0E8A16 2>/dev/null || true
+            gh issue create \
+              --title "$ISSUE_TITLE" \
+              --label claude-audit \
+              --body-file /tmp/audit-body.trimmed.md
+          fi

@@ -1,0 +1,27 @@
+{
+  "skill_name": "architecture",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "input/requirements/example.md の要求からシステムアーキテクチャを設計して",
+      "expected_output": "設計方針・レイヤー構成と依存方向ルール・ディレクトリ構成・状態管理設計を含む文書が output/design/ARCH_<機能名>.md に出力される。ソースコードは変更しない。",
+      "assertions": [
+        "output/design/ 配下に ARCH_ で始まる Markdown ファイルが作成されている",
+        "レイヤー定義と依存方向ルールのセクションがある",
+        "ディレクトリ構成が示されている",
+        "主要な設計判断に根拠が書かれている",
+        "src/ や tests/ 配下のファイルが変更されていない"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "アーキテクチャ設計して(要求メモはまだ書いてない)",
+      "expected_output": "入力となる要求メモや PRD が無いことを伝え、input/requirements/ への配置や /prd を先に案内する。推測だけで設計書を作らない。",
+      "assertions": [
+        "入力ファイルが無いことを明示している",
+        "input/requirements/ への要求メモ配置、または /brainstorm か /prd の実行を案内している",
+        "根拠のない ARCH_ ファイルを作成していない"
+      ]
+    }
+  ]
+}

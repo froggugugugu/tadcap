@@ -1,0 +1,71 @@
+---
+# Claude Code 自動 PR レビューワークフロー（テンプレート）
+#
+# 有効化手順:
+#   1. このファイルをコピー: cp .github/workflows/claude-review.yml.template .github/workflows/claude-review.yml
+#   2. GitHub リポジトリの Secrets に ANTHROPIC_API_KEY を追加
+#   3. セットアップ詳細は .github/CLAUDE_REVIEW_SETUP.md 参照
+#
+# トリガー: PR に `@claude` をメンションしたコメント、または PR 作成時（オプション）
+#
+# コスト注意: API キーは月額 / 日額上限を設定すること（.github/CLAUDE_REVIEW_SETUP.md 参照）
+
+name: Claude Code Review
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  claude-review:
+    # @claude メンションがあるコメント or PR イベントのみ実行
+    if: >
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+
+    # 最小権限: PR への書き込みとコメント追加のみ
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # モデル指定（コスト/品質のトレードオフ）
+          # - opus (Opus 5): 高品質レビュー、コスト高
+          # - sonnet (Sonnet 5): 標準レビュー、推奨
+          # - haiku (Haiku 4.5): 軽量レビュー、簡易チェック
+          model: claude-sonnet-5
+          # コスト guardrail: 最大ターン数
+          max_turns: 10
+          # 追加プロンプト（プロジェクト固有のレビュー観点）
+          direct_prompt: |
+            このリポジトリは `AGENTS.md`・`CLAUDE.md` と `project-config.md` に定義された規約に従う。
+            以下の観点で PR をレビューしてほしい:
+
+            1. **設計**: アーキテクチャ違反、依存方向違反がないか
+            2. **セキュリティ**: OWASP Top 10、シークレット混入、入力検証
+            3. **テスト**: カバレッジ、エッジケース、TDD の観点
+            4. **可読性**: 命名、コメント、責務分離
+            5. **落とし穴**: `.claude/pitfalls.md` に列挙された事例に該当しないか
+
+            指摘は CRITICAL / HIGH / MEDIUM / LOW / INFO で分類し、
+            修正案は具体的な差分提案の形で示す。
+
+            プロジェクトで日本語を使うため、レビューコメントも日本語で返す。

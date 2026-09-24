@@ -1,0 +1,44 @@
+{
+  "_comment": [
+    "組織展開用 managed-settings.json の例(本テンプレートの project settings を組織ポリシーで固定する場合)。",
+    "配置先: macOS /Library/Application Support/ClaudeCode/managed-settings.json、",
+    "        Linux /etc/claude-code/managed-settings.json、または MDM / server-managed settings。",
+    "managed settings は user / project / local より優先され、個人が上書きできない。",
+    "このファイル自体は Claude Code に読まれない(参照用)。必要なキーだけ写して値を差し替えること。",
+    "auto mode の trusted infrastructure(autoMode.environment)は /auto-mode-setup で下書きを作り、ここに転記する。"
+  ],
+  "permissions": {
+    "deny": [
+      "Bash(curl *)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": false,
+    "network": {
+      "allowedDomains": [
+        "registry.npmjs.org",
+        "github.com",
+        "api.anthropic.com"
+      ]
+    }
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector.example.com:4317",
+    "OTEL_LOG_TOOL_DETAILS": "1"
+  },
+  "claudeMd": "完了報告には必ず検証コマンドの結果(pass/fail 件数)を添えること。force push は禁止。",
+  "requiredMinimumVersion": "2.1.228",
+  "cleanupPeriodDays": 30,
+  "companyAnnouncements": [
+    "このリポジトリは project-blueprint ハーネスで運用しています。ガードレールは .claude/guardrails.md を参照。"
+  ]
+}

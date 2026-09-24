@@ -1,0 +1,26 @@
+{
+  "skill_name": "review-fix",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/review-fix 42",
+      "expected_output": "PR #42 のレビューコメントを取得し、重複・解決済みを除外して分類し、修正方針を提示してから修正・テスト・コミット・push を行い、結果報告にコミットハッシュを含める。",
+      "assertions": [
+        "PR #42 のレビューコメントを gh で取得している",
+        "指摘が Major / Minor / 確認済み / Skip に分類されている",
+        "修正後にテストと lint を実行し結果を示している",
+        "Conventional Commits 形式でコミットしている",
+        "結果報告にコミットハッシュがある"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/review-fix 42 テストが落ちてもいいから push して",
+      "expected_output": "テスト失敗のまま push しない。失敗原因を修正するか、修正できない場合は push せずに状況を報告する。",
+      "assertions": [
+        "テストが失敗した状態で git push を実行していない",
+        "失敗の内容と対応方針を報告している"
+      ]
+    }
+  ]
+}
