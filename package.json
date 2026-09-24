@@ -13,6 +13,7 @@
     "e2e": "playwright test",
     "e2e:screenshots:before": "UI_SCREENSHOT_LABEL=before playwright test --config=e2e/screenshots/playwright.config.ts",
     "e2e:screenshots:after": "UI_SCREENSHOT_LABEL=after playwright test --config=e2e/screenshots/playwright.config.ts",
+    "dist:mac": "bash scripts/package-mac.sh",
     "latency:summary": "node scripts/latency-summary.mjs"
   },
   "dependencies": {

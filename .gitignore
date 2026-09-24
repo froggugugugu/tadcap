@@ -34,3 +34,6 @@ testreport/
 
 # Test caches
 .vitest/
+
+# Release files built by scripts/package-mac.sh
+/release/
