@@ -6,6 +6,8 @@ Tadcap 本体は MIT License（[LICENSE](LICENSE)）です。
 
 アプリが使う Rust クレート（Tauri など）と npm パッケージのライセンスは、それぞれのパッケージに同梱されたライセンスファイルに従います（依存の一覧は `src-tauri/Cargo.lock` と `package-lock.json`）。
 
+配布アプリ（DMG / zip）には、このファイルと [LICENSE](LICENSE) を `Tadcap.app/Contents/Resources/licenses/` に同梱しています。
+
 ## 紹介ページ（.github/pages/assets/）
 
 紹介ページ（GitHub Pages）は、次のスクリプトを同じサイトから配信しています。

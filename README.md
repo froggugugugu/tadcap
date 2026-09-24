@@ -25,16 +25,43 @@
 
 ## インストール
 
-署名・公証済みの配布版（DMG）は準備中です。現時点ではソースからビルドしてください。
+配布版は Apple silicon の Mac（macOS 14 以降）向けです。Intel の Mac では[ソースからビルド](#ソースからビルド)してください。
 
-### 必要なもの
+### コマンドで入れる（おすすめ）
+
+```bash
+curl -fsSL https://froggugugugu.github.io/tadcap/install.sh | bash
+```
+
+最新版を [Releases](https://github.com/froggugugugu/tadcap/releases) から取得し、公開時のチェックサム（sha256）と照合してから「アプリケーション」フォルダ（書き込めなければ `~/Applications`）に入れて起動します。この方法なら、公証していないアプリでも初回の警告が出ずに開けます。更新も同じコマンドで、起動中の Tadcap は終了してから置き換えます。
+
+環境変数で動きを変えられます（例: `curl -fsSL ... | TADCAP_NO_OPEN=1 bash`）。
+
+| 変数 | 意味 |
+| ---- | ---- |
+| `TADCAP_VERSION=0.1.0` | 最新版の代わりにこの版を入れる |
+| `TADCAP_APP_DIR=DIR` | `DIR` に入れる |
+| `TADCAP_ZIP=FILE` | ダウンロード済みの `Tadcap-<版>-arm64.zip` から入れる |
+| `TADCAP_NO_OPEN=1` | 入れたあと起動しない |
+
+### DMG をダウンロードする
+
+1. [最新のリリース](https://github.com/froggugugugu/tadcap/releases/latest)から `Tadcap-<版>-arm64.dmg` をダウンロードして開き、`Tadcap.app` を「アプリケーション」フォルダへドラッグします
+2. 公証していないアプリのため、ブラウザでダウンロードした場合は初回に開けないことがあります。macOS 14 では Finder で `Tadcap.app` を右クリック（Control＋クリック）して「開く」を選びます。macOS 15 以降は、一度開こうとしたあと「システム設定」→「プライバシーとセキュリティ」の「このまま開く」を押します
+3. 「壊れているため開けません」と出るときは、ターミナルで次を実行してから開き直します
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Tadcap.app
+```
+
+### ソースからビルド
+
+必要なもの:
 
 - macOS 14 以降
 - Xcode Command Line Tools（`xcode-select --install`）
 - Rust（stable。[rustup](https://rustup.rs/) で導入）
 - Node.js 20 以降と npm
-
-### ビルド
 
 ```bash
 git clone https://github.com/froggugugugu/tadcap.git && cd tadcap
@@ -43,8 +70,6 @@ npm run tauri build -- --bundles app
 ```
 
 できあがった `src-tauri/target/release/bundle/macos/Tadcap.app` を「アプリケーション」フォルダへ移します。
-
-署名していないアプリのため、初回は開けないことがあります。その場合は Finder で `Tadcap.app` を右クリック（Control＋クリック）して「開く」を選んでください。
 
 ## 初回セットアップ（画面収録の許可）
 
@@ -84,6 +109,9 @@ npm run tauri build -- --bundles app
 **撮った画像が真っ黒、または壁紙しか写らない**
 画面収録が許可されていません。[初回セットアップ](#初回セットアップ画面収録の許可)の手順で許可し、必要なら再起動してください。
 
+**更新したら撮れなくなった**
+配布版は Apple の公証を受けていない（アドホック署名の）ため、更新すると macOS が別のアプリとみなし、画面収録の許可が外れることがあります。「システム設定」→「プライバシーとセキュリティ」→「画面収録」で Tadcap を一度オフにしてオンにし直すか、一覧から削除して追加し直し、Tadcap を起動し直してください。
+
 **`⌘⇧2` を押しても何も起きない**
 ほかのアプリが同じショートカットを使っている可能性があります。そのアプリ側のショートカットを変えるか、メニューバーのアイコンから「キャプチャ」を選んでください（Tadcap 側のキー変更機能は現在ありません）。
 
@@ -101,7 +129,10 @@ npm run tauri dev     # 開発起動
 npm run build         # フロントエンドの型チェックとビルド
 npm run test:run      # ユニットテスト(Vitest)
 npm run e2e           # E2E テスト(Playwright。Tauri IPC はモック)
+npm run dist:mac      # 配布物(release/Tadcap-<版>-arm64.dmg / .zip)を作る
 ```
+
+リリースの手順: `package.json`・`src-tauri/tauri.conf.json`・`src-tauri/Cargo.toml` の `version` を揃えて上げ、`cargo check --manifest-path src-tauri/Cargo.toml` で `Cargo.lock` も更新してからコミットして push したあと、`git tag v<版>` → `git push origin v<版>` します。タグの push で `.github/workflows/release.yml` が動き、テスト・ビルド・署名の検証を通った DMG と zip を GitHub Releases に公開します。タグと 3 ファイルの版が食い違うと失敗します。
 
 | ディレクトリ | 内容 |
 | ------------ | ---- |
@@ -110,11 +141,12 @@ npm run e2e           # E2E テスト(Playwright。Tauri IPC はモック)
 | `e2e/` | Playwright の E2E テスト(`e2e/screenshots/` は画像撮影用) |
 | `docs/media/` | README と紹介ページで使う画像 |
 | `.github/pages/` | 紹介ページ(GitHub Pages) |
+| `scripts/` | 配布物の作成(`package-mac.sh`)・インストーラー(`install.sh`) |
 
 紹介ページと README の画像は `npx playwright test --config=e2e/screenshots/playwright.config.ts landing` で撮り直せます（写っている画面は架空のものです）。
 
 ## ライセンス
 
-[MIT](LICENSE)。紹介ページで使っているサードパーティのスクリプトなどは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
+[MIT](LICENSE)。配布アプリには `LICENSE` と `THIRD_PARTY_NOTICES.md` を同梱しています（`Tadcap.app/Contents/Resources/licenses/`）。紹介ページで使っているサードパーティのスクリプトなどは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
 
 macOS は Apple Inc. の商標です。

@@ -26,7 +26,10 @@ npm run test               # Vitest（watch）
 npm run test:run           # Vitest 一回実行
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip(アドホック署名)
 ```
+
+リリース: 3 ファイル(`package.json`・`src-tauri/tauri.conf.json`・`src-tauri/Cargo.toml`)の版を揃えてコミット → `git tag v<版>` → タグを push。`.github/workflows/release.yml` が検証して GitHub Releases に公開し、`scripts/install.sh`(紹介ページから配信)が最新版を入れる。
 
 スモークテストコマンド(全タスク共通、ゲート3 決定):
 

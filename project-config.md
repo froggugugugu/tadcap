@@ -127,6 +127,7 @@ npm run tauri              # Tauri CLI（dev/build 等）
 npm run test               # Vitest（watch、T01 で追加）
 npm run test:run           # Vitest 一回実行（T01 で追加）
 npm run latency:summary -- <ログファイル>  # NFR-001計測ログ(標準エラー)を集計（T11 で追加、依存追加なし）
+npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip を作る（scripts/package-mac.sh、アドホック署名・公証なし。リリースは v<版> タグの push で .github/workflows/release.yml が作る）
 cargo test --manifest-path src-tauri/Cargo.toml               # Rust ユニットテスト（T01 で確定）
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings  # Rust 静的解析（T01 で確定、警告があればビルド扱いでエラー）
 npx playwright install chromium  # E2E用ブラウザの初回インストール（T13 で追加）
@@ -436,6 +437,9 @@ output/reports/                ← 人間向けサマリー（Git管理）
 | テキストツール(T27)の入力欄で、IMEの変換確定のEnterで文字が焼き込まれてしまう/他アプリへ切り替えただけで入力が確定してしまう | WebKit系は変換確定のEnterを`compositionend`の後に`isComposing=false`・`keyCode 229`のkeydownとして送る。また要素の`blur`はウィンドウ自体がフォーカスを失ったときにも発火する | 確定判定は`textTool.ts::textKeyAction()`で`isComposing`・`compositionstart`〜`compositionend`の自前フラグ・`keyCode 229`の3つを見る。blurでの確定は`document.hasFocus()`が真のとき(アプリ内でフォーカスが移ったとき)だけにする。IMEの実挙動はE2E(chromium)で再現できないため実機確認に含める |
 | ツールバーのカラーピッカー(`<input type="color">`、T28)で色を選んだ後はフォーカスがINPUTに残るため、`isEditableTarget()`がtagNameだけで判定すると以後のCmd+C/Cmd+Zが効かなくなる | `shortcutGuards.ts::isEditableTarget()`は`type`が`color`等の文字入力でないINPUTをfalseにする(T28)。新しいINPUTをツールバーに足すときも同じ判定を通る |
 | 編集中の図形(T31)があるときの取り消しボタンは、`shapeTools.ts`の「Canvas外のpointerdownで確定」が先に走ると確定→取り消しになり、キー(破棄)とボタンで挙動が食い違う | 取り消し・やり直しボタンに`data-preserve-pending-shape`属性を付け、`shapeTools.ts`の確定対象から除外する(T29)。同じ扱いが必要なボタンを増やすときは属性を付ける |
+| ローカルの `npm run tauri build`(dmg)が失敗し `src-tauri/target/release/bundle/dmg/rw.*.dmg` が残る(2026-09-24、リリース作業で確認) | Tauri の `bundle_dmg.sh` は環境変数 `CI` が `true` でないとき、DMG の窓の配置を `osascript` で Finder に指示する。実行元(ターミナル・エージェント)に Finder の自動操作の許可が無いと失敗する。`CI=true` なら bundler が `--skip-jenkins` を渡してこの手順を飛ばす(tauri-bundler `bundle/macos/dmg/mod.rs`) | 配布物は `npm run dist:mac`(`CI=true` で実行)で作る。GitHub Actions は既定で `CI=true`。窓のアイコン配置は既定のまま(App と Applications へのリンク) |
+| 配布版はアドホック署名(`bundle.macOS.signingIdentity: "-"`)で Team ID が無いため、更新するたびに画面収録の許可が外れることがある | TCC が記録する要件がビルドごとのコードハッシュに結び付く | README・紹介ページの FAQ と `install.sh` の最後の案内で、許可のオフ→オンまたは削除→追加を案内する。解消には Developer ID 署名が要る |
+| `npm run tauri icon <png>` は macOS 用以外に `icons/android/`・`icons/ios/`・`icons/64x64.png` も生成する | CLI が全プラットフォーム分を作る | macOS 専用なので生成後に削除し、コミットしない。元画像は `src-tauri/icons/app-icon.svg`(1024px PNG に書き出して `app-icon.png`) |
 
 ### フレームワーク固有パターン
 

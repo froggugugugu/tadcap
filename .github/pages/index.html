@@ -124,10 +124,10 @@
         <div class="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-10 pt-10 sm:px-6 sm:pb-14 sm:pt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12">
           <div>
             <a href="#install" class="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground">
-              <span class="inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span class="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
               <span class="font-mono text-foreground">v0.1.0</span>
               <span class="h-3 w-px bg-border"></span>
-              <span>配布版は準備中・ソースからビルドできます</span>
+              <span>配布版を公開しました・Apple silicon 向け</span>
               <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
             </a>
             <h1 class="mt-6 text-[2rem] font-bold leading-[1.2] tracking-tight sm:text-5xl sm:leading-[1.15] lg:text-[2.75rem]"><span class="inline-block">撮る、描き込む、貼る。</span><span class="inline-block text-brand">最短で。</span></h1>
@@ -262,30 +262,11 @@
         <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
           <div class="max-w-2xl">
             <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">インストール</h2>
-            <p class="mt-3 text-muted-foreground">署名・公証済みの配布版（DMG）は準備中です。いまはソースからビルドして使います。</p>
-          </div>
-          <div class="mt-6 flex max-w-3xl gap-3 rounded-lg border border-amber-300/70 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200" role="note">
-            <i data-lucide="info" class="mt-0.5 h-4 w-4 shrink-0"></i>
-            <p>配布版の公開までは、以下の手順でビルドした <code class="font-mono">Tadcap.app</code> を使ってください。公開したらこのページでお知らせします。</p>
+            <p class="mt-3 text-muted-foreground">配布版は Apple silicon の Mac（macOS 14 以降）向けです。ターミナルのコマンド 1 行で入れるのがおすすめです。Intel の Mac ではソースからビルドしてください。</p>
           </div>
           <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2 [&>*]:min-w-0">
             <div>
-              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold"><i data-lucide="package-check" class="h-4 w-4 text-muted-foreground"></i>必要なもの</h3>
-              <ul class="space-y-2 text-sm text-muted-foreground">
-                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>macOS 14（Sonoma）以降</span></li>
-                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>Xcode Command Line Tools（<code class="font-mono">xcode-select --install</code>）</span></li>
-                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>Rust（stable、<a href="https://rustup.rs/" class="underline decoration-border underline-offset-4 hover:text-foreground" target="_blank" rel="noopener">rustup</a> で入れます）</span></li>
-                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>Node.js 20 以降と npm</span></li>
-              </ul>
-              <h3 class="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold"><i data-lucide="app-window" class="h-4 w-4 text-muted-foreground"></i>ビルドしたあと</h3>
-              <ol class="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
-                <li><code class="break-all font-mono">src-tauri/target/release/bundle/macos/Tadcap.app</code> を「アプリケーション」フォルダへ移します。</li>
-                <li>署名していないアプリのため、初回は開けないことがあります。そのときは Finder で <code class="font-mono">Tadcap.app</code> を右クリック（Control＋クリック）して「開く」を選んでください。</li>
-                <li>起動するとメニューバーにオタマジャクシのアイコンが出ます（Dock には出ません）。</li>
-              </ol>
-            </div>
-            <div>
-              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold"><i data-lucide="code-2" class="h-4 w-4 text-muted-foreground"></i>ソースからビルド</h3>
+              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold"><i data-lucide="terminal" class="h-4 w-4 text-muted-foreground"></i>コマンドで入れる（おすすめ）</h3>
               <div data-code class="group relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-50 shadow-sm">
                 <div class="flex h-9 items-center justify-between border-b border-zinc-800 px-3">
                   <span class="font-mono text-xs text-zinc-400">Terminal</span>
@@ -294,13 +275,52 @@
                     <span class="i-check text-emerald-400"><i data-lucide="check" class="h-4 w-4"></i></span>
                   </button>
                 </div>
-                <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-6"><code>git clone https://github.com/froggugugugu/tadcap.git &amp;&amp; cd tadcap
+                <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-6"><code>curl -fsSL https://froggugugugu.github.io/tadcap/install.sh | bash</code></pre>
+              </div>
+              <ul class="mt-3 space-y-2 text-sm text-muted-foreground">
+                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>最新版を <a href="https://github.com/froggugugugu/tadcap/releases" class="underline decoration-border underline-offset-4 hover:text-foreground" target="_blank" rel="noopener">Releases</a> から取得し、公開時のチェックサム（sha256）と照合してから「アプリケーション」フォルダに入れて起動します。</span></li>
+                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>この方法なら、公証していないアプリでも初回の警告が出ずに開けます。</span></li>
+                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>更新も同じコマンドです。起動中の Tadcap は終了してから置き換えます。</span></li>
+              </ul>
+              <p class="mt-3 text-xs leading-5 text-muted-foreground">実行前に中身を見たいときは <a href="install.sh" class="underline decoration-border underline-offset-4 hover:text-foreground">install.sh</a> を開いてください。</p>
+            </div>
+            <div>
+              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold"><i data-lucide="download" class="h-4 w-4 text-muted-foreground"></i>DMG をダウンロードする</h3>
+              <ol class="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                <li><a href="https://github.com/froggugugugu/tadcap/releases/latest" class="underline decoration-border underline-offset-4 hover:text-foreground" target="_blank" rel="noopener">最新のリリース</a>から <code class="break-all font-mono">Tadcap-&lt;版&gt;-arm64.dmg</code> をダウンロードして開き、<code class="font-mono">Tadcap.app</code> を「アプリケーション」フォルダへドラッグします。</li>
+                <li>公証していないアプリのため、ブラウザでダウンロードした場合は初回に開けないことがあります。macOS 14 では Finder で <code class="font-mono">Tadcap.app</code> を右クリック（Control＋クリック）して「開く」を選びます。macOS 15 以降は、一度開こうとしたあと「システム設定」→「プライバシーとセキュリティ」の「このまま開く」を押します。</li>
+                <li>「壊れているため開けません」と出るときは、ターミナルで次を実行してから開き直してください。</li>
+              </ol>
+              <div data-code class="group relative mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-50 shadow-sm">
+                <div class="flex h-9 items-center justify-between border-b border-zinc-800 px-3">
+                  <span class="font-mono text-xs text-zinc-400">Terminal</span>
+                  <button type="button" data-copy aria-label="コマンドをコピー" title="コピー" class="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-50">
+                    <span class="i-copy inline-flex"><i data-lucide="copy" class="h-4 w-4"></i></span>
+                    <span class="i-check text-emerald-400"><i data-lucide="check" class="h-4 w-4"></i></span>
+                  </button>
+                </div>
+                <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-6"><code>xattr -dr com.apple.quarantine /Applications/Tadcap.app</code></pre>
+              </div>
+              <p class="mt-3 text-sm text-muted-foreground">起動するとメニューバーにオタマジャクシのアイコンが出ます（Dock には出ません）。</p>
+            </div>
+          </div>
+          <div class="mt-10 max-w-3xl">
+            <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold"><i data-lucide="code-2" class="h-4 w-4 text-muted-foreground"></i>ソースからビルドする</h3>
+            <p class="mb-3 text-sm text-muted-foreground">Intel の Mac や、手元でビルドしたい場合。macOS 14 以降、Xcode Command Line Tools（<code class="font-mono">xcode-select --install</code>）、Rust（stable、<a href="https://rustup.rs/" class="underline decoration-border underline-offset-4 hover:text-foreground" target="_blank" rel="noopener">rustup</a> で入れます）、Node.js 20 以降と npm が必要です。</p>
+            <div data-code class="group relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-50 shadow-sm">
+              <div class="flex h-9 items-center justify-between border-b border-zinc-800 px-3">
+                <span class="font-mono text-xs text-zinc-400">Terminal</span>
+                <button type="button" data-copy aria-label="コマンドをコピー" title="コピー" class="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-50">
+                  <span class="i-copy inline-flex"><i data-lucide="copy" class="h-4 w-4"></i></span>
+                  <span class="i-check text-emerald-400"><i data-lucide="check" class="h-4 w-4"></i></span>
+                </button>
+              </div>
+              <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-6"><code>git clone https://github.com/froggugugugu/tadcap.git &amp;&amp; cd tadcap
 npm install
 npm run tauri build -- --bundles app
 open src-tauri/target/release/bundle/macos</code></pre>
-              </div>
-              <p class="mt-2 text-xs leading-5 text-muted-foreground">初回のビルドは Rust の依存を取得・コンパイルするため数分かかります。<code class="font-mono">--bundles app</code> を付けると、DMG は作らず <code class="font-mono">.app</code> だけを作ります。</p>
             </div>
+            <p class="mt-2 text-xs leading-5 text-muted-foreground">初回のビルドは Rust の依存を取得・コンパイルするため数分かかります。できた <code class="break-all font-mono">Tadcap.app</code> を「アプリケーション」フォルダへ移してください。</p>
           </div>
         </div>
       </section>
@@ -375,6 +395,10 @@ open src-tauri/target/release/bundle/macos</code></pre>
             <details class="group p-5">
               <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">撮った画像が真っ黒、または壁紙しか写りません<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
               <p class="mt-3 text-sm leading-6 text-muted-foreground">画面収録が許可されていないときに起きます。「システム設定」→「プライバシーとセキュリティ」→「画面収録」で Tadcap をオンにし、反映されなければ Tadcap を終了して起動し直してください（<a href="#setup" class="underline decoration-border underline-offset-4 hover:text-foreground">初回セットアップ</a>）。</p>
+            </details>
+            <details class="group p-5">
+              <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">更新したら撮れなくなりました<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
+              <p class="mt-3 text-sm leading-6 text-muted-foreground">配布版は Apple の公証を受けていない（アドホック署名の）ため、更新すると macOS が別のアプリとみなし、画面収録の許可が外れることがあります。「システム設定」→「プライバシーとセキュリティ」→「画面収録」で Tadcap を一度オフにしてオンにし直すか、一覧から削除して追加し直し、Tadcap を起動し直してください。</p>
             </details>
             <details class="group p-5">
               <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">⌘⇧2 を押しても何も起きません<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
