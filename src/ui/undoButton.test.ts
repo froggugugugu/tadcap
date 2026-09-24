@@ -16,7 +16,8 @@ const key = (k: string, mods: Partial<{ metaKey: boolean; shiftKey: boolean; ctr
   ...mods,
 });
 
-const idle: UndoContext = { canUndo: false, canRedo: false, hasPendingShape: false, isDrawing: false };
+// 【改訂 2026-09-24 T32】編集中の図形(T31)が無くなったため`hasPendingShape`を文脈から外した。
+const idle: UndoContext = { canUndo: false, canRedo: false, isDrawing: false };
 
 describe("undoShortcutCommand", () => {
   it("Cmd+Zは取り消し、Cmd+Shift+Zはやり直し(Shiftで大文字になっても判定する)", () => {
@@ -56,33 +57,18 @@ describe("undoAvailability", () => {
     expect(undoAvailability({ ...idle, canRedo: true })).toEqual({ undo: false, redo: true });
   });
 
-  it("編集中の図形があれば取り消しは有効(破棄できる)、やり直しは無効", () => {
-    expect(undoAvailability({ ...idle, hasPendingShape: true })).toEqual({ undo: true, redo: false });
-    expect(undoAvailability({ ...idle, hasPendingShape: true, canRedo: true })).toEqual({
-      undo: true,
-      redo: false,
-    });
-  });
-
   it("ドラッグ中は両方無効", () => {
     expect(
-      undoAvailability({ canUndo: true, canRedo: true, hasPendingShape: true, isDrawing: true }),
+      undoAvailability({ canUndo: true, canRedo: true, isDrawing: true }),
     ).toEqual({ undo: false, redo: false });
   });
 });
 
 describe("resolveUndoCommand", () => {
-  it("取り消し: 編集中の図形があれば破棄を優先し、なければUndoスタックから戻す", () => {
-    expect(resolveUndoCommand("undo", { ...idle, canUndo: true, hasPendingShape: true })).toBe(
-      "discardPendingShape",
-    );
-    expect(resolveUndoCommand("undo", { ...idle, canUndo: true })).toBe("popUndo");
+  it("取り消し・やり直し: 各スタックにコマンドがあるときだけ", () => {
+    expect(resolveUndoCommand("undo", { ...idle, canUndo: true })).toBe("undo");
     expect(resolveUndoCommand("undo", idle)).toBeNull();
-  });
-
-  it("やり直し: Redoスタックがあり編集中の図形が無いときだけ", () => {
-    expect(resolveUndoCommand("redo", { ...idle, canRedo: true })).toBe("popRedo");
-    expect(resolveUndoCommand("redo", { ...idle, canRedo: true, hasPendingShape: true })).toBeNull();
+    expect(resolveUndoCommand("redo", { ...idle, canRedo: true })).toBe("redo");
     expect(resolveUndoCommand("redo", idle)).toBeNull();
   });
 

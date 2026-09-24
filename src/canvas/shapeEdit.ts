@@ -8,11 +8,17 @@
 //! 提供する(ユニットテスト対象)。描画とポインタ結線は `tools/shapeTools.ts`、編集中図形の
 //! 保持・確定・破棄は `pendingShape.ts` が担う。
 //!
+//! 【改訂 2026-09-24 T32】「編集中の図形1つ」を「選択中のオブジェクト」に一般化した
+//! (`pendingShape.ts`は廃止し、オブジェクトの保持は`documentState.ts`)。ハンドル・当たり判定・
+//! リサイズ・移動の純粋関数はそのまま選択中のオブジェクトに使い、`decidePointerDown()`だけが
+//! オブジェクト配列(最前面からの当たり判定、`objectModel.ts::pickObjectAt()`)を見るようにした。
+//!
 //! ツール固有の算出(線幅・正方形拘束・外接矩形)は各ツールファイルの既存純粋関数を再利用し、
 //! 本モジュールで式を複製しない。
 
 import type { ToolId } from "./canvasState";
 import type { Point, Rect } from "./coords";
+import { findObject, pickObjectAt, type AnnotationObject } from "./objectModel";
 import {
   arrowLineWidth,
   computeArrowGeometry,
@@ -246,7 +252,9 @@ export function applyEditDrag(
 }
 
 export interface PointerDownInput {
-  pending: EditableShape | null;
+  /** 重ね順のオブジェクト配列(末尾が最前面、T32)。 */
+  objects: readonly AnnotationObject[];
+  selectedId: number | null;
   activeTool: ToolId | null;
   point: Point;
   tolerance: number;
@@ -257,34 +265,43 @@ export interface PointerDownInput {
 }
 
 export type PointerDownDecision =
-  | { type: "edit"; session: EditSession }
-  | { type: "create"; commitFirst: boolean; session: EditSession }
-  | { type: "commit" }
+  /** オブジェクト`id`を選択してリサイズ/移動を始める。 */
+  | { type: "edit"; id: number; session: EditSession }
+  /** 選択を外して新しい図形の作成を始める。 */
+  | { type: "create"; session: EditSession }
+  | { type: "deselect" }
   | { type: "ignore" };
 
 /**
- * Canvas上のpointerdownをどう扱うかを決める。編集中の図形に当たれば編集(リサイズ/移動)、
- * 外れれば編集中の図形を確定してから(図形ツール選択中なら)新しい図形の作成を始める。
+ * Canvas上のpointerdownをどう扱うかを決める(T32【改訂 2026-09-24】)。
+ * ①選択中のオブジェクトのハンドル・内側 → リサイズ/移動 ②未選択のオブジェクトを最前面から
+ * 当たり判定(線の付近のみ)→ 選択して移動 ③外れたら、図形ツール選択中なら新規作成、
+ * それ以外は選択解除。モザイク・テキストツール中はオブジェクトを掴まない(各ツールが処理する)。
  */
 export function decidePointerDown(input: PointerDownInput): PointerDownDecision {
-  const { pending, activeTool, point } = input;
-  if (pending) {
-    const hit = hitTestShape(pending, point, input.tolerance, input.canvasWidth, input.canvasHeight);
+  const { objects, activeTool, point, tolerance, canvasWidth, canvasHeight } = input;
+  const selected = findObject(objects, input.selectedId);
+  const blank: PointerDownDecision = selected ? { type: "deselect" } : { type: "ignore" };
+  if (activeTool !== null && !isShapeTool(activeTool)) {
+    return blank;
+  }
+  if (selected) {
+    const hit = hitTestShape(selected.shape, point, tolerance, canvasWidth, canvasHeight);
     if (hit?.type === "handle") {
-      return { type: "edit", session: { mode: "resize", handle: hit.handle, initial: pending } };
+      return { type: "edit", id: selected.id, session: { mode: "resize", handle: hit.handle, initial: selected.shape } };
     }
     if (hit?.type === "body") {
-      return { type: "edit", session: { mode: "move", origin: point, initial: pending } };
+      return { type: "edit", id: selected.id, session: { mode: "move", origin: point, initial: selected.shape } };
     }
   }
-  if (isShapeTool(activeTool)) {
-    return {
-      type: "create",
-      commitFirst: pending !== null,
-      session: { mode: "create", kind: activeTool, origin: point, color: input.color },
-    };
+  const picked = pickObjectAt(objects, point, tolerance, canvasWidth, canvasHeight);
+  if (picked) {
+    return { type: "edit", id: picked.id, session: { mode: "move", origin: point, initial: picked.shape } };
   }
-  return pending ? { type: "commit" } : { type: "ignore" };
+  if (isShapeTool(activeTool)) {
+    return { type: "create", session: { mode: "create", kind: activeTool, origin: point, color: input.color } };
+  }
+  return blank;
 }
 
 /**

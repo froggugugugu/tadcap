@@ -1,7 +1,7 @@
 //! E2Eテスト: 直前に描いた図形の編集(リサイズ・移動)と確定・破棄(T31、PRD FR-006/007/011改訂)。
 //!
 //! ハンドルの描画・ポインタ結線(`src/canvas/tools/shapeTools.ts`)はDOM/Canvas依存のため
-//! Vitest対象外で、ここで検証する。判定ロジック自体は`shapeEdit.test.ts`/`pendingShape.test.ts`。
+//! Vitest対象外で、ここで検証する。判定ロジック自体は`shapeEdit.test.ts`/`documentState.test.ts`(T32で`pendingShape.test.ts`から移行)。
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
@@ -178,27 +178,32 @@ test.describe("直前に描いた図形の編集(T31)", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test("Escで編集中の図形を破棄すると、描く前の画像に戻る", async ({ page }) => {
+  // 【改訂 2026-09-24 T32】Escは破棄ではなく選択解除になった(図形はオブジェクトとして残り、
+  // 取り消しはCmd+Z)。T31の「Escで描く前に戻る」はCmd+Zで確かめる。
+  test("Escは選択解除で図形は残り、Cmd+Zで描く前の画像に戻る", async ({ page }) => {
     const canvas = await captureAndSelect(page, "円");
     await drag(page, canvas, [60, 40], [200, 160]);
     expect(await countAnnotationPixelsAll(canvas)).toBeGreaterThan(0);
 
     await page.keyboard.press("Escape");
-
-    expect(await countAnnotationPixelsAll(canvas)).toBe(0);
     expect(await overlayHasHandles(page)).toBe(false);
+    expect(await countAnnotationPixelsAll(canvas)).toBeGreaterThan(0);
+
+    await page.keyboard.press("Meta+Z");
+    expect(await countAnnotationPixelsAll(canvas)).toBe(0);
     expect(pageErrors).toEqual([]);
   });
 
-  test("次の図形を描き始めると直前の図形は確定され、編集対象は新しい図形だけになる", async ({ page }) => {
+  // 【改訂 2026-09-24 T32】T31では「次の図形で直前の図形は確定され編集できない」だったが、
+  // オブジェクト化で両方とも再調整できる。選択されるのは新しい図形で、Cmd+Zは新しい方から戻る。
+  test("次の図形を描くと新しい図形が選択され、前の図形も残り、取り消しは新しい方から戻る", async ({ page }) => {
     const canvas = await captureAndSelect(page, "矩形");
     await drag(page, canvas, [20, 20], [80, 70]);
     await drag(page, canvas, [180, 100], [260, 170]);
 
-    // 1つ目は確定済み: その右下ハンドル位置をドラッグしても1つ目は変わらない(新しい図形の作成になる)。
     expect(await countAnnotationPixels(canvas, { x: 76, y: 30, width: 8, height: 20 })).toBeGreaterThan(0);
-    await page.keyboard.press("Escape");
-    // Escで破棄されるのは2つ目(編集中)だけ。
+    expect(await countAnnotationPixels(canvas, { x: 256, y: 120, width: 8, height: 20 })).toBeGreaterThan(0);
+    await page.keyboard.press("Meta+Z");
     expect(await countAnnotationPixels(canvas, { x: 256, y: 120, width: 8, height: 20 })).toBe(0);
     expect(await countAnnotationPixels(canvas, { x: 76, y: 30, width: 8, height: 20 })).toBeGreaterThan(0);
     expect(pageErrors).toEqual([]);

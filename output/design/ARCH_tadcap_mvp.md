@@ -196,6 +196,12 @@ tadcap/
 | `src/canvas/pendingShape.ts`(【新設 2026-09-24 T31】) | 直前に描いた図形1つの保持(図形パラメータ+描く前のベース画像)と確定・破棄 | `beginPendingShape()`, `commitPendingShape()`, `discardPendingShape()` | undoStack |
 | `src/canvas/tools/shapeTools.ts`(【新設 2026-09-24 T31】) | 矢印・矩形・円の共通ポインタ結線(旧`bindArrowTool()`/`bindRectangleTool()`/`bindEllipseTool()`を統合)、ハンドル用オーバーレイの描画 | `bindShapeTools()` | canvasState, toolSettings, pendingShape |
 | `src/ui/pendingShapeKeys.ts`(【新設 2026-09-24 T31】) | 編集中の図形のEnter(確定)/Esc(破棄) | `bindPendingShapeKeys()` | pendingShape |
+| `src/canvas/objectModel.ts`(【新設 2026-09-24 T32】) | オブジェクト配列の純粋関数(挿入・除去・置換・最前面からの当たり判定)と上限 `OBJECT_LIMIT` | `pickObjectAt()`, `insertObject()`, `removeObject()` | — |
+| `src/canvas/commands.ts`(【新設 2026-09-24 T32】) | 取り消し・やり直しのコマンド(追加・変更・削除・ピクセル・焼き込み・グループ)の取り消し/やり直し適用 | `undoCommand()`, `redoCommand()` | — |
+| `src/canvas/documentState.ts`(【新設 2026-09-24 T32】) | 1 画像分のドキュメント(ベース + オブジェクト + 選択 + 下書き)の状態と操作。上限超過の焼き込み | `addShapeObject()`, `commitShapeEdit()`, `applyBaseEdit()`, `undoDocument()`, `resetDocument()` | undoStack |
+| `src/canvas/documentSurface.ts`(【新設 2026-09-24 T32】) | ベースのオフスクリーン canvas と合成描画(DOM 依存) | `createDocumentSurface()`, `drawEditableShape()` | — |
+| `src/ui/selectionKeys.ts`(【改訂 2026-09-24 T32】`pendingShapeKeys.ts` を置き換え) | Enter/Esc で選択解除 | `bindSelectionKeys()` | documentState |
+| (廃止 T32)`src/canvas/pendingShape.ts` | `documentState.ts` に置き換え | — | — |
 | `src/history/` | セッション内履歴の保持 | `historyStore` | historyStore |
 | `src/ui/toolbar.ts`(【改訂 2026-09-24】) | 矢印/矩形/円/テキスト/モザイクのツール切替(3ツール追加) | `initToolbar()` | canvasState |
 | `src/ui/colorPicker.ts`(【新設 2026-09-24】) | プリセット色見本＋ネイティブカラーピッカーのUI、`toolSettings`への反映 | `initColorPicker()` | toolSettings |
@@ -241,6 +247,30 @@ tadcap/
 - 破棄(`discardPendingShape()`、Undoへ積まずbaseを書き戻す): Esc。T29の`Cmd+Z`は、編集中の図形があれば`popUndo()`の代わりにこれを呼ぶ
 - 確定トリガーを経ずに画像が差し替わった場合は`dropPendingShapeIfImageChanged()`で古いbaseを書き戻さずに捨てる(MUST-1と同じ考え方)。ドラッグ中の差し替えは従来どおり`imageAtDragStart`で検知して中断する
 
+**【改訂 2026-09-24 T32】オブジェクト層**(上記 T31 の「編集中の図形」を置き換える。`pendingShape.ts` は廃止):
+
+- **ドキュメント**(1 画像分) = **ベース**(元画像。画像と同サイズのオフスクリーン canvas。モザイク・テキスト焼き込み・上限超過の焼き込みはここにだけ適用)+ **オブジェクト配列**(`AnnotationObject { id, shape }`、配列順 = 重ね順で末尾が最前面。`shape` は T31 の `EditableShape` をそのまま使う)+ 選択中の id。状態は `documentState.ts`(モジュール単位の薄い状態)
+- **表示**: `#capture-canvas` は常に「ベースを `drawImage` → 全オブジェクトを重ね順に描画(+ドラッグ中の下書き)」の合成結果。選択ハンドル・円の外接枠は従来どおりオーバーレイ(`.shape-overlay`)にだけ描く。コピー・履歴サムネイル・履歴保存は `#capture-canvas` を読むため、コード変更なしで合成結果になりハンドルは写らない
+- **描画方式(性能)**: ベースは `getImageData`/`putImageData` の全体スナップショットではなく canvas として保持し、1 フレーム = `clearRect` + `drawImage(base)` + オブジェクト N 個のパス描画。ドラッグ中はモデルを書き換えず「下書き」(`{ id | null, shape }`)を差し替えて描き、ポインタを離したときに 1 コマンドとして確定する。T31 までの「pointerdown で 5K 全体を `getImageData`(約 60MB)」も不要になる
+- **ポインタ操作**(`shapeEdit.ts::decidePointerDown()` を一般化): ①選択中のオブジェクトのハンドル・内側 → リサイズ/移動 ②未選択のオブジェクトを最前面から当たり判定(`objectModel.ts::pickObjectAt()`。矩形・円は線の付近のみ、矢印は胴体)→ 選択して移動 ③外れたら選択解除し、図形ツール選択中なら新規作成(作ったものを選択)。モザイク・テキストツール選択中は選択解除のみ(それぞれのツールが処理)。ハンドル・リサイズ・移動の幾何は T31 の純粋関数を再利用
+- **キー**: Enter/Esc = 選択解除(`ui/selectionKeys.ts`)。ドラッグ中の Esc はそのドラッグの取り消し(`shapeTools.ts`、`preventDefault` して選択解除側は動かない)
+- **コマンド**(`commands.ts`、取り消し・やり直しの 1 単位):
+
+  | コマンド | 取り消し | やり直し |
+  | -------- | -------- | -------- |
+  | `add { object, index }` | id で除去 | `index` へ挿入 |
+  | `update { id, before, after }`(移動・リサイズ 1 回) | `before` に戻す | `after` にする |
+  | `remove { object, index }`(T34 の削除用。T32 は純粋関数のみ) | `index` へ挿入 | id で除去 |
+  | `pixels { rect, image }`(モザイク・テキスト) | ベースの `rect` と `image` を入れ替え | 同じ入れ替え |
+  | `flatten { object, index, rect, image }`(上限超過) | ピクセルを入れ替え + `index` へ挿入 | ピクセルを入れ替え + 除去 |
+  | `group { commands }` | 逆順に取り消し | 順に やり直し |
+
+  ピクセル系は T23 の差分方式を再利用し、「変更矩形 + 反対側の状態のピクセル」を 1 枚だけ持つ**入れ替え方式**(取り消し時に現在のピクセルを読み、保持していたピクセルを書き、読んだ方を次の方向用に持ち替える)。ベースを変える操作はすべてコマンド経由でスタック順に適用されるため、入れ替え時のベースは常にそのコマンド直後(直前)の状態と一致する。スタック上限は従来どおり各 30(`UNDO_STACK_LIMIT`)
+- **上限と焼き込み**(`OBJECT_LIMIT = 50`): 追加で 50 個を超えたら、最古(配列先頭)から外接矩形(`shapeUndoRect()`)のベースピクセルを保存 → ベースへ描画 → 配列から除去し、`flatten` コマンドを作る。**【設計判断】焼き込みは、それを引き起こした `add` と同じ `group` に入れて 1 回の取り消しで戻せるようにする**。根拠: (1) FR-014 の「1 操作 = 1 取り消し」を保てる(ユーザーが意識していない焼き込みだけが取り消し単位として残ると、1 回の Cmd+Z で見た目が変わらない)(2) 取り消すと最古のオブジェクトが編集可能な状態へ正確に戻る(3) 保存するのは焼き込むオブジェクトの外接矩形分だけで、差分方式のメモリ特性を崩さない。取り消しスタック(30)から溢れた `flatten` は以後取り消せない(従来の焼き込みと同じ扱い)
+- **テキスト**(T33 まで): 従来どおり確定時に焼き込むが、焼き込み先はベース(`pixels` コマンド)。したがって常にオブジェクトより下になる
+- **画像の差し替え**: 新規キャプチャ・履歴再読込は `renderImageToCanvas()` 直後に `resetDocument()`(表示 → ベースへ複製、オブジェクト・選択・下書き・取り消しスタックを空に)。差し替え前の確定処理(旧 `commitPendingShape()`)は不要(表示は常に合成結果)。T34 で履歴項目ごとにドキュメントを保持する前提で、ドキュメントの中身(ベース + オブジェクト配列 + 取り消しスタック)を 1 か所(`documentState.ts`)に集めてある
+- **DOM 依存の分離**: `documentState.ts` はベースへの読み書き・描画を `DocumentSurface` インターフェース越しに行い、Vitest では配列ベースの偽物で検証する。実装は `documentSurface.ts`(オフスクリーン canvas と合成描画)
+
 ## 6. 状態管理設計
 
 ### 6.1 ストア一覧
@@ -251,7 +281,8 @@ tadcap/
 | `historyStore`(`src/history/historyStore.ts`) | セッション内 `HistoryItem[]`(編集後画像を保持) | なし(アプリ終了で破棄。PRD §5・FR-010) | — |
 | `permissionState`(`src/ipc/permissions.ts` 内) | 画面収録権限の許可状態(未確認/許可/未許可) | なし(起動・キャプチャ試行ごとに再確認) | — |
 | `toolSettings`(`src/canvas/toolSettings.ts`、【新設 2026-09-24】) | 矢印・矩形・円・テキスト共通の現在色、テキストのフォントサイズ段階(FR-013) | なし(アプリ起動中のみ。初期値は`#FF5C8A`とfontSize既定値) | — |
-| `undoStack`(`src/canvas/undoStack.ts`、【新設 2026-09-24】) | 焼き込み操作の差分(変更矩形+焼き込み前ピクセル)のスタック(FR-014) | なし(新規Capture読込・履歴項目切替でクリア) | — |
+| `undoStack`(`src/canvas/undoStack.ts`、【新設 2026-09-24】) | 焼き込み操作の差分(変更矩形+焼き込み前ピクセル)のスタック(FR-014)。【改訂 2026-09-24 T32】要素を `DocumentCommand`(§5.2 T32)に変更 | なし(新規Capture読込・履歴項目切替でクリア) | — |
+| `documentState`(`src/canvas/documentState.ts`、【新設 2026-09-24 T32】) | 表示中画像のドキュメント(ベース canvas・オブジェクト配列・選択中 id・ドラッグ中の下書き) | なし(新規Capture読込・履歴項目切替で `resetDocument()`。履歴ごとの保持は T34) | — |
 
 ### 6.2 永続化方針
 
@@ -281,6 +312,8 @@ PRD §11のリスク(5K Retina相当の画像はCanvas全体のImageDataで概�
 
 具体的な上限値・「件数上限」と「合計バイト数上限」のどちらを安全弁の基準にするかは実装フェーズで計測のうえ調整してよい(過剰設計を避け、まずは件数上限30件のシンプルな実装から始める)。
 
+【改訂 2026-09-24 T32】オブジェクト化により矢印・矩形・円の追加・変更はピクセルを持たない(図形パラメータのみ、数十バイト)。ピクセルを持つのはモザイク・テキスト(`pixels`)と上限超過の焼き込み(`flatten`、焼き込むオブジェクトの外接矩形分)だけで、いずれも B 案と同じ「変更矩形 1 枚」のため、メモリ特性は改訂前と同等かそれ以下。ベース canvas は画像 1 枚分(5K で約 60MB)を常に 1 つ持つが、T31 までドラッグのたびに確保していた全体スナップショット(同サイズ)が不要になるため、ピークは増えない。
+
 ## 7. データフロー
 
 ### 7.1 データの流れ
@@ -301,6 +334,7 @@ PRD §11のリスク(5K Retina相当の画像はCanvas全体のImageDataで概�
 14. 【新設 2026-09-24】取り消し(`Cmd+Z`/取り消しボタン): `undoStack.popUndo()` → 取り出した`{rect, before}`を`ctx.putImageData(before, rect.x, rect.y)`で書き戻す → `canvasState`の`image`(assetUrl/capture)自体は変更しないため、クリップボードコピー・履歴反映は従来どおり「コピー成功時」「履歴項目切替直前」にのみ行われる(取り消し自体は履歴を更新しない)
 15. 【新設 2026-09-24】Capture新規読込・履歴項目の再読込(手順5・9)の直後に`undoStack.clearUndoStack()`を呼び、取り消し対象を常に「現在表示中の画像」に限定する
 16. 【改訂 2026-09-24 T31】矢印・矩形・円(手順10・11の置き換え): `pointerup`で図形を`pendingShape`に保持(編集中、ハンドルはオーバーレイ)→ リサイズ・移動のたびに base+図形 を再描画 → 確定トリガー(§5.2末尾)で`pushUndoStep()`して編集状態を解除。手順7(コピー)・手順5/9(差し替え)の前には必ず確定する。Escは破棄してbaseへ戻す
+17. 【改訂 2026-09-24 T32】矢印・矩形・円(手順16の置き換え): pointerdown で `decidePointerDown()`(選択中 → 最前面の当たり判定 → 新規作成)→ pointermove は下書きを差し替えて `renderDocument()`(ベース + 全オブジェクト)→ pointerup で `addShapeObject()`(`add` + 必要なら `flatten` の `group`)または `commitShapeEdit()`(`update`)をコマンドとして積む。モザイク・テキストは `applyBaseEdit(rect, draw)` でベースのピクセルを変え `pixels` コマンドを積む。取り消し・やり直しは `undoDocument()`/`redoDocument()` がコマンドを適用して再合成する。手順5/9 の差し替えは `resetDocument()`。手順7・8(コピー・履歴保存)は表示 canvas(合成結果)を読むだけで変更なし
 
 ### 7.2 バリデーション戦略
 

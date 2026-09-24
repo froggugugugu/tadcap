@@ -1,0 +1,92 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  OBJECT_LIMIT,
+  findObject,
+  hitTestObjectOutline,
+  insertObject,
+  pickObjectAt,
+  removeObject,
+  replaceObjectShape,
+  type AnnotationObject,
+} from "./objectModel";
+import type { ArrowShape, BoxShape } from "./shapeEdit";
+
+const W = 400;
+const H = 300;
+const COLOR = "#FF5C8A";
+
+const rect: BoxShape = { kind: "rectangle", rect: { x: 100, y: 100, width: 100, height: 60 }, color: COLOR };
+const ellipse: BoxShape = { ...rect, kind: "ellipse" };
+const arrow: ArrowShape = { kind: "arrow", start: { x: 50, y: 250 }, end: { x: 250, y: 250 }, color: COLOR };
+
+const obj = (id: number, shape: AnnotationObject["shape"]): AnnotationObject => ({ id, shape });
+
+describe("OBJECT_LIMIT", () => {
+  it("1画像あたりのオブジェクト上限は50個", () => {
+    expect(OBJECT_LIMIT).toBe(50);
+  });
+});
+
+describe("insertObject / removeObject / replaceObjectShape / findObject", () => {
+  const a = obj(1, rect);
+  const b = obj(2, ellipse);
+
+  it("指定位置へ挿入する(元の配列は変えない)", () => {
+    const objects = [a];
+    expect(insertObject(objects, b, 0)).toEqual([b, a]);
+    expect(insertObject(objects, b, 1)).toEqual([a, b]);
+    expect(objects).toEqual([a]);
+  });
+
+  it("範囲外の位置は末尾・先頭へ丸める", () => {
+    expect(insertObject([a], b, 99)).toEqual([a, b]);
+    expect(insertObject([a], b, -1)).toEqual([b, a]);
+  });
+
+  it("idで除去・形の置き換え・検索ができ、無いidは何もしない", () => {
+    expect(removeObject([a, b], 1)).toEqual([b]);
+    expect(removeObject([a, b], 9)).toEqual([a, b]);
+    expect(replaceObjectShape([a, b], 2, arrow)).toEqual([a, obj(2, arrow)]);
+    expect(replaceObjectShape([a], 9, arrow)).toEqual([a]);
+    expect(findObject([a, b], 2)).toBe(b);
+    expect(findObject([a, b], 9)).toBeUndefined();
+  });
+});
+
+describe("hitTestObjectOutline(未選択オブジェクトの掴める範囲)", () => {
+  it("矩形は枠線の付近だけ当たり、内側の中央は当たらない(大きな枠の中に新しい図形を描けるように)", () => {
+    expect(hitTestObjectOutline(rect, { x: 102, y: 130 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(rect, { x: 150, y: 158 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(rect, { x: 150, y: 130 }, 6, W, H)).toBe(false);
+    expect(hitTestObjectOutline(rect, { x: 60, y: 130 }, 6, W, H)).toBe(false);
+  });
+
+  it("円は楕円の線の付近だけ当たる", () => {
+    // 中心(150,130)、半径(50,30)。右端(200,130)・上端(150,100)は線上。
+    expect(hitTestObjectOutline(ellipse, { x: 199, y: 130 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(ellipse, { x: 150, y: 101 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(ellipse, { x: 150, y: 130 }, 6, W, H)).toBe(false);
+    // 外接矩形の角は楕円から離れているので当たらない。
+    expect(hitTestObjectOutline(ellipse, { x: 101, y: 101 }, 6, W, H)).toBe(false);
+  });
+
+  it("矢印は胴体(始点→終点の線分)の付近で当たる", () => {
+    expect(hitTestObjectOutline(arrow, { x: 150, y: 252 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(arrow, { x: 150, y: 200 }, 6, W, H)).toBe(false);
+  });
+});
+
+describe("pickObjectAt(最前面から当たり判定)", () => {
+  it("重なっていれば後から描いた(配列の後ろの)オブジェクトを返す", () => {
+    const lower = obj(1, rect);
+    const upper = obj(2, { ...rect, rect: { x: 100, y: 100, width: 50, height: 40 } });
+    expect(pickObjectAt([lower, upper], { x: 101, y: 120 }, 6, W, H)).toBe(upper);
+    expect(pickObjectAt([upper, lower], { x: 101, y: 120 }, 6, W, H)).toBe(lower);
+  });
+
+  it("どれにも当たらなければnull", () => {
+    expect(pickObjectAt([obj(1, rect), obj(2, arrow)], { x: 350, y: 20 }, 6, W, H)).toBeNull();
+    expect(pickObjectAt([], { x: 0, y: 0 }, 6, W, H)).toBeNull();
+  });
+});

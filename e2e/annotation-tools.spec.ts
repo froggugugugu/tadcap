@@ -280,15 +280,17 @@ test.describe("追加機能(T20〜T29)の横断フロー(T30)", () => {
     expect(await diffFromSnapshot(canvas, "original")).toBeGreaterThan(0);
     expect(await overlayHasHandles(page)).toBe(false);
 
-    // 5操作(矢印・矩形[リサイズ+移動]・円・テキスト・モザイク)ぶん、Cmd+Zで1つずつ元へ戻る。
-    for (let i = 0; i < 5; i += 1) {
+    // 【改訂 2026-09-24 T32】7操作(矢印・矩形の追加・リサイズ・移動・円・テキスト・モザイク)ぶん、
+    // Cmd+Zで1つずつ元へ戻る(オブジェクト化で確定後も再調整できるようになり、リサイズ・移動も
+    // それぞれ1回の操作として取り消せる。T31では「矩形[リサイズ+移動]」で1操作だった)。
+    for (let i = 0; i < 7; i += 1) {
       await page.keyboard.press("Meta+Z");
     }
     expect(await diffFromSnapshot(canvas, "original")).toBe(0);
     await expect(page.getByRole("button", { name: "取り消し" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "やり直し" })).toBeEnabled();
 
-    for (let i = 0; i < 5; i += 1) {
+    for (let i = 0; i < 7; i += 1) {
       await page.keyboard.press("Meta+Shift+Z");
     }
     expect(await diffFromSnapshot(canvas, "edited")).toBe(0);

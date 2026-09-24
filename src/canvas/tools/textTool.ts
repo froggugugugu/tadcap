@@ -6,7 +6,7 @@
 //! 矩形・円のみ)。
 //!
 //! - 入力欄は`<input>`のため、`shortcutGuards.ts::isEditableTarget()`によりCmd+C/Cmd+Z等の
-//!   アプリショートカットと`pendingShapeKeys.ts`のEnter/Escを奪わない(T22・T31)。
+//!   アプリショートカットと`selectionKeys.ts`のEnter/Escを奪わない(T22・T31・T32)。
 //! - 入力欄の見た目(フォントサイズ・位置・行の高さ・影)はCanvas実ピクセルの値に表示倍率
 //!   (`canvasToCssScale()`)を掛けて決め、焼き込み結果と一致させる。
 //! - 確定・取消・画像差し替えの状態遷移と、各寸法の算出は純粋関数でユニットテストし、
@@ -22,9 +22,8 @@ import {
   type CanvasImage,
 } from "../canvasState";
 import { clientToCanvasPoint, clipRectToCanvas, type Point, type Rect } from "../coords";
-import { commitPendingShape } from "../pendingShape";
 import { getToolSettings, type FontSize } from "../toolSettings";
-import { pushUndoStep } from "../undoStack";
+import { applyBaseEdit } from "../documentState";
 
 // --- 定数(テキストの寸法・見た目はすべてここに集約) ---
 
@@ -282,7 +281,11 @@ export function commitPendingText(): boolean {
   return true;
 }
 
-/** Canvasへテキストを焼き込む(確定直前に外接矩形を`pushUndoStep()`してから描く)。 */
+/**
+ * テキストをベース(元画像)へ焼き込む(T32【改訂 2026-09-24】: 焼き込み先をベースにし、
+ * `applyBaseEdit()`の`pixels`コマンドとして取り消せる。オブジェクトより常に下になる)。
+ * 寸法の計測は表示canvasで行う(フォントは同じため結果は一致する)。
+ */
 function burnText(canvas: HTMLCanvasElement, editor: TextEditor, text: string): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
@@ -310,18 +313,21 @@ function burnText(canvas: HTMLCanvasElement, editor: TextEditor, text: string): 
     canvasWidth: canvas.width,
     canvasHeight: canvas.height,
   });
+  ctx.restore();
   if (rect.width === 0 || rect.height === 0) {
-    ctx.restore();
     return;
   }
-  pushUndoStep(rect, ctx.getImageData(rect.x, rect.y, rect.width, rect.height));
-  ctx.fillStyle = editor.color;
-  ctx.shadowColor = shadow.color;
-  ctx.shadowBlur = shadow.blur;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = shadow.offsetY;
-  ctx.fillText(text, editor.x, baselineY);
-  ctx.restore();
+  applyBaseEdit(rect, (base) => {
+    base.font = fontString(editor.fontPx);
+    base.textAlign = "left";
+    base.textBaseline = "alphabetic";
+    base.fillStyle = editor.color;
+    base.shadowColor = shadow.color;
+    base.shadowBlur = shadow.blur;
+    base.shadowOffsetX = 0;
+    base.shadowOffsetY = shadow.offsetY;
+    base.fillText(text, editor.x, baselineY);
+  });
 }
 
 /** 入力欄の位置・文字サイズ・幅をCanvasの表示倍率に合わせる。 */
@@ -384,8 +390,7 @@ export function bindTextTool(canvas: HTMLCanvasElement): () => void {
 
   const open = (point: Point): void => {
     const state = getCanvasState();
-    // T31: 配置を始める前に編集中の図形を確定する。
-    commitPendingShape();
+    // T32: オブジェクトの選択解除は`shapeTools.ts`が同じpointerdownで行う。
     const settings = getToolSettings();
     const fontPx = computeFontSizePx(settings.fontSize, canvas.width, canvas.height);
     const lineHeight = textLineHeight(fontPx);

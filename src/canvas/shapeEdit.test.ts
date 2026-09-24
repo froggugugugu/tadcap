@@ -201,45 +201,86 @@ describe("applyEditDrag", () => {
   });
 });
 
-describe("decidePointerDown", () => {
+describe("decidePointerDown(T32: オブジェクト一般化)", () => {
   const base = { point: { x: 150, y: 125 }, tolerance: 8, canvasWidth: W, canvasHeight: H, color: COLOR };
+  const rectObj = { id: 1, shape: rectShape };
+  const arrowObj = { id: 2, shape: arrowShape };
 
-  it("編集中の図形の内側を押すと移動セッション", () => {
-    expect(decidePointerDown({ ...base, pending: rectShape, activeTool: "rectangle" })).toEqual({
-      type: "edit",
-      session: { mode: "move", origin: base.point, initial: rectShape },
-    });
+  it("選択中のオブジェクトの内側を押すと移動セッション", () => {
+    expect(
+      decidePointerDown({ ...base, objects: [rectObj], selectedId: 1, activeTool: "rectangle" }),
+    ).toEqual({ type: "edit", id: 1, session: { mode: "move", origin: base.point, initial: rectShape } });
   });
 
-  it("ハンドルを押すとリサイズセッション", () => {
+  it("選択中のオブジェクトのハンドルを押すとリサイズセッション", () => {
     expect(
-      decidePointerDown({ ...base, point: { x: 200, y: 150 }, pending: rectShape, activeTool: "rectangle" }),
-    ).toEqual({ type: "edit", session: { mode: "resize", handle: "se", initial: rectShape } });
+      decidePointerDown({
+        ...base,
+        point: { x: 200, y: 150 },
+        objects: [rectObj],
+        selectedId: 1,
+        activeTool: "rectangle",
+      }),
+    ).toEqual({ type: "edit", id: 1, session: { mode: "resize", handle: "se", initial: rectShape } });
   });
 
-  it("空白部分を押すと編集中の図形を確定してから新しい図形の作成を始める", () => {
+  it("未選択のオブジェクトは線の付近を押すと選択して移動セッション(ツール未選択でも)", () => {
+    const point = { x: 101, y: 125 };
+    for (const activeTool of ["rectangle", "arrow", null] as const) {
+      expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: null, activeTool })).toEqual({
+        type: "edit",
+        id: 1,
+        session: { mode: "move", origin: point, initial: rectShape },
+      });
+    }
+  });
+
+  it("未選択の矩形の内側(線から離れた所)は掴まず、図形ツールなら新しい図形の作成", () => {
     expect(
-      decidePointerDown({ ...base, point: { x: 350, y: 280 }, pending: rectShape, activeTool: "rectangle" }),
-    ).toEqual({
+      decidePointerDown({ ...base, objects: [rectObj], selectedId: null, activeTool: "ellipse" }),
+    ).toEqual({ type: "create", session: { mode: "create", kind: "ellipse", origin: base.point, color: COLOR } });
+  });
+
+  it("重なっていれば最前面(配列の後ろ)を掴む", () => {
+    const point = { x: 150, y: 150 }; // 矩形の下辺と矢印の胴体が重なる位置
+    expect(
+      decidePointerDown({ ...base, point, objects: [rectObj, arrowObj], selectedId: null, activeTool: null }),
+    ).toMatchObject({ type: "edit", id: 2 });
+    expect(
+      decidePointerDown({ ...base, point, objects: [arrowObj, rectObj], selectedId: null, activeTool: null }),
+    ).toMatchObject({ type: "edit", id: 1 });
+  });
+
+  it("空白を押すと、図形ツールなら作成、それ以外は選択解除(選択が無ければ何もしない)", () => {
+    const point = { x: 350, y: 280 };
+    expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: 1, activeTool: "arrow" })).toEqual({
       type: "create",
-      commitFirst: true,
-      session: { mode: "create", kind: "rectangle", origin: { x: 350, y: 280 }, color: COLOR },
+      session: { mode: "create", kind: "arrow", origin: point, color: COLOR },
+    });
+    expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: 1, activeTool: null })).toEqual({
+      type: "deselect",
+    });
+    expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: null, activeTool: null })).toEqual({
+      type: "ignore",
     });
   });
 
-  it("編集中の図形が無ければそのまま作成", () => {
-    expect(decidePointerDown({ ...base, pending: null, activeTool: "arrow" })).toEqual({
-      type: "create",
-      commitFirst: false,
-      session: { mode: "create", kind: "arrow", origin: base.point, color: COLOR },
-    });
+  it("モザイク・テキストツール中はオブジェクトを掴まず、選択解除だけ(処理は各ツール)", () => {
+    for (const activeTool of ["mosaic", "text"] as const) {
+      const point = { x: 101, y: 125 };
+      expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: 1, activeTool })).toEqual({
+        type: "deselect",
+      });
+      expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: null, activeTool })).toEqual({
+        type: "ignore",
+      });
+    }
   });
 
-  it("図形ツール以外(モザイク・未選択)では何もしない(編集中の図形があれば確定のみ)", () => {
-    expect(decidePointerDown({ ...base, pending: null, activeTool: "mosaic" })).toEqual({ type: "ignore" });
+  it("選択中のidが配列に無ければ未選択と同じに扱う", () => {
     expect(
-      decidePointerDown({ ...base, point: { x: 350, y: 280 }, pending: rectShape, activeTool: null }),
-    ).toEqual({ type: "commit" });
+      decidePointerDown({ ...base, objects: [], selectedId: 9, activeTool: "rectangle" }),
+    ).toMatchObject({ type: "create" });
   });
 });
 

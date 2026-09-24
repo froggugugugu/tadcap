@@ -117,6 +117,29 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 理由の詳細は`undoStack.ts`モジュールdoc参照)。上限30件はUndo・Redo双方に適用(PRD §11リスク、全画面モザイク等の
 最悪ケースを安全弁で頭打ちにする)。
 
+【改訂 2026-09-24 T32】`undo`/`redo`の要素は`UndoEntry`から`DocumentCommand`(下記)に変わった。
+`pixels`/`flatten`コマンドが上記`UndoEntry`と同じ「変更矩形+反対側の状態のピクセル」を持つ(入れ替え方式)。
+
+派生型: なし
+
+### AnnotationDocument(`src/canvas/documentState.ts`・`objectModel.ts`・`commands.ts`、T32、FR-006/008/014改訂)
+
+1画像分のドキュメント。永続化しない(新規キャプチャ・履歴切替で`resetDocument()`、履歴ごとの保持はT34)。
+
+| フィールド | 型 | 備考 |
+| ---------- | -- | ---- |
+| ベース | 画像と同サイズのオフスクリーン canvas(`documentSurface.ts`) | 元画像。モザイク・テキスト・上限超過の焼き込みはここにだけ適用 |
+| `objects` | `AnnotationObject[]` | 配列順=重ね順(末尾が最前面)。最大`OBJECT_LIMIT`=50 |
+| `selectedId` | `number \| null` | 選択中のオブジェクト。取り消し対象外 |
+| `draft` | `{ id: number \| null, shape } \| null` | ドラッグ中の下書き(`id`がnullなら作成中)。確定までモデルは変えない |
+
+`AnnotationObject = { id: number, shape: EditableShape }`(`EditableShape`は`shapeEdit.ts`: 矢印`{kind:"arrow", start, end, color}`、
+矩形・円`{kind:"rectangle"|"ellipse", rect, color}`)。
+
+`DocumentCommand`(取り消し・やり直しの1操作): `add {object, index}` / `update {id, before, after}` / `remove {object, index}`(T34で結線) /
+`pixels {rect, image}` / `flatten {object, index, rect, image}` / `group {commands}`。51個目の追加は`group[add, flatten]`になり、
+1回の取り消しで両方戻る。
+
 派生型: なし
 
 ## フォームバリデーション

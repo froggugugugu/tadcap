@@ -21,11 +21,15 @@
 //! T25【改訂 2026-09-24】: `roundRect()`/`cropSnapshotRect()`も`../coords.ts`へ移設した
 //! (矩形ツールが3ファイル目の利用者になったためRule of Threeで集約、挙動不変。詳細は
 //! `coords.ts`モジュールdoc参照)。
+//!
+//! T32【改訂 2026-09-24】: モザイクはベース(元画像)にだけ適用する(`documentState.ts::applyBaseEdit()`、
+//! `pixels`コマンドとして取り消し可能)。上に乗る矢印・矩形・円のオブジェクトは隠れない
+//! (PRD FR-008改訂)。ドラッグ中のプレビューは全体スナップショットではなく、合成を描き直して
+//! (`renderDocument()`)から選択枠を重ねる(5K画像での約60MBの`getImageData`が不要になる)。
 
 import {
   clientToCanvasPoint,
   clipRectToCanvas,
-  cropSnapshotRect,
   normalizeRect,
   roundRect,
   type Point,
@@ -37,8 +41,7 @@ import {
   setDrawing,
   type CanvasImage,
 } from "../canvasState";
-import { commitPendingShape } from "../pendingShape";
-import { pushUndoStep } from "../undoStack";
+import { applyBaseEdit, renderDocument } from "../documentState";
 
 export type { Point, Rect };
 
@@ -217,18 +220,16 @@ function applyMosaic(
  * 対象外)。
  *
  * 選択中ツールが `"mosaic"` のときのみドラッグを受け付ける(`canvasState.activeTool`)。
- * ドラッグ中は `pointerdown` 時点のImageDataへ毎回復元してから選択矩形の枠線プレビューを
- * 描く(矢印ツールと同じスナップショット→pointerupで焼き込みパターン。プレビューは矩形枠
- * 表示のみで、ピクセル化はpointerup時に1回だけ行う)。`pointerup`/`pointercancel` で
- * スナップショットへ復元したうえで選択矩形のImageDataのみをピクセル化し焼き込む(復元しない。
- * 以降のコピー結果に反映される、ARCH §7)。戻り値は購読解除関数。
+ * ドラッグ中は合成(ベース+オブジェクト)を描き直してから選択矩形の枠線プレビューを描く
+ * (プレビューは矩形枠表示のみで、ピクセル化はpointerup時に1回だけ行う)。`pointerup`/
+ * `pointercancel` でベースの選択矩形のみをピクセル化する(T32、以降のコピー結果に反映される)。
+ * 戻り値は購読解除関数。
  *
  * MUST-1(レビュー2026-09-24): `arrowTool.ts::bindArrowTool()`と同じ判定
  * (`isSameCanvasImage()`)でドラッグ中の非同期Canvas差し替えを検知し、中断する。
  */
 export function bindMosaicTool(canvas: HTMLCanvasElement): () => void {
   let start: Point | null = null;
-  let snapshot: ImageData | null = null;
   let imageAtDragStart: CanvasImage | null = null;
 
   const toCanvasPoint = (event: PointerEvent): Point => {
@@ -248,7 +249,6 @@ export function bindMosaicTool(canvas: HTMLCanvasElement): () => void {
   /** ドラッグ状態を破棄する(通常終了・中断のいずれでも呼ぶ、MUST-1)。 */
   const resetDrag = (event: PointerEvent): void => {
     start = null;
-    snapshot = null;
     imageAtDragStart = null;
     setDrawing(false);
     if (canvas.hasPointerCapture(event.pointerId)) {
@@ -261,27 +261,19 @@ export function bindMosaicTool(canvas: HTMLCanvasElement): () => void {
     if (canvasState.activeTool !== "mosaic" || !canvasState.image) {
       return;
     }
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return;
-    }
-    // T31: モザイクは即焼き込みのまま。開始前に編集中の図形(矢印・矩形・円)を確定し、
-    // 確定済みのピクセルをスナップショットに含める(Undoの順序も「図形→モザイク」になる)。
-    commitPendingShape();
+    // T32: オブジェクトの選択解除は`shapeTools.ts`が同じpointerdownで行う。
     start = toCanvasPoint(event);
-    snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
     imageAtDragStart = canvasState.image;
     setDrawing(true);
     canvas.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event: PointerEvent): void => {
-    if (!start || !snapshot) {
+    if (!start) {
       return;
     }
     if (!isSameCanvasImage(getCanvasState().image, imageAtDragStart)) {
-      // MUST-1: ドラッグ中にCanvasが非同期に差し替えられた。古いsnapshotは新しい画像と
-      // 食い違うため、選択矩形のプレビュー描画をせず中断する。
+      // MUST-1: ドラッグ中にCanvasが非同期に差し替えられた。プレビューを描かず中断する。
       resetDrag(event);
       return;
     }
@@ -289,42 +281,30 @@ export function bindMosaicTool(canvas: HTMLCanvasElement): () => void {
     if (!ctx) {
       return;
     }
-    const current = toCanvasPoint(event);
-    const rect = computeMosaicRect(start, current, canvas.width, canvas.height);
-    ctx.putImageData(snapshot, 0, 0);
+    const rect = computeMosaicRect(start, toCanvasPoint(event), canvas.width, canvas.height);
+    renderDocument();
     if (rect) {
       drawSelectionOutline(ctx, rect, resolveOutlineColor());
     }
   };
 
   const finishDrag = (event: PointerEvent): void => {
-    if (!start || !snapshot) {
+    if (!start) {
       return;
     }
     if (isSameCanvasImage(getCanvasState().image, imageAtDragStart)) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        const end = toCanvasPoint(event);
-        const rect = computeMosaicRect(start, end, canvas.width, canvas.height);
-        ctx.putImageData(snapshot, 0, 0);
-        if (rect) {
-          // T24: 確定焼き込み(applyMosaic)の直前に、ドラッグ開始時のsnapshotから
-          // 変更対象矩形分を切り出しUndoスタックへpushする(矢印ツールと同じ作法、
-          // ARCH §5.2)。applyMosaic自体は従来どおり元の`rect`(非整数の可能性あり)を
-          // 渡し、内部の丸め処理も含め挙動不変のままにする。
-          const roundedRect = roundRect(rect);
-          const before = cropSnapshotRect(
-            snapshot.data,
-            snapshot.width,
-            snapshot.height,
-            roundedRect,
-          );
-          pushUndoStep(roundedRect, before);
-          applyMosaic(ctx, rect, canvas.width, canvas.height);
-        }
+      const rect = computeMosaicRect(start, toCanvasPoint(event), canvas.width, canvas.height);
+      if (rect) {
+        // T32: ベースだけをピクセル化し、`pixels`コマンドとして積む(変更矩形は従来どおり
+        // 整数化した`roundRect(rect)`。`applyMosaic`は元の`rect`を渡し内部の丸めも挙動不変)。
+        const width = canvas.width;
+        const height = canvas.height;
+        applyBaseEdit(roundRect(rect), (baseCtx) => applyMosaic(baseCtx, rect, width, height));
+      } else {
+        renderDocument();
       }
     }
-    // MUST-1: 画像が差し替えられていた場合はここでも焼き込まず、状態のリセットのみ行う。
+    // MUST-1: 画像が差し替えられていた場合は焼き込まず、状態のリセットのみ行う。
     resetDrag(event);
   };
 

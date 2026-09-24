@@ -9,11 +9,11 @@ import {
   loadImage,
   renderImageToCanvas,
 } from "./canvas/render";
-import { commitPendingShape } from "./canvas/pendingShape";
+import { resetDocument, setDocumentSurface } from "./canvas/documentState";
+import { createDocumentSurface } from "./canvas/documentSurface";
 import { bindMosaicTool } from "./canvas/tools/mosaicTool";
 import { bindShapeTools } from "./canvas/tools/shapeTools";
 import { bindTextTool, commitPendingText } from "./canvas/tools/textTool";
-import { clearUndoStack } from "./canvas/undoStack";
 import {
   addHistoryItem,
   updateSelectedItemImage,
@@ -39,7 +39,7 @@ import {
   shouldShowPermissionBanner,
   type PermissionBannerController,
 } from "./ui/permissionBanner";
-import { bindPendingShapeKeys } from "./ui/pendingShapeKeys";
+import { bindSelectionKeys } from "./ui/selectionKeys";
 import { initSidebar } from "./ui/sidebar";
 import { initToolbar } from "./ui/toolbar";
 import { initUndoButtons } from "./ui/undoButton";
@@ -75,9 +75,9 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
   }
   let objectUrl: string | null = null;
   try {
-    // T31/T27: 差し替え前に入力中のテキスト・編集中の図形を確定し、下の履歴保存に含める。
+    // T27: 差し替え前に入力中のテキストを確定し、下の履歴保存に含める(T32: 図形は
+    // オブジェクトとして常に表示canvasへ合成済みのため確定は不要)。
     commitPendingText();
-    commitPendingShape();
     if (
       canvasEl.width > 0 &&
       canvasEl.height > 0 &&
@@ -90,10 +90,10 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
     objectUrl = URL.createObjectURL(blob);
     const image = await loadImage(objectUrl);
     renderImageToCanvas(canvasEl, image);
+    // T32: 新しいドキュメント(ベース=読み込んだ画像、オブジェクト0個)にする。Undo/Redoスタックの
+    // クリア(T24、取り消し対象を「現在表示中の画像」に限定)も含む。
+    resetDocument();
     setCanvasImage({ assetUrl: objectUrl, capture: result });
-    // T24: Canvas差し替え完了後にUndo/Redoスタックをクリアし、取り消し対象を常に
-    // 「現在表示中の画像」に限定する(ARCH §5.2・§6.3、PRD §5、T23申し送り)。
-    clearUndoStack();
     const assets = await captureHistoryAssets(canvasEl);
     addHistoryItem({
       id: result.id,
@@ -139,10 +139,9 @@ function getClipboardPayload(): ClipboardImagePayload | null {
   if (!canvasEl || canvasEl.width === 0 || canvasEl.height === 0) {
     return null;
   }
-  // T31/T27: コピー前に入力中のテキスト・編集中の図形を確定する(ハンドル・入力欄はCanvasに
-  // 重ねたDOMのため元々写らない)。
+  // T27: コピー前に入力中のテキストを確定する(ハンドル・入力欄はCanvasに重ねたDOMのため
+  // 元々写らない。T32: 図形は表示canvasへ合成済み)。
   commitPendingText();
-  commitPendingShape();
   return getCanvasImageData(canvasEl);
 }
 
@@ -174,9 +173,8 @@ async function captureCurrentHistoryAssets(): Promise<
   if (!canvasEl || canvasEl.width === 0 || canvasEl.height === 0) {
     return null;
   }
-  // T31/T27: 履歴切替で差し替える前に入力中のテキスト・編集中の図形を確定し、保存内容に含める。
+  // T27: 履歴切替で差し替える前に入力中のテキストを確定し、保存内容に含める。
   commitPendingText();
-  commitPendingShape();
   return captureHistoryAssets(canvasEl);
 }
 
@@ -187,10 +185,10 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
   try {
     const image = await loadImage(item.image);
     renderImageToCanvas(canvasEl, image);
+    // T32: 合成結果(編集後画像)をベースとする新しいドキュメントにする(Undo/Redoもクリア、
+    // T24と同じ理由)。履歴ごとのオブジェクト保持はT34。
+    resetDocument();
     setCanvasImage({ assetUrl: item.image, capture: null });
-    // T24: Canvas差し替え完了後にUndo/Redoスタックをクリアする(handleCaptureCompletedと
-    // 同じ理由、ARCH §5.2・§6.3)。
-    clearUndoStack();
   } catch (error) {
     console.error("履歴画像の再読込に失敗しました", error);
     if (statusEl) {
@@ -228,19 +226,20 @@ window.addEventListener("DOMContentLoaded", () => {
     initFontSizePicker(fontSizePickerEl);
   }
   if (canvasEl) {
-    // T31: 矢印・矩形・円は共通の結線(直前に描いた図形を編集中として保持し、ハンドルで
-    // リサイズ・移動)。Enterで確定・Escで破棄。
+    // T32: 表示canvas = ベース(オフスクリーン)+ オブジェクトの合成。矢印・矩形・円は
+    // オブジェクトとして保持し、クリックで選び直してハンドルでリサイズ・移動できる。
+    setDocumentSurface(createDocumentSurface(canvasEl));
     bindShapeTools(canvasEl);
     bindMosaicTool(canvasEl);
     // T27: テキストツール(クリック位置に入力欄を重ね、Enter/blurで確定・Escで取消)。
     bindTextTool(canvasEl);
-    bindPendingShapeKeys();
+    bindSelectionKeys();
     // T29: 取り消し・やり直し(ボタン + Cmd+Z/Cmd+Shift+Z)。Undo/Redoスタックのクリアは
-    // 画像差し替え完了後(`handleCaptureCompleted`/`reloadHistoryItemIntoCanvas`、T24で結線済み)。
+    // 画像差し替え完了後の`resetDocument()`(`handleCaptureCompleted`/`reloadHistoryItemIntoCanvas`)。
     const undoButtonEl = document.querySelector<HTMLButtonElement>("#undo-button");
     const redoButtonEl = document.querySelector<HTMLButtonElement>("#redo-button");
     if (undoButtonEl && redoButtonEl) {
-      initUndoButtons({ undo: undoButtonEl, redo: redoButtonEl }, canvasEl);
+      initUndoButtons({ undo: undoButtonEl, redo: redoButtonEl });
     }
   }
 

@@ -1,21 +1,24 @@
-//! 矢印・矩形・円ツールの共通ポインタ結線と編集中図形の表示(T31【新設 2026-09-24】、
-//! ARCH §5.4、PRD FR-006/007/011改訂)。
+//! 矢印・矩形・円ツールの共通ポインタ結線と選択ハンドルの表示(T31【新設 2026-09-24】、
+//! T32【改訂 2026-09-24】オブジェクト化、ARCH §5.2 T32、PRD FR-006 オブジェクト共通基準)。
 //!
-//! 3ツールは pointerup で焼き込まず、直前に描いた1つを「編集中の図形」(`pendingShape.ts`)として
-//! 保持する。Canvasには常に「描く前の画像(base)+図形」を描き、ハンドル(四隅/始点・終点)は
-//! Canvasに重ねたオーバーレイ用canvas(`pointer-events: none`)にだけ描く。コピー・履歴保存は
-//! `#capture-canvas` のピクセルを読むため、ハンドルは写らない。
+//! 3ツールで描いた図形は焼き込まず、オブジェクト(`documentState.ts`)として保持する。表示canvasは
+//! 常に「ベース+全オブジェクト」の合成(`documentSurface.ts`)で、選択中のオブジェクトの
+//! ハンドル(四隅/始点・終点)と円の外接枠はCanvasに重ねたオーバーレイ用canvas
+//! (`pointer-events: none`)にだけ描く。コピー・履歴保存は `#capture-canvas` のピクセルを
+//! 読むため、ハンドルは写らない。
 //!
-//! 判断ロジック(当たり判定・リサイズ・移動・pointerdownの分岐)は`shapeEdit.ts`の純粋関数で
+//! 操作: pointerdownを`shapeEdit.ts::decidePointerDown()`で振り分け(選択中のハンドル・内側 →
+//! 最前面のオブジェクト → 空白なら作成 or 選択解除)、ドラッグ中は下書き(`setDraft`)だけを
+//! 差し替えて再描画し、pointerupで追加(`addShapeObject`)・変更(`commitShapeEdit`)を
+//! 1コマンドとして確定する。ドラッグ中のEscはそのドラッグだけを取り消す。
+//! 選択解除: 空白クリック・ツール切替・Canvas以外のpointerdown(取り消し・やり直しボタンは
+//! `data-preserve-selection`で除外)。Enter/Escは`ui/selectionKeys.ts`。
+//!
+//! 判断ロジックは`shapeEdit.ts`/`objectModel.ts`/`documentState.ts`の純粋関数・状態として
 //! ユニットテストし、本ファイル(DOM/Canvas依存)はE2Eで検証する(project-config.md §11)。
 //!
-//! 確定トリガーのうち本ファイルが担うもの: 次の図形の描き始め・編集中図形の外(空白)のクリック・
-//! Canvas以外(画像の外・ツールバー・履歴サイドバー等)のpointerdown・ツール切替。
-//! Enter/Escは`ui/pendingShapeKeys.ts`、コピー・新規キャプチャ・履歴切替は`main.ts`、
-//! モザイク開始は`mosaicTool.ts`が`commitPendingShape()`を呼ぶ。
-//!
-//! MUST-1(ドラッグ中の非同期Canvas差し替え)は旧`bind*Tool()`と同じく`imageAtDragStart`+
-//! `isSameCanvasImage()`で検知して中断する。
+//! MUST-1(ドラッグ中の非同期Canvas差し替え)は従来どおり`imageAtDragStart`+
+//! `isSameCanvasImage()`で検知して中断する(差し替え側は`resetDocument()`で下書きも消す)。
 
 import {
   getCanvasState,
@@ -27,28 +30,25 @@ import {
 } from "../canvasState";
 import { clientToCanvasPoint, type Point } from "../coords";
 import {
-  beginPendingShape,
-  commitPendingShape,
-  dropPendingShapeIfImageChanged,
-  getPendingShape,
-  setPendingShapeRestorer,
-  subscribePendingShape,
-  updatePendingShape,
-} from "../pendingShape";
+  addShapeObject,
+  commitShapeEdit,
+  getDocumentState,
+  selectObject,
+  setDraft,
+  subscribeDocument,
+} from "../documentState";
+import { findObject, pickObjectAt } from "../objectModel";
 import {
   applyEditDrag,
   cursorForHit,
   decidePointerDown,
   getShapeHandles,
   hitTestShape,
+  isShapeTool,
   type EditableShape,
   type EditSession,
 } from "../shapeEdit";
 import { getToolSettings } from "../toolSettings";
-import type { ImageDataLike } from "../undoStack";
-import { computeTaperArrowPolygon, drawTaperArrowPolygon } from "./arrowTool";
-import { computeEllipseCenterAndRadii, drawEllipseOutline, ellipseLineWidth } from "./ellipseTool";
-import { drawRectangleOutline, rectangleLineWidth } from "./rectangleTool";
 
 /** ハンドルの当たり判定半径(画面上のCSSピクセル。Canvasピクセルへは表示倍率で換算する)。 */
 const HANDLE_HIT_RADIUS_CSS = 10;
@@ -59,49 +59,13 @@ const HANDLE_FILL = "#ffffff";
 const HANDLE_STROKE = "rgba(0, 0, 0, 0.55)";
 const SELECTION_STROKE = "rgba(0, 0, 0, 0.45)";
 
-/** 図形1つをCanvasへ描く(ツール別の既存描画関数へ振り分ける)。 */
-export function drawEditableShape(
-  ctx: CanvasRenderingContext2D,
-  shape: EditableShape,
-  canvasWidth: number,
-  canvasHeight: number,
-): void {
-  if (shape.kind === "arrow") {
-    const polygon = computeTaperArrowPolygon(shape.start, shape.end, canvasWidth, canvasHeight);
-    if (polygon) {
-      drawTaperArrowPolygon(ctx, polygon, shape.color);
-    }
-    return;
+/** 選択中のオブジェクトの今の形(移動・リサイズ中は下書き)。選択が無ければ`null`。 */
+function selectedShape(): EditableShape | null {
+  const { objects, selectedId, draft } = getDocumentState();
+  if (draft && draft.id !== null && draft.id === selectedId) {
+    return draft.shape;
   }
-  if (shape.kind === "rectangle") {
-    drawRectangleOutline(ctx, shape.rect, rectangleLineWidth(canvasWidth, canvasHeight), shape.color);
-    return;
-  }
-  drawEllipseOutline(
-    ctx,
-    {
-      rect: shape.rect,
-      ...computeEllipseCenterAndRadii(shape.rect),
-      lineWidth: ellipseLineWidth(canvasWidth, canvasHeight),
-    },
-    shape.color,
-  );
-}
-
-/** base(描く前の画像)を書き戻し、その上に図形を描く。 */
-function renderShapeOnBase(
-  canvas: HTMLCanvasElement,
-  base: ImageDataLike,
-  shape: EditableShape | null,
-): void {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return;
-  }
-  ctx.putImageData(base as ImageData, 0, 0);
-  if (shape) {
-    drawEditableShape(ctx, shape, canvas.width, canvas.height);
-  }
+  return findObject(objects, selectedId)?.shape ?? null;
 }
 
 /** Canvasに重ねるハンドル描画用のオーバーレイを作る(Canvasの兄弟要素)。 */
@@ -113,7 +77,7 @@ function createOverlay(canvas: HTMLCanvasElement): HTMLCanvasElement {
   return overlay;
 }
 
-/** オーバーレイをCanvasの表示位置・サイズに合わせ、編集中の図形のハンドルを描く。 */
+/** オーバーレイをCanvasの表示位置・サイズに合わせ、選択中のオブジェクトのハンドルを描く。 */
 function renderOverlay(
   canvas: HTMLCanvasElement,
   overlay: HTMLCanvasElement,
@@ -177,13 +141,15 @@ function renderOverlay(
 }
 
 /**
- * 矢印・矩形・円ツールをCanvasへ結線する(Container相当、DOM依存、E2Eで検証)。
+ * 矢印・矩形・円ツールとオブジェクトの選択・編集をCanvasへ結線する(DOM依存、E2Eで検証)。
  * 戻り値は購読解除関数。
  */
 export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
   const overlay = createOverlay(canvas);
   let session: EditSession | null = null;
-  let base: ImageDataLike | null = null;
+  /** 移動・リサイズ中のオブジェクトid(作成中は`null`)。 */
+  let editId: number | null = null;
+  let activePointerId: number | null = null;
   let imageAtDragStart: CanvasImage | null = null;
   let lastActiveTool: ToolId | null = getCanvasState().activeTool;
 
@@ -208,19 +174,35 @@ export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
   };
 
   const redrawOverlay = (): void => {
-    renderOverlay(canvas, overlay, getPendingShape()?.shape ?? null);
+    renderOverlay(canvas, overlay, selectedShape());
   };
 
-  const resetDrag = (pointerId?: number): void => {
+  const resetDrag = (): void => {
     session = null;
-    base = null;
+    editId = null;
     imageAtDragStart = null;
     if (getCanvasState().isDrawing) {
       setDrawing(false);
     }
-    if (pointerId !== undefined && canvas.hasPointerCapture(pointerId)) {
-      canvas.releasePointerCapture(pointerId);
+    if (activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
+      canvas.releasePointerCapture(activePointerId);
     }
+    activePointerId = null;
+  };
+
+  /** ホバー中のカーソル(選択中のハンドル・内側、または掴めるオブジェクトの線の上)。 */
+  const updateHoverCursor = (point: Point): void => {
+    const tool = getCanvasState().activeTool;
+    if (tool !== null && !isShapeTool(tool)) {
+      canvas.style.cursor = "";
+      return;
+    }
+    const { objects } = getDocumentState();
+    const shape = selectedShape();
+    const tolerance = hitTolerance();
+    const hit = shape ? hitTestShape(shape, point, tolerance, canvas.width, canvas.height) : null;
+    const picked = hit ? null : pickObjectAt(objects, point, tolerance, canvas.width, canvas.height);
+    canvas.style.cursor = cursorForHit(hit) ?? (picked ? "move" : "");
   };
 
   const handlePointerDown = (event: PointerEvent): void => {
@@ -228,17 +210,12 @@ export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
     if (!canvasState.image) {
       return;
     }
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return;
-    }
-    dropPendingShapeIfImageChanged(canvasState.image);
-    const pending = getPendingShape();
-    const point = toCanvasPoint(event);
+    const { objects, selectedId } = getDocumentState();
     const decision = decidePointerDown({
-      pending: pending?.shape ?? null,
+      objects,
+      selectedId,
       activeTool: canvasState.activeTool,
-      point,
+      point: toCanvasPoint(event),
       tolerance: hitTolerance(),
       canvasWidth: canvas.width,
       canvasHeight: canvas.height,
@@ -247,108 +224,94 @@ export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
     switch (decision.type) {
       case "ignore":
         return;
-      case "commit":
-        commitPendingShape();
+      case "deselect":
+        selectObject(null);
         return;
       case "create":
-        if (decision.commitFirst) {
-          commitPendingShape();
-        }
-        // 確定はUndoへ積むだけでCanvasのピクセルは変わらないため、確定後の今の表示が新しいbase。
-        base = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        selectObject(null);
+        editId = null;
         break;
       case "edit":
-        base = pending ? pending.base : null;
+        selectObject(decision.id);
+        editId = decision.id;
         break;
-    }
-    if (!base) {
-      return;
     }
     session = decision.session;
     imageAtDragStart = canvasState.image;
+    activePointerId = event.pointerId;
     setDrawing(true);
     canvas.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event: PointerEvent): void => {
-    if (!session || !base) {
-      const pending = getPendingShape();
-      const hit = pending
-        ? hitTestShape(pending.shape, toCanvasPoint(event), hitTolerance(), canvas.width, canvas.height)
-        : null;
-      canvas.style.cursor = cursorForHit(hit) ?? "";
+    if (!session) {
+      updateHoverCursor(toCanvasPoint(event));
       return;
     }
     if (!isSameCanvasImage(getCanvasState().image, imageAtDragStart)) {
-      // MUST-1: ドラッグ中にCanvasが非同期に差し替えられた。古いbaseを描かず中断する。
-      resetDrag(event.pointerId);
+      // MUST-1: ドラッグ中にCanvasが非同期に差し替えられた。古い下書きを描かず中断する。
+      resetDrag();
       return;
     }
     const shape = applyEditDrag(session, toCanvasPoint(event), event.shiftKey, canvas.width, canvas.height);
-    renderShapeOnBase(canvas, base, shape);
-    if (session.mode !== "create" && shape) {
-      updatePendingShape(shape);
-    }
+    setDraft(shape ? { id: editId, shape } : null);
   };
 
   const finishDrag = (event: PointerEvent): void => {
-    if (!session || !base) {
+    if (!session) {
       return;
     }
-    const image = getCanvasState().image;
-    if (isSameCanvasImage(image, imageAtDragStart)) {
+    if (isSameCanvasImage(getCanvasState().image, imageAtDragStart)) {
       const shape = applyEditDrag(session, toCanvasPoint(event), event.shiftKey, canvas.width, canvas.height);
-      renderShapeOnBase(canvas, base, shape);
       if (session.mode === "create") {
         if (shape) {
-          beginPendingShape({ shape, base, image });
+          addShapeObject(shape);
+        } else {
+          setDraft(null);
         }
-      } else if (shape) {
-        updatePendingShape(shape);
+      } else if (editId !== null && shape) {
+        commitShapeEdit(editId, shape);
       }
     }
-    // MUST-1: 画像が差し替えられていた場合は描かず、状態のリセットのみ行う。
-    resetDrag(event.pointerId);
+    // MUST-1: 画像が差し替えられていた場合は確定せず、状態のリセットのみ行う。
+    resetDrag();
   };
 
-  /** Canvas以外(画像の外・ツールバー・サイドバー等)を押したら編集中の図形を確定する。 */
+  /** ドラッグ中のEscはそのドラッグだけを取り消す(作成中は何も残さず、編集中は掴む前に戻す)。 */
+  const handleKeydown = (event: KeyboardEvent): void => {
+    if (!session || event.key !== "Escape") {
+      return;
+    }
+    event.preventDefault();
+    resetDrag();
+    setDraft(null);
+  };
+
+  /** Canvas以外(画像の外・ツールバー・サイドバー等)を押したら選択を外す。 */
   const handleDocumentPointerDown = (event: PointerEvent): void => {
     if (event.target === canvas) {
       return;
     }
-    // T29: 取り消し・やり直しボタン(`data-preserve-pending-shape`)は確定せず、取り消しボタンで
-    // 編集中の図形を破棄できるようにする(`ui/undoButton.ts`参照)。
-    if (event.target instanceof Element && event.target.closest("[data-preserve-pending-shape]")) {
+    // 取り消し・やり直しボタン(`data-preserve-selection`)は選択を保つ(移動の取り消しなどで
+    // 同じオブジェクトを続けて調整できるように)。
+    if (event.target instanceof Element && event.target.closest("[data-preserve-selection]")) {
       return;
     }
-    commitPendingShape();
+    selectObject(null);
   };
 
-  setPendingShapeRestorer((restoreBase) => {
-    const ctx = canvas.getContext("2d");
-    if (ctx && restoreBase.width === canvas.width && restoreBase.height === canvas.height) {
-      ctx.putImageData(restoreBase as ImageData, 0, 0);
-    }
-  });
-
-  const unsubscribePending = subscribePendingShape((pending) => {
-    if (!pending && session && session.mode !== "create") {
-      // 編集ドラッグ中に外部(新規キャプチャ等)から確定・破棄された: ドラッグを終える。
-      resetDrag();
-    }
-    if (!pending) {
+  const unsubscribeDocument = subscribeDocument((state) => {
+    if (state.selectedId === null && !session) {
       canvas.style.cursor = "";
     }
     redrawOverlay();
   });
 
   const unsubscribeCanvas = subscribeCanvasState((state) => {
-    // 確定トリガーを経ずに画像が差し替わった場合は古いbaseを捨てる(書き戻さない)。
-    dropPendingShapeIfImageChanged(state.image);
     if (state.activeTool !== lastActiveTool) {
       lastActiveTool = state.activeTool;
-      // ツール切替で確定する(編集できるのは直前に描いた図形だけ、PRD FR-006/007/011改訂)。
-      commitPendingShape();
+      // ツール切替で選択を外す(T31の「ツール切替で確定」に相当)。
+      selectObject(null);
     }
     redrawOverlay();
   });
@@ -357,6 +320,7 @@ export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
     typeof ResizeObserver === "undefined" ? null : new ResizeObserver(redrawOverlay);
   resizeObserver?.observe(canvas);
   window.addEventListener("resize", redrawOverlay);
+  window.addEventListener("keydown", handleKeydown);
 
   canvas.addEventListener("pointerdown", handlePointerDown);
   canvas.addEventListener("pointermove", handlePointerMove);
@@ -372,10 +336,10 @@ export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
     canvas.removeEventListener("pointercancel", finishDrag);
     document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
     window.removeEventListener("resize", redrawOverlay);
+    window.removeEventListener("keydown", handleKeydown);
     resizeObserver?.disconnect();
-    unsubscribePending();
+    unsubscribeDocument();
     unsubscribeCanvas();
-    setPendingShapeRestorer(null);
     overlay.remove();
   };
 }
