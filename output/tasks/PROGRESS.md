@@ -9,10 +9,10 @@
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 最終更新 | 2026-09-24(T20〜T31 完了・ゲート4 = 人間の実機確認待ち) |
+| 最終更新 | 2026-09-24(GitHub へ push・紹介ページ公開済み。ゲート4 = 人間の実機確認待ち) |
 | 入力 | `docs/requirements.md`(要求メモ・ドラフト) |
 | 承認モード | 通常(各ゲートで人間承認を待つ) / 実装モード: 逐次 |
-| ブランチ | `docs/requirements-mvp` |
+| ブランチ | `main`(origin = https://github.com/froggugugugu/tadcap、push 済み)/ 作業用 `feat/mvp` |
 | スモークテスト | `npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.toml && cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings && npm run e2e`(Bash では先頭に `. "$HOME/.cargo/env" &&`。e2e は T13 以降) |
 | 実行順 | T01→T02→T03→T04→T05→T06→T07→**T15→T16**→T08→T09→T10→T11→T12→**T14→T13→T19**→T17→T18(ID は不変、T15/T16 を前倒し。E2E が履歴 UI も含められるよう T14 を先に) |
 | タスク進捗 | T01〜T31 すべて実装済み・自動検証 green(vitest 323 / cargo 109 / e2e 27)。手動チェックリスト `testreport/manual/CHECKLIST_T18.md` 41 項目は人間の実施待ち |
@@ -64,6 +64,11 @@
 #7 F-04 を MVP に含める(既定キー Cmd+Shift+2 等の空きキー、変更 UI は MVP 外) / #8 ライトテーマ固定 / 追加: F-08 メニューバー常駐も MVP に含める(Dock アイコンは非表示で確定)
 
 ## 4. セッションログ(新しいものを上に)
+
+### 2026-09-24 — GitHub へ公開
+
+- **人間**: リポジトリ froggugugugu/tadcap を作成し「後はできるかな」
+- **やったこと**: 公開前点検(秘密情報・第三者製品名なし、`.vitest/` を ignore、レポート内の絶対パスを除去)→ `feat/mvp` で 6 コミット → main を早送り → GitHub 側の初期コミット(LICENSE、内容同一)を unrelated histories で統合 → push(force なし)→ Pages を GitHub Actions で有効化 → pages ワークフロー成功 → https://froggugugugu.github.io/tadcap/ ほか 6 URL が 200。Lucide のライセンス表記を v1.45.0 原文に修正して追加 push
 
 ### 2026-09-24 — 紹介ページ完成(未公開)
 
