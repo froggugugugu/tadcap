@@ -17,6 +17,7 @@ import type { ImageDataLike } from "./commands";
 import { computeTaperArrowPolygon, drawTaperArrowPolygon } from "./tools/arrowTool";
 import { computeEllipseCenterAndRadii, drawEllipseOutline, ellipseLineWidth } from "./tools/ellipseTool";
 import { drawRectangleOutline, rectangleLineWidth } from "./tools/rectangleTool";
+import { drawTextShape } from "./tools/textLayout";
 
 /** 図形1つをcanvasへ描く(ツール別の既存描画関数へ振り分ける。T31で`shapeTools.ts`に新設、T32で移設)。 */
 export function drawEditableShape(
@@ -25,6 +26,10 @@ export function drawEditableShape(
   canvasWidth: number,
   canvasHeight: number,
 ): void {
+  if (shape.kind === "text") {
+    drawTextShape(ctx, shape, canvasWidth, canvasHeight);
+    return;
+  }
   if (shape.kind === "arrow") {
     const polygon = computeTaperArrowPolygon(shape.start, shape.end, canvasWidth, canvasHeight);
     if (polygon) {

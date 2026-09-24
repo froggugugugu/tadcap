@@ -20,6 +20,7 @@ import {
   OBJECT_LIMIT,
   findObject,
   insertObject,
+  removeObject,
   replaceObjectShape,
   type AnnotationObject,
 } from "./objectModel";
@@ -52,12 +53,14 @@ export interface DocumentState {
   objects: readonly AnnotationObject[];
   selectedId: number | null;
   draft: ShapeDraft | null;
+  /** 描画しないオブジェクト(再編集中のテキスト。入力欄と二重に見えないように、T33)。 */
+  hiddenId: number | null;
 }
 
 type Listener = (state: DocumentState) => void;
 
 let surface: DocumentSurface | null = null;
-let state: DocumentState = { objects: [], selectedId: null, draft: null };
+let state: DocumentState = { objects: [], selectedId: null, draft: null, hiddenId: null };
 let nextId = 1;
 const listeners = new Set<Listener>();
 
@@ -75,7 +78,7 @@ export function getDocumentState(): DocumentState {
  */
 export function resetDocument(): void {
   surface?.reset();
-  state = { objects: [], selectedId: null, draft: null };
+  state = { objects: [], selectedId: null, draft: null, hiddenId: null };
   clearUndoStack();
   commit();
 }
@@ -114,7 +117,7 @@ export function addShapeObject(shape: EditableShape): AnnotationObject {
     commands.push({ type: "flatten", object: oldest, index: 0, rect, image: before });
     objects = objects.slice(1);
   }
-  state = { objects, selectedId: object.id, draft: null };
+  state = { ...state, objects, selectedId: object.id, draft: null };
   pushCommand(commands.length === 1 ? commands[0]! : { type: "group", commands });
   commit();
   return object;
@@ -134,6 +137,33 @@ export function commitShapeEdit(id: number, after: EditableShape): boolean {
   state = { ...state, draft: null };
   commit();
   return changed;
+}
+
+/**
+ * オブジェクトを削除して`remove`コマンドを積む(再編集で空にしたテキスト、T33。T34の削除キーも
+ * これを使う)。選択中なら選択を外す。存在しないidは`false`。
+ */
+export function removeShapeObject(id: number): boolean {
+  const index = state.objects.findIndex((object) => object.id === id);
+  if (index < 0) {
+    return false;
+  }
+  const object = state.objects[index]!;
+  state = {
+    ...state,
+    objects: removeObject(state.objects, id),
+    selectedId: state.selectedId === id ? null : state.selectedId,
+    hiddenId: state.hiddenId === id ? null : state.hiddenId,
+  };
+  pushCommand({ type: "remove", object, index });
+  commit();
+  return true;
+}
+
+/** 描画から一時的に外すオブジェクトを指定する(`null`で解除)。取り消し対象ではない。 */
+export function setHiddenObject(id: number | null): void {
+  state = { ...state, hiddenId: id };
+  commit();
 }
 
 /**
@@ -162,7 +192,8 @@ export function redoDocument(): boolean {
 
 /** 今の状態で表示canvasを描き直す(ドラッグ中のプレビューの下地など)。 */
 export function renderDocument(): void {
-  surface?.render(state.objects, state.draft);
+  const { objects, hiddenId } = state;
+  surface?.render(hiddenId === null ? objects : objects.filter((o) => o.id !== hiddenId), state.draft);
 }
 
 export function subscribeDocument(listener: Listener): () => void {

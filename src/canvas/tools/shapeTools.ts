@@ -49,6 +49,8 @@ import {
   type EditSession,
 } from "../shapeEdit";
 import { getToolSettings } from "../toolSettings";
+import { textShapeBox } from "./textLayout";
+import { isTextEditorOpen } from "./textTool";
 
 /** ハンドルの当たり判定半径(画面上のCSSピクセル。Canvasピクセルへは表示倍率で換算する)。 */
 const HANDLE_HIT_RADIUS_CSS = 10;
@@ -58,6 +60,8 @@ const HANDLE_DRAW_RADIUS_CSS = 5;
 const HANDLE_FILL = "#ffffff";
 const HANDLE_STROKE = "rgba(0, 0, 0, 0.55)";
 const SELECTION_STROKE = "rgba(0, 0, 0, 0.45)";
+/** テキストの選択枠を行ボックスから離す余白(CSSピクセル、T33)。 */
+const TEXT_SELECTION_PADDING_CSS = 3;
 
 /** 選択中のオブジェクトの今の形(移動・リサイズ中は下書き)。選択が無ければ`null`。 */
 function selectedShape(): EditableShape | null {
@@ -125,6 +129,24 @@ function renderOverlay(
       shape.rect.width * scaleX,
       shape.rect.height * scaleY,
     );
+    ctx.restore();
+  }
+
+  // T33: テキストはハンドルを持たないため、行ボックスを枠で示す(白の実線+濃色の点線にして
+  // 明るい背景・暗い背景のどちらでも見えるようにする)。
+  if (shape.kind === "text") {
+    const box = textShapeBox(shape, canvas.width, canvas.height);
+    const x = box.x * scaleX - TEXT_SELECTION_PADDING_CSS + 0.5;
+    const y = box.y * scaleY - TEXT_SELECTION_PADDING_CSS + 0.5;
+    const w = box.width * scaleX + TEXT_SELECTION_PADDING_CSS * 2;
+    const h = box.height * scaleY + TEXT_SELECTION_PADDING_CSS * 2;
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = HANDLE_FILL;
+    ctx.strokeRect(x, y, w, h);
+    ctx.strokeStyle = HANDLE_STROKE;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(x, y, w, h);
     ctx.restore();
   }
 
@@ -207,7 +229,8 @@ export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
 
   const handlePointerDown = (event: PointerEvent): void => {
     const canvasState = getCanvasState();
-    if (!canvasState.image) {
+    // T33: テキストの入力中(新規・再編集)にCanvasを押したら、確定(`textTool.ts`)だけにする。
+    if (!canvasState.image || isTextEditorOpen()) {
       return;
     }
     const { objects, selectedId } = getDocumentState();

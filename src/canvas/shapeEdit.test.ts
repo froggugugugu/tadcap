@@ -13,7 +13,9 @@ import {
   shapeUndoRect,
   type ArrowShape,
   type BoxShape,
+  type TextShape,
 } from "./shapeEdit";
+import { textShapeBoundingRect } from "./tools/textLayout";
 import { computeTaperArrowBoundingRect, computeTaperArrowPolygon } from "./tools/arrowTool";
 import { computeRectangleBoundingRect, rectangleLineWidth } from "./tools/rectangleTool";
 
@@ -265,7 +267,7 @@ describe("decidePointerDown(T32: オブジェクト一般化)", () => {
     });
   });
 
-  it("モザイク・テキストツール中はオブジェクトを掴まず、選択解除だけ(処理は各ツール)", () => {
+  it("モザイク・テキストツール中は矢印・矩形・円を掴まず、選択解除だけ(処理は各ツール)", () => {
     for (const activeTool of ["mosaic", "text"] as const) {
       const point = { x: 101, y: 125 };
       expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: 1, activeTool })).toEqual({
@@ -281,6 +283,74 @@ describe("decidePointerDown(T32: オブジェクト一般化)", () => {
     expect(
       decidePointerDown({ ...base, objects: [], selectedId: 9, activeTool: "rectangle" }),
     ).toMatchObject({ type: "create" });
+  });
+});
+
+describe("テキスト(T33)", () => {
+  // 400x300 の「中」= 18px、行の高さ 23px。行ボックス = (100,50)-(140,73)。
+  const textShape: TextShape = {
+    kind: "text",
+    text: "Hi",
+    x: 100,
+    top: 50,
+    fontSize: "medium",
+    color: COLOR,
+    metrics: { width: 40, left: 0, right: 38, ascent: 13, descent: 1, fontAscent: 17, fontDescent: 4 },
+  };
+  const textObj = { id: 7, shape: textShape };
+  const decideBase = { tolerance: 4, canvasWidth: W, canvasHeight: H, color: COLOR };
+
+  it("ハンドルは出さない(サイズは文字サイズで変える、T34)", () => {
+    expect(getShapeHandles(textShape)).toEqual([]);
+  });
+
+  it("行ボックス(+許容幅)の中が本体", () => {
+    expect(hitTestShape(textShape, { x: 120, y: 60 }, 4, W, H)).toEqual({ type: "body" });
+    expect(hitTestShape(textShape, { x: 142, y: 75 }, 4, W, H)).toEqual({ type: "body" });
+    expect(hitTestShape(textShape, { x: 150, y: 60 }, 4, W, H)).toBeNull();
+  });
+
+  it("移動は位置だけ変え、行ボックスがCanvas外へ出ないようクランプする", () => {
+    expect(moveShape(textShape, { x: 10, y: -5 }, W, H)).toEqual({ ...textShape, x: 110, top: 45 });
+    expect(moveShape(textShape, { x: 1000, y: 1000 }, W, H)).toEqual({ ...textShape, x: 360, top: 277 });
+    expect(moveShape(textShape, { x: -1000, y: -1000 }, W, H)).toEqual({ ...textShape, x: 0, top: 0 });
+  });
+
+  it("リサイズしても形は変わらない", () => {
+    expect(resizeShape(textShape, "se", { x: 300, y: 300 }, W, H, false)).toBe(textShape);
+  });
+
+  it("取り消し・焼き込み用の外接矩形は影込みの文字の範囲", () => {
+    expect(shapeUndoRect(textShape, W, H)).toEqual(textShapeBoundingRect(textShape, W, H));
+  });
+
+  it("テキストツール中はテキストだけを掴む(選択中でも未選択でも)", () => {
+    const rectObj = { id: 1, shape: rectShape };
+    const onText = { x: 120, y: 60 };
+    expect(
+      decidePointerDown({ ...decideBase, point: onText, objects: [textObj], selectedId: null, activeTool: "text" }),
+    ).toEqual({ type: "edit", id: 7, session: { mode: "move", origin: onText, initial: textShape } });
+    expect(
+      decidePointerDown({ ...decideBase, point: onText, objects: [textObj], selectedId: 7, activeTool: "text" }),
+    ).toEqual({ type: "edit", id: 7, session: { mode: "move", origin: onText, initial: textShape } });
+    // 矩形の枠線上でもテキストツールでは掴まない(その位置に文字を置ける)。
+    expect(
+      decidePointerDown({
+        ...decideBase,
+        point: { x: 101, y: 125 },
+        objects: [rectObj, textObj],
+        selectedId: null,
+        activeTool: "text",
+      }),
+    ).toEqual({ type: "ignore" });
+  });
+
+  it("図形ツール・ツール未選択でもテキストを掴める", () => {
+    for (const activeTool of ["arrow", null] as const) {
+      expect(
+        decidePointerDown({ ...decideBase, point: { x: 120, y: 60 }, objects: [textObj], selectedId: null, activeTool }),
+      ).toMatchObject({ type: "edit", id: 7 });
+    }
   });
 });
 

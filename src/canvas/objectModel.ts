@@ -64,7 +64,8 @@ export function hitTestObjectOutline(
   canvasWidth: number,
   canvasHeight: number,
 ): boolean {
-  if (shape.kind === "arrow") {
+  if (shape.kind === "arrow" || shape.kind === "text") {
+    // 矢印は胴体、テキストは行ボックス全体(文字の隙間でも掴めるように、T33)。
     return hitTestShape(shape, point, tolerance, canvasWidth, canvasHeight)?.type === "body";
   }
   const { rect } = shape;

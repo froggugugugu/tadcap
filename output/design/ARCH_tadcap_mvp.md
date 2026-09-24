@@ -190,7 +190,7 @@ tadcap/
 | `src/canvas/tools/arrowTool.ts`(【改訂 2026-09-24】) | 矢印(テーパー形状+矢じり)の描画 | `computeTaperArrowPolygon()`, `bindArrowTool()` | canvasState, toolSettings, undoStack |
 | `src/canvas/tools/rectangleTool.ts`(【新設 2026-09-24】) | 矩形枠の描画(ドラッグ→確定→焼き込み) | `bindRectangleTool()` | canvasState, toolSettings, undoStack |
 | `src/canvas/tools/ellipseTool.ts`(【新設 2026-09-24】) | 円(楕円)枠の描画 | `bindEllipseTool()` | canvasState, toolSettings, undoStack |
-| `src/canvas/tools/textTool.ts`(【新設 2026-09-24】) | クリック位置へのテキスト入力(DOMオーバーレイ)→確定でCanvas焼き込み | `computeFontSizePx()`, `bindTextTool()` | canvasState, toolSettings, undoStack |
+| `src/canvas/tools/textTool.ts`(【新設 2026-09-24】) | クリック位置へのテキスト入力(DOMオーバーレイ)→確定でCanvas焼き込み(【改訂 2026-09-24 T33】確定でテキストオブジェクトを追加、ダブルクリックで再編集) | `computeFontSizePx()`, `bindTextTool()` | canvasState, toolSettings, undoStack |
 | `src/canvas/tools/mosaicTool.ts`(【改訂 2026-09-24】) | モザイク(矩形選択→ピクセル化焼き込み)。色は参照しない | `bindMosaicTool()` | canvasState, undoStack |
 | `src/canvas/shapeEdit.ts`(【新設 2026-09-24 T31】) | 編集中の図形(矢印・矩形・円)の純粋関数: 作成・ハンドル列挙・当たり判定・リサイズ・移動・取り消し用外接矩形・pointerdownの分岐 | `decidePointerDown()`, `hitTestShape()`, `resizeShape()`, `moveShape()` | — |
 | `src/canvas/pendingShape.ts`(【新設 2026-09-24 T31】) | 直前に描いた図形1つの保持(図形パラメータ+描く前のベース画像)と確定・破棄 | `beginPendingShape()`, `commitPendingShape()`, `discardPendingShape()` | undoStack |
@@ -200,6 +200,7 @@ tadcap/
 | `src/canvas/commands.ts`(【新設 2026-09-24 T32】) | 取り消し・やり直しのコマンド(追加・変更・削除・ピクセル・焼き込み・グループ)の取り消し/やり直し適用 | `undoCommand()`, `redoCommand()` | — |
 | `src/canvas/documentState.ts`(【新設 2026-09-24 T32】) | 1 画像分のドキュメント(ベース + オブジェクト + 選択 + 下書き)の状態と操作。上限超過の焼き込み | `addShapeObject()`, `commitShapeEdit()`, `applyBaseEdit()`, `undoDocument()`, `resetDocument()` | undoStack |
 | `src/canvas/documentSurface.ts`(【新設 2026-09-24 T32】) | ベースのオフスクリーン canvas と合成描画(DOM 依存) | `createDocumentSurface()`, `drawEditableShape()` | — |
+| `src/canvas/tools/textLayout.ts`(【新設 2026-09-24 T33】) | テキストの寸法・描画・入力終了の判定の純粋関数(`textTool.ts` から分離) | `textShapeBox()`, `drawTextShape()`, `decideTextEdit()` | — |
 | `src/ui/selectionKeys.ts`(【改訂 2026-09-24 T32】`pendingShapeKeys.ts` を置き換え) | Enter/Esc で選択解除 | `bindSelectionKeys()` | documentState |
 | (廃止 T32)`src/canvas/pendingShape.ts` | `documentState.ts` に置き換え | — | — |
 | `src/history/` | セッション内履歴の保持 | `historyStore` | historyStore |
@@ -268,6 +269,7 @@ tadcap/
   ピクセル系は T23 の差分方式を再利用し、「変更矩形 + 反対側の状態のピクセル」を 1 枚だけ持つ**入れ替え方式**(取り消し時に現在のピクセルを読み、保持していたピクセルを書き、読んだ方を次の方向用に持ち替える)。ベースを変える操作はすべてコマンド経由でスタック順に適用されるため、入れ替え時のベースは常にそのコマンド直後(直前)の状態と一致する。スタック上限は従来どおり各 30(`UNDO_STACK_LIMIT`)
 - **上限と焼き込み**(`OBJECT_LIMIT = 50`): 追加で 50 個を超えたら、最古(配列先頭)から外接矩形(`shapeUndoRect()`)のベースピクセルを保存 → ベースへ描画 → 配列から除去し、`flatten` コマンドを作る。**【設計判断】焼き込みは、それを引き起こした `add` と同じ `group` に入れて 1 回の取り消しで戻せるようにする**。根拠: (1) FR-014 の「1 操作 = 1 取り消し」を保てる(ユーザーが意識していない焼き込みだけが取り消し単位として残ると、1 回の Cmd+Z で見た目が変わらない)(2) 取り消すと最古のオブジェクトが編集可能な状態へ正確に戻る(3) 保存するのは焼き込むオブジェクトの外接矩形分だけで、差分方式のメモリ特性を崩さない。取り消しスタック(30)から溢れた `flatten` は以後取り消せない(従来の焼き込みと同じ扱い)
 - **テキスト**(T33 まで): 従来どおり確定時に焼き込むが、焼き込み先はベース(`pixels` コマンド)。したがって常にオブジェクトより下になる
+- **【改訂 2026-09-24 T33】テキストのオブジェクト化**: `EditableShape` に `TextShape { kind: "text", text, x, top, fontSize, color, metrics }` を追加(位置は行ボックスの左端・上端、フォント実寸は `fontSize` と画像サイズから決定論的に算出、`metrics` は作成・再編集時の `measureText()` の値で、当たり判定・外接矩形を DOM 無しで計算するため)。ハンドルは持たず移動のみ(文字サイズ変更は T34)。確定は `addShapeObject()`(上限 50 の対象)で、ベースへは焼き込まない(上の「テキスト(T33 まで)」を置き換え)。テキストツール中の pointerdown はテキストだけを掴む。ダブルクリック(モザイク以外)で再編集: `setHiddenObject(id)` で一時的に描画から外して同じ位置に入力欄を開き、`textLayout.ts::decideTextEdit()` で Enter/blur → `update`、空 → `remove`(`removeShapeObject()`)、Esc → 何もしない。入力欄が開いている間の Canvas の pointerdown は確定だけ(`shapeTools.ts` は `isTextEditorOpen()` で何もしない)。寸法・描画の純粋関数は `tools/textLayout.ts` に分離した(`textTool.ts` → `documentState.ts` → `shapeEdit.ts` → `textTool.ts` の循環を避けるため)
 - **画像の差し替え**: 新規キャプチャ・履歴再読込は `renderImageToCanvas()` 直後に `resetDocument()`(表示 → ベースへ複製、オブジェクト・選択・下書き・取り消しスタックを空に)。差し替え前の確定処理(旧 `commitPendingShape()`)は不要(表示は常に合成結果)。T34 で履歴項目ごとにドキュメントを保持する前提で、ドキュメントの中身(ベース + オブジェクト配列 + 取り消しスタック)を 1 か所(`documentState.ts`)に集めてある
 - **DOM 依存の分離**: `documentState.ts` はベースへの読み書き・描画を `DocumentSurface` インターフェース越しに行い、Vitest では配列ベースの偽物で検証する。実装は `documentSurface.ts`(オフスクリーン canvas と合成描画)
 

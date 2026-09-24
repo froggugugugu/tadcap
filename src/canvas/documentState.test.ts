@@ -7,10 +7,12 @@ import {
   commitShapeEdit,
   getDocumentState,
   redoDocument,
+  removeShapeObject,
   resetDocument,
   selectObject,
   setDocumentSurface,
   setDraft,
+  setHiddenObject,
   subscribeDocument,
   undoDocument,
   type DocumentSurface,
@@ -105,7 +107,7 @@ describe("resetDocument", () => {
     addShapeObject(box(10));
     setDraft({ id: null, shape: box(50) });
     resetDocument();
-    expect(getDocumentState()).toEqual({ objects: [], selectedId: null, draft: null });
+    expect(getDocumentState()).toEqual({ objects: [], selectedId: null, draft: null, hiddenId: null });
     expect(canUndo()).toBe(false);
     expect(surface.resets).toBe(2);
     expect(last(surface.renders)).toEqual({ objects: [], draft: null });
@@ -223,6 +225,52 @@ describe("commitShapeEdit(移動・リサイズの確定)", () => {
   it("存在しないid(差し替え後など)は何もしない", () => {
     expect(commitShapeEdit(999, box(10))).toBe(false);
     expect(canUndo()).toBe(false);
+  });
+});
+
+describe("removeShapeObject(テキストを空にして確定、T33。T34の削除キーも使う)", () => {
+  it("元の位置から除去してremoveコマンドを積み、取り消しで同じ位置へ戻る", () => {
+    const a = addShapeObject(box(10));
+    const b = addShapeObject(box(60));
+    const c = addShapeObject(box(110));
+    expect(removeShapeObject(b.id)).toBe(true);
+    expect(getDocumentState().objects).toEqual([a, c]);
+    expect(getDocumentState().selectedId).toBe(c.id);
+    undoDocument();
+    expect(getDocumentState().objects).toEqual([a, b, c]);
+    redoDocument();
+    expect(getDocumentState().objects).toEqual([a, c]);
+  });
+
+  it("選択中を消したら選択を外し、存在しないidは何もしない", () => {
+    const a = addShapeObject(box(10));
+    removeShapeObject(a.id);
+    expect(getDocumentState().selectedId).toBeNull();
+    const depth = getUndoStackState().undo.length;
+    expect(removeShapeObject(999)).toBe(false);
+    expect(getUndoStackState().undo.length).toBe(depth);
+  });
+});
+
+describe("setHiddenObject(再編集中のテキストを入力欄と二重に描かない、T33)", () => {
+  it("隠したオブジェクトは描画に渡さず、解除すると戻る。モデル・取り消しには影響しない", () => {
+    const a = addShapeObject(box(10));
+    const b = addShapeObject(box(60));
+    const depth = getUndoStackState().undo.length;
+    setHiddenObject(a.id);
+    expect(getDocumentState().hiddenId).toBe(a.id);
+    expect(last(surface.renders)?.objects).toEqual([b]);
+    expect(getDocumentState().objects).toEqual([a, b]);
+    setHiddenObject(null);
+    expect(last(surface.renders)?.objects).toEqual([a, b]);
+    expect(getUndoStackState().undo.length).toBe(depth);
+  });
+
+  it("画像の差し替えで解除される", () => {
+    const a = addShapeObject(box(10));
+    setHiddenObject(a.id);
+    resetDocument();
+    expect(getDocumentState().hiddenId).toBeNull();
   });
 });
 

@@ -36,6 +36,8 @@ import {
   computeRectangleGeometry,
   rectangleLineWidth,
 } from "./tools/rectangleTool";
+import { textShapeBoundingRect, textShapeBox } from "./tools/textLayout";
+import type { FontSize } from "./toolSettings";
 
 /** 編集中にできる図形の種類(モザイクは即焼き込みのため対象外)。 */
 export type ShapeKind = "arrow" | "rectangle" | "ellipse";
@@ -54,7 +56,37 @@ export interface BoxShape {
   color: string;
 }
 
-export type EditableShape = ArrowShape | BoxShape;
+/**
+ * テキスト(T33【新設 2026-09-24】)。位置は行ボックスの左端(描画原点)・上端。フォント実寸は
+ * `fontSize`と画像サイズから決まる(`textLayout.ts::textShapeFontPx()`)。`metrics`は作成・再編集時に
+ * `ctx.measureText()`で測った値で、当たり判定・外接矩形を DOM 無しで計算するために持つ
+ * (文字サイズを変える T34 では測り直す)。ハンドルは持たない(移動のみ)。
+ */
+export interface TextShape {
+  kind: "text";
+  text: string;
+  x: number;
+  top: number;
+  fontSize: FontSize;
+  color: string;
+  metrics: TextMetricsSnapshot;
+}
+
+/** `ctx.measureText()`の必要な値(Canvasピクセル)。 */
+export interface TextMetricsSnapshot {
+  /** 送り幅(`width`)。 */
+  width: number;
+  /** `actualBoundingBoxLeft`/`Right`/`Ascent`/`Descent`(実際の字形の範囲)。 */
+  left: number;
+  right: number;
+  ascent: number;
+  descent: number;
+  /** `fontBoundingBoxAscent`/`Descent`(行ボックス内のベースライン位置の算出用)。 */
+  fontAscent: number;
+  fontDescent: number;
+}
+
+export type EditableShape = ArrowShape | BoxShape | TextShape;
 
 /** 矢印は始点・終点、矩形・円は四隅(北西・北東・南西・南東)。 */
 export type HandleId = "start" | "end" | "nw" | "ne" | "sw" | "se";
@@ -103,6 +135,9 @@ export function createShapeFromDrag(
 }
 
 export function getShapeHandles(shape: EditableShape): ShapeHandle[] {
+  if (shape.kind === "text") {
+    return [];
+  }
   if (shape.kind === "arrow") {
     return [
       { id: "start", point: shape.start },
@@ -135,6 +170,15 @@ export function hitTestShape(
     if (Math.hypot(point.x - handle.point.x, point.y - handle.point.y) <= tolerance) {
       return { type: "handle", handle: handle.id };
     }
+  }
+  if (shape.kind === "text") {
+    const box = textShapeBox(shape, canvasWidth, canvasHeight);
+    const inside =
+      point.x >= box.x - tolerance &&
+      point.x <= box.x + box.width + tolerance &&
+      point.y >= box.y - tolerance &&
+      point.y <= box.y + box.height + tolerance;
+    return inside ? { type: "body" } : null;
   }
   if (shape.kind === "arrow") {
     const halfWidth = arrowLineWidth(canvasWidth, canvasHeight) / 2;
@@ -170,6 +214,9 @@ export function resizeShape(
   canvasHeight: number,
   shiftKey: boolean,
 ): EditableShape {
+  if (shape.kind === "text") {
+    return shape;
+  }
   const p = clampPoint(pointer, canvasWidth, canvasHeight);
   if (shape.kind === "arrow") {
     const next: ArrowShape =
@@ -194,6 +241,12 @@ export function moveShape(
   canvasWidth: number,
   canvasHeight: number,
 ): EditableShape {
+  if (shape.kind === "text") {
+    const box = textShapeBox(shape, canvasWidth, canvasHeight);
+    const dx = clamp(delta.x, -box.x, canvasWidth - (box.x + box.width));
+    const dy = clamp(delta.y, -box.y, canvasHeight - (box.y + box.height));
+    return { ...shape, x: shape.x + dx, top: shape.top + dy };
+  }
   const bounds =
     shape.kind === "arrow"
       ? {
@@ -282,19 +335,30 @@ export function decidePointerDown(input: PointerDownInput): PointerDownDecision 
   const { objects, activeTool, point, tolerance, canvasWidth, canvasHeight } = input;
   const selected = findObject(objects, input.selectedId);
   const blank: PointerDownDecision = selected ? { type: "deselect" } : { type: "ignore" };
-  if (activeTool !== null && !isShapeTool(activeTool)) {
+  if (activeTool === "mosaic") {
     return blank;
   }
-  if (selected) {
-    const hit = hitTestShape(selected.shape, point, tolerance, canvasWidth, canvasHeight);
+  // T33: テキストツール中はテキストだけを掴む(矢印・矩形・円の上にも文字を置けるように)。
+  const grabbable = activeTool === "text" ? objects.filter((o) => o.shape.kind === "text") : objects;
+  const selectedGrabbable = selected && grabbable.includes(selected) ? selected : undefined;
+  if (selectedGrabbable) {
+    const hit = hitTestShape(selectedGrabbable.shape, point, tolerance, canvasWidth, canvasHeight);
     if (hit?.type === "handle") {
-      return { type: "edit", id: selected.id, session: { mode: "resize", handle: hit.handle, initial: selected.shape } };
+      return {
+        type: "edit",
+        id: selectedGrabbable.id,
+        session: { mode: "resize", handle: hit.handle, initial: selectedGrabbable.shape },
+      };
     }
     if (hit?.type === "body") {
-      return { type: "edit", id: selected.id, session: { mode: "move", origin: point, initial: selected.shape } };
+      return {
+        type: "edit",
+        id: selectedGrabbable.id,
+        session: { mode: "move", origin: point, initial: selectedGrabbable.shape },
+      };
     }
   }
-  const picked = pickObjectAt(objects, point, tolerance, canvasWidth, canvasHeight);
+  const picked = pickObjectAt(grabbable, point, tolerance, canvasWidth, canvasHeight);
   if (picked) {
     return { type: "edit", id: picked.id, session: { mode: "move", origin: point, initial: picked.shape } };
   }
@@ -309,6 +373,9 @@ export function decidePointerDown(input: PointerDownInput): PointerDownDecision 
  * 各ツールの既存`compute*BoundingRect()`をそのまま使う(確定前の旧実装と同じ範囲)。
  */
 export function shapeUndoRect(shape: EditableShape, canvasWidth: number, canvasHeight: number): Rect {
+  if (shape.kind === "text") {
+    return textShapeBoundingRect(shape, canvasWidth, canvasHeight);
+  }
   if (shape.kind === "arrow") {
     const polygon = computeTaperArrowPolygon(shape.start, shape.end, canvasWidth, canvasHeight);
     if (!polygon) {

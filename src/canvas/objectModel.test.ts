@@ -77,6 +77,22 @@ describe("hitTestObjectOutline(未選択オブジェクトの掴める範囲)", 
   });
 });
 
+describe("hitTestObjectOutline(テキスト、T33)", () => {
+  it("テキストは行ボックス全体で掴める(文字の間の隙間でも)", () => {
+    const text = {
+      kind: "text" as const,
+      text: "Hi",
+      x: 100,
+      top: 50,
+      fontSize: "medium" as const,
+      color: COLOR,
+      metrics: { width: 40, left: 0, right: 38, ascent: 13, descent: 1, fontAscent: 17, fontDescent: 4 },
+    };
+    expect(hitTestObjectOutline(text, { x: 120, y: 60 }, 4, W, H)).toBe(true);
+    expect(hitTestObjectOutline(text, { x: 200, y: 60 }, 4, W, H)).toBe(false);
+  });
+});
+
 describe("pickObjectAt(最前面から当たり判定)", () => {
   it("重なっていれば後から描いた(配列の後ろの)オブジェクトを返す", () => {
     const lower = obj(1, rect);

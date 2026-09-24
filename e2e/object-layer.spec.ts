@@ -222,7 +222,9 @@ test.describe("オブジェクト層(T32)", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test("テキストは元画像へ焼き込まれ、先に描いた矩形より下になる", async ({ page }) => {
+  // 【改訂 2026-09-24 T33】テキストもオブジェクトになり、描いた順の重ね順に入る(T32では元画像へ
+  // 焼き込まれ常に矩形より下だった)。後から置いたテキストは矩形の上に描かれ、取り消しで消える。
+  test("テキストもオブジェクトとして重ね順に入り、後から置けば矩形より上になる", async ({ page }) => {
     const canvas = await captureAndWaitReady(page);
     await page.getByRole("button", { name: "矩形" }).click();
     await drag(page, canvas, [40, 60], [200, 140]);
@@ -230,6 +232,7 @@ test.describe("オブジェクト層(T32)", () => {
     const band: Region = { x: 36, y: 85, width: 10, height: 30 };
     const pinkBefore = await countColorPixels(canvas, band);
     expect(pinkBefore).toBeGreaterThan(0);
+    await saveSnapshot(canvas, "withRect");
 
     await page.getByRole("button", { name: "テキスト" }).click();
     await page.getByRole("button", { name: "青" }).click();
@@ -238,9 +241,12 @@ test.describe("オブジェクト層(T32)", () => {
     await page.keyboard.type("MMMMMMMM");
     await page.keyboard.press("Enter");
 
-    // テキストは左辺をまたいで描かれている(帯の外側にも青がある)が、左辺の画素は矩形の色のまま。
-    expect(await countColorPixels(canvas, { x: 15, y: 85, width: 120, height: 30 }, BLUE)).toBeGreaterThan(0);
-    expect(await countColorPixels(canvas, band)).toBe(pinkBefore);
+    // 左辺の上に青い文字が重なり、矩形の色の画素が減る(テキストが上)。
+    expect(await countColorPixels(canvas, band, BLUE)).toBeGreaterThan(0);
+    expect(await countColorPixels(canvas, band)).toBeLessThan(pinkBefore);
+    // 取り消し1回(テキストの追加)で矩形だけの状態とバイト一致(元画像へは焼き込まれていない)。
+    await page.keyboard.press("Meta+Z");
+    expect(await diffFromSnapshot(canvas, "withRect")).toBe(0);
     expect(pageErrors).toEqual([]);
   });
 });
