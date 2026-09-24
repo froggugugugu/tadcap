@@ -9,7 +9,7 @@
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 最終更新 | 2026-09-24(GitHub へ push・紹介ページ公開済み。ゲート4 = 人間の実機確認待ち) |
+| 最終更新 | 2026-09-24(v0.1.0 リリース公開済み。アプリアイコンの幾何学デザイン案 A/B/C を人間が選択中 → v0.1.1 予定。ゲート4 = 人間の実機確認待ち) |
 | 入力 | `docs/requirements.md`(要求メモ・ドラフト) |
 | 承認モード | 通常(各ゲートで人間承認を待つ) / 実装モード: 逐次 |
 | ブランチ | `main`(origin = https://github.com/froggugugugu/tadcap、push 済み)/ 作業用 `feat/mvp` |
@@ -64,6 +64,13 @@
 #7 F-04 を MVP に含める(既定キー Cmd+Shift+2 等の空きキー、変更 UI は MVP 外) / #8 ライトテーマ固定 / 追加: F-08 メニューバー常駐も MVP に含める(Dock アイコンは非表示で確定)
 
 ## 4. セッションログ(新しいものを上に)
+
+### 2026-09-24 — v0.1.0 リリース
+
+- **やったこと**: アプリアイコン(オタマジャクシ)一式、ad-hoc 署名(`signingIdentity: "-"`)の DMG/zip(`scripts/package-mac.sh`、`CI=true` で Finder 自動化を回避)、`scripts/install.sh`(sha256 照合)、`release.yml`(build/publish 分離)、紹介ページ・README のインストール節を更新。5 コミット → main push → `v0.1.0` タグ push
+- **結果**: release ワークフロー build/publish 成功。Releases に `Tadcap-0.1.0-arm64.dmg`(2.38MB)と `.zip`(2.24MB)。公開された install.sh をパイプ実行して一時ディレクトリに導入 → exit 0、codesign OK、版 0.1.0、quarantine 無し
+- **未追跡のまま**: `npm run tauri icon` が生成した `src-tauri/icons/{android,ios,64x64.png}`(削除は deny ルールで拒否されたため add せず残置。人間が削除してよい)
+- **人間の要望**: アイコンをキャプチャを連想させる幾何学デザインに(mdslide 参考)→ 3 案 `output/reports/ui/icon-candidates.png`、PJM 推奨 A
 
 ### 2026-09-24 — GitHub へ公開
 

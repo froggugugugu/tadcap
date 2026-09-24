@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Tadcap icon candidate C: two stacked captures (history); the front one carries a selection frame and a tapered arrow
+       whose round tail start nods to the tadpole of the original icon. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF93B4"/>
+      <stop offset="1" stop-color="#E5336A"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FAEEF2"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="26" stdDeviation="26" flood-color="#6E0A2E" flood-opacity="0.38"/>
+    </filter>
+    <filter id="backShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#6E0A2E" flood-opacity="0.22"/>
+    </filter>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#6E0A2E" flood-opacity="0.30"/>
+    </filter>
+  </defs>
+  <!-- rounded square (macOS grid: 824 tile on a 1024 canvas) -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#gloss)"/>
+  <!-- back capture -->
+  <rect x="318" y="262" width="470" height="340" rx="36" fill="#FFFFFF" fill-opacity="0.42" filter="url(#backShadow)"/>
+  <!-- front capture -->
+  <rect x="236" y="366" width="470" height="340" rx="36" fill="url(#card)" filter="url(#cardShadow)"/>
+  <!-- selection frame -->
+  <rect x="440" y="424" width="210" height="160" rx="22" fill="#FF5C8A" fill-opacity="0.12" stroke="#F2437A" stroke-width="28"/>
+  <!-- tapered arrow with a round (tadpole-head) start -->
+  <g transform="translate(318 648) rotate(-35)" fill="#F2437A" stroke="#F2437A" stroke-width="12" stroke-linejoin="round">
+    <path d="M0,-14 L150,-28 L136,-66 L262,0 L136,66 L150,28 L0,14 Z"/>
+    <circle cx="0" cy="0" r="36"/>
+  </g>
+</svg>
