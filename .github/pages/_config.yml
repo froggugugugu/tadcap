@@ -1,0 +1,17 @@
+# Jekyll config for the GitHub Pages site. pages.yml assembles the site source from index.html (the landing page,
+# copied as-is: no front matter), README.md (→ README.html), docs/media/, LICENSE and THIRD_PARTY_NOTICES.md, then
+# builds it with actions/jekyll-build-pages. jekyll-readme-index only kicks in when there is no index, so README stays
+# a plain page.
+title: Tadcap
+description: 撮る、描き込む、貼る。最短で。macOS 専用の軽量なスクリーンショット注釈ツール
+lang: ja
+baseurl: /tadcap
+theme: jekyll-theme-primer
+plugins:
+  - jekyll-optional-front-matter   # render .md files that have no front matter
+  - jekyll-readme-index            # README.md becomes index.html (only when there is no index.html)
+  - jekyll-relative-links          # links to *.md resolve to the rendered pages
+  - jekyll-titles-from-headings
+defaults:
+  - scope: { path: "" }
+    values: { layout: default }

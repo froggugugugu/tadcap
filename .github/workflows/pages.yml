@@ -1,0 +1,54 @@
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Publishes the site to GitHub Pages with Jekyll: the landing page (.github/pages/index.html, a single static file)
+# at the root, and README.md (→ README.html), LICENSE, THIRD_PARTY_NOTICES.md and the images in docs/media/ next to it.
+# Pages must be enabled once in the repository settings (Source: GitHub Actions); GITHUB_TOKEN cannot create the site.
+# Actions are pinned to commit SHAs (version in the comment); runner images are pinned too.
+# Only deploy can write to Pages: build runs the repository's content through Jekyll with read access.
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: read   # configure-pages reads the site's settings
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - name: Assemble the site source
+        run: |
+          mkdir -p _pages/docs
+          cp LICENSE THIRD_PARTY_NOTICES.md _pages/
+          # jekyll-optional-front-matter leaves README.md unrendered by default; with front matter it becomes README.html.
+          { printf -- '---\ntitle: Tadcap の使い方\n---\n\n'; cat README.md; } > _pages/README.md
+          cp -R docs/media _pages/docs/media   # screenshots and the logo, shared by the landing page and README
+          cp .github/pages/_config.yml .github/pages/index.html _pages/
+          cp -R .github/pages/assets _pages/assets   # the page's scripts, served from the site itself
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
+        with: { source: ./_pages, destination: ./_site }
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with: { path: ./_site }
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+      actions: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

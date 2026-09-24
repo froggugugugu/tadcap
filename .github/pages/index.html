@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="ja" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tadcap — 撮る、描き込む、貼る。最短で。</title>
+    <meta name="description" content="Tadcap は macOS 専用の軽量なスクリーンショット注釈ツールです。⌘⇧2 で範囲を撮り、矢印・矩形・円・テキスト・モザイクを描き込んで、⌘C でそのまま貼り付けられます。" />
+    <meta property="og:title" content="Tadcap — 撮る、描き込む、貼る。最短で。" />
+    <meta property="og:description" content="macOS 専用の軽量なスクリーンショット注釈ツール。メニューバーに常駐し、⌘⇧2 から ⌘C まで最短の操作で。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://froggugugugu.github.io/tadcap/docs/media/editor.png" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="docs/media/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="docs/media/icon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="docs/media/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <!-- Scripts are served from this site, pinned by hash: Tailwind Play CDN 3.4.17 (cdn.tailwindcss.com/3.4.17) and Lucide 1.45.0 (lucide/dist/umd/lucide.min.js). Licenses: THIRD_PARTY_NOTICES.md. -->
+    <script src="assets/tailwindcss-3.4.17.js" integrity="sha384-igm5BeiBt36UU4gqwWS7imYmelpTsZlQ45FZf+XBn9MuJbn4nQr7yx1yFydocC/K"></script>
+    <script>
+      // shadcn/ui の既定トークン（hsl）。色はすべてここから引く。brand は注釈の既定色 #FF5C8A。
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              border: "hsl(var(--border))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
+              muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" },
+              primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },
+              accent: "hsl(var(--accent))",
+              brand: { DEFAULT: "hsl(var(--brand))", foreground: "hsl(var(--brand-foreground))" },
+            },
+            fontFamily: {
+              sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", '"Hiragino Sans"', '"Noto Sans JP"', "sans-serif"],
+              mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+            },
+            borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 44%;
+        --border: 214.3 31.8% 91.4%;
+        --primary: 222.2 47.4% 11.2%;
+        --primary-foreground: 210 40% 98%;
+        --accent: 210 40% 96.1%;
+        --brand: 343 100% 52%;
+        --brand-foreground: 0 0% 100%;
+        --radius: 0.5rem;
+      }
+      /* ダークモード: OS の設定に合わせてトークンだけを差し替える */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: 222.2 84% 4.9%;
+          --foreground: 210 40% 98%;
+          --muted: 217.2 32.6% 17.5%;
+          --muted-foreground: 215 20.2% 70%;
+          --border: 217.2 32.6% 20%;
+          --primary: 210 40% 98%;
+          --primary-foreground: 222.2 47.4% 11.2%;
+          --accent: 217.2 32.6% 17.5%;
+          --brand: 343 100% 68%;
+          --brand-foreground: 222.2 84% 4.9%;
+        }
+      }
+      html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+      body { font-feature-settings: "cv11", "ss01"; }
+      /* 罫線の背景（shadcn のヒーローで使われる細いグリッド） */
+      .grid-bg {
+        background-image: linear-gradient(to right, hsl(var(--border) / 0.6) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border) / 0.6) 1px, transparent 1px);
+        background-size: 32px 32px;
+        mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 40%, transparent 100%);
+        -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 40%, transparent 100%);
+      }
+      /* コピー用ブロック: クリックでアイコンがチェックに変わる */
+      [data-code] .i-check { display: none; }
+      [data-code].copied .i-check { display: inline-flex; }
+      [data-code].copied .i-copy { display: none; }
+      [data-code] pre { scrollbar-width: thin; }
+      kbd { font-family: inherit; }
+      .kbd { display: inline-flex; min-width: 1.75rem; height: 1.625rem; align-items: center; justify-content: center; padding: 0 0.4rem; border: 1px solid hsl(var(--border)); border-bottom-width: 2px; border-radius: 0.375rem; background: hsl(var(--background)); font-size: 0.8125rem; font-weight: 500; white-space: nowrap; }
+      details > summary { list-style: none; }
+      details > summary::-webkit-details-marker { display: none; }
+      details[open] .chev { transform: rotate(180deg); }
+      :focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: 2px; }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .chev { transition: none; } }
+    </style>
+  </head>
+  <body class="min-h-screen bg-background font-sans text-foreground antialiased">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:shadow">本文へ移動</a>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <a href="./" class="flex items-center gap-2.5 font-semibold tracking-tight">
+          <img src="docs/media/icon.svg" alt="" width="24" height="24" class="h-6 w-6" />
+          <span>Tadcap</span>
+        </a>
+        <nav aria-label="ページ内" class="flex items-center gap-1 sm:gap-2">
+          <a href="#features" class="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground md:inline-flex">機能</a>
+          <a href="#install" class="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground md:inline-flex">インストール</a>
+          <a href="#usage" class="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground md:inline-flex">使い方</a>
+          <a href="#faq" class="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground md:inline-flex">よくある質問</a>
+          <a href="https://github.com/froggugugugu/tadcap" class="ml-1 inline-flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent" target="_blank" rel="noopener">
+            <!-- Lucide はブランドアイコンを持たないので GitHub マークはインライン -->
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>
+            <span>GitHub</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero: 左で何のツールか、右でアプリの画面 -->
+      <section class="relative overflow-hidden border-b border-border">
+        <div class="grid-bg pointer-events-none absolute inset-0"></div>
+        <div class="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-10 pt-10 sm:px-6 sm:pb-14 sm:pt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12">
+          <div>
+            <a href="#install" class="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground">
+              <span class="inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <span class="font-mono text-foreground">v0.1.0</span>
+              <span class="h-3 w-px bg-border"></span>
+              <span>配布版は準備中・ソースからビルドできます</span>
+              <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+            </a>
+            <h1 class="mt-6 text-[2rem] font-bold leading-[1.2] tracking-tight sm:text-5xl sm:leading-[1.15] lg:text-[2.75rem]"><span class="inline-block">撮る、描き込む、貼る。</span><span class="inline-block text-brand">最短で。</span></h1>
+            <p class="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+              Tadcap は、キャプチャを主役にした macOS 専用のスクリーンショット注釈ツールです。<kbd class="kbd">⌘⇧2</kbd> で範囲を撮り、矢印・枠・テキスト・モザイクを描き込んで、<kbd class="kbd">⌘C</kbd> でそのままチャットや資料へ貼り付けます。
+            </p>
+            <div class="mt-8 flex flex-wrap items-center gap-3">
+              <a href="#install" class="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90">
+                <i data-lucide="terminal" class="h-4 w-4"></i>
+                インストール
+              </a>
+              <a href="#usage" class="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-background px-5 text-sm font-medium shadow-sm transition-colors hover:bg-accent">
+                <i data-lucide="book-open" class="h-4 w-4"></i>
+                使い方を見る
+              </a>
+            </div>
+            <p class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span class="inline-flex items-center gap-1.5"><i data-lucide="laptop" class="h-3.5 w-3.5"></i>macOS 14 以降</span>
+              <span class="inline-flex items-center gap-1.5"><i data-lucide="scale" class="h-3.5 w-3.5"></i>MIT License</span>
+              <span class="inline-flex items-center gap-1.5"><i data-lucide="wifi-off" class="h-3.5 w-3.5"></i>外部通信なし</span>
+            </p>
+          </div>
+          <figure class="overflow-hidden rounded-xl border border-border bg-background p-1.5 shadow-lg">
+            <div class="overflow-hidden rounded-lg border border-border">
+              <div class="flex h-7 items-center gap-1.5 border-b border-border bg-muted/60 px-2.5" aria-hidden="true">
+                <span class="h-2 w-2 rounded-full bg-zinc-300"></span>
+                <span class="h-2 w-2 rounded-full bg-zinc-300"></span>
+                <span class="h-2 w-2 rounded-full bg-zinc-300"></span>
+              </div>
+              <img src="docs/media/editor.png" width="2080" height="1400" alt="Tadcap のエディタ画面。架空の設定画面のキャプチャに、ピンクの矢印と枠、「ここをオンにする」の文字、メールアドレス欄のモザイク、保存ボタンを囲む青い円が描かれている。右端に履歴のサムネイル" class="block h-auto w-full" />
+            </div>
+            <figcaption class="px-2 pb-1 pt-2 text-center text-xs text-muted-foreground">エディタの画面（キャプチャした画像は架空のものです）</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Flow: 撮る・描き込む・貼る -->
+      <section class="border-b border-border bg-muted/40" aria-label="Tadcap の流れ">
+        <ol class="mx-auto grid max-w-6xl gap-3 px-4 py-6 sm:px-6 md:grid-cols-3">
+          <li class="flex gap-3 rounded-lg border border-border bg-background p-3.5 shadow-sm">
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="scan" class="h-4 w-4"></i></span>
+            <div>
+              <p class="text-xs font-medium text-muted-foreground">1. 撮る</p>
+              <p class="font-semibold">どこからでも <kbd class="kbd">⌘⇧2</kbd></p>
+              <p class="mt-0.5 text-sm leading-6 text-muted-foreground">範囲をドラッグ。スペースキーでウィンドウ選択に切り替え。</p>
+            </div>
+          </li>
+          <li class="flex gap-3 rounded-lg border border-border bg-background p-3.5 shadow-sm">
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="pen-line" class="h-4 w-4"></i></span>
+            <div>
+              <p class="text-xs font-medium text-muted-foreground">2. 描き込む</p>
+              <p class="font-semibold">すぐ開くエディタで</p>
+              <p class="mt-0.5 text-sm leading-6 text-muted-foreground">矢印・矩形・円・テキスト・モザイクの 5 つだけ。</p>
+            </div>
+          </li>
+          <li class="flex gap-3 rounded-lg border border-border bg-background p-3.5 shadow-sm">
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="clipboard-check" class="h-4 w-4"></i></span>
+            <div>
+              <p class="text-xs font-medium text-muted-foreground">3. 貼る</p>
+              <p class="font-semibold"><kbd class="kbd">⌘C</kbd> でクリップボードへ</p>
+              <p class="mt-0.5 text-sm leading-6 text-muted-foreground">描き込んだ画像を、チャットや資料にそのまま貼り付け。</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Features -->
+      <section id="features" class="scroll-mt-14 border-b border-border">
+        <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div class="max-w-2xl">
+            <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">必要な描き込みだけを、素早く</h2>
+            <p class="mt-3 text-muted-foreground">多機能な画像編集ではなく、「ここを見て」を伝えるための道具に絞っています。</p>
+          </div>
+          <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
+              <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="crop" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 text-base font-semibold">どこからでもキャプチャ</h3>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground">グローバルショートカット <kbd class="kbd">⌘⇧2</kbd> で、どのアプリを使っていても範囲選択を始められます。選択には macOS 標準の範囲選択（<code class="font-mono text-[0.9em]">screencapture -i</code>）を使い、スペースキーでウィンドウ単位の選択に切り替えられます。撮り終えるとエディタが前面に開きます。</p>
+            </div>
+            <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
+              <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="shapes" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 text-base font-semibold">5 つの描き込みツール</h3>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground">根元から先へ太くなるテーパー矢印、矩形、円、テキスト（小・中・大）、モザイク。色は 6 色のプリセットとカラーピッカーから選べます。モザイクは隠したい範囲をなぞるだけです。</p>
+            </div>
+            <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
+              <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="move" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 text-base font-semibold">描いた直後なら調整できる</h3>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground">直前に描いた矢印・矩形・円は、ハンドルでリサイズ、内側のドラッグで移動できます。<kbd class="kbd">Enter</kbd> で確定、<kbd class="kbd">Esc</kbd> で取り消し。<kbd class="kbd">Shift</kbd> を押しながらで正方形・正円になります。</p>
+            </div>
+            <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
+              <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="undo-2" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 text-base font-semibold">取り消し・やり直し</h3>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground"><kbd class="kbd">⌘Z</kbd> で 1 操作ずつ取り消し、<kbd class="kbd">⌘⇧Z</kbd> でやり直し。ツールバーのボタンからも操作できます。</p>
+            </div>
+            <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
+              <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="history" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 text-base font-semibold">セッション内の履歴</h3>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground">アプリを起動している間に撮った画像は、右側にサムネイルで並びます。クリックすると、描き込んだ状態のまま呼び戻してもう一度コピーできます。</p>
+            </div>
+            <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
+              <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="shield-check" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 text-base font-semibold">メニューバーに常駐、何も残さない</h3>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground">Dock には出ず、メニューバーのオタマジャクシから「キャプチャ」「エディタを開く」「終了」を選べます。画像はディスクに保存せず、一時ファイルは起動時と終了時に自動で削除します。外部との通信はしません。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Toolbar -->
+      <section id="toolbar" class="scroll-mt-14 border-b border-border bg-muted/40">
+        <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div class="max-w-2xl">
+            <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">ツールバー</h2>
+            <p class="mt-3 text-muted-foreground">ボタンはアイコンだけです。ポインタを重ねると名前とショートカットが出ます。</p>
+          </div>
+          <figure class="mt-8 overflow-x-auto rounded-lg border border-border bg-white p-2 shadow-sm">
+            <img src="docs/media/toolbar.png" width="2080" height="82" alt="Tadcap のツールバー。左からキャプチャ、矢印・矩形・円・テキスト・モザイク、6 色とカラーピッカー、文字サイズ小・中・大、右端に取り消し・やり直しとクリップボードにコピー" class="block h-auto w-full min-w-[640px]" />
+          </figure>
+          <dl class="mt-6 grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            <div><dt class="font-semibold">キャプチャ</dt><dd class="mt-1 text-muted-foreground">アプリ内から範囲選択を始めます（<kbd class="kbd">⌘⇧2</kbd> と同じ）。</dd></div>
+            <div><dt class="font-semibold">編集ツール</dt><dd class="mt-1 text-muted-foreground">矢印・矩形・円・テキスト・モザイク。選んでいるツールは枠で示します。</dd></div>
+            <div><dt class="font-semibold">色</dt><dd class="mt-1 text-muted-foreground">ピンク・赤・橙・黄・緑・青と、その他の色（カラーピッカー）。モザイク以外に効きます。</dd></div>
+            <div><dt class="font-semibold">文字サイズ</dt><dd class="mt-1 text-muted-foreground">テキストの大きさを小・中・大から選びます。</dd></div>
+            <div><dt class="font-semibold">取り消し・やり直し</dt><dd class="mt-1 text-muted-foreground"><kbd class="kbd">⌘Z</kbd> / <kbd class="kbd">⌘⇧Z</kbd>。できないときはボタンが薄くなります。</dd></div>
+            <div><dt class="font-semibold">クリップボードにコピー</dt><dd class="mt-1 text-muted-foreground">描き込んだ画像をコピーします（<kbd class="kbd">⌘C</kbd>）。</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- Install -->
+      <section id="install" class="scroll-mt-14 border-b border-border">
+        <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div class="max-w-2xl">
+            <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">インストール</h2>
+            <p class="mt-3 text-muted-foreground">署名・公証済みの配布版（DMG）は準備中です。いまはソースからビルドして使います。</p>
+          </div>
+          <div class="mt-6 flex max-w-3xl gap-3 rounded-lg border border-amber-300/70 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200" role="note">
+            <i data-lucide="info" class="mt-0.5 h-4 w-4 shrink-0"></i>
+            <p>配布版の公開までは、以下の手順でビルドした <code class="font-mono">Tadcap.app</code> を使ってください。公開したらこのページでお知らせします。</p>
+          </div>
+          <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2 [&>*]:min-w-0">
+            <div>
+              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold"><i data-lucide="package-check" class="h-4 w-4 text-muted-foreground"></i>必要なもの</h3>
+              <ul class="space-y-2 text-sm text-muted-foreground">
+                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>macOS 14（Sonoma）以降</span></li>
+                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>Xcode Command Line Tools（<code class="font-mono">xcode-select --install</code>）</span></li>
+                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>Rust（stable、<a href="https://rustup.rs/" class="underline decoration-border underline-offset-4 hover:text-foreground" target="_blank" rel="noopener">rustup</a> で入れます）</span></li>
+                <li class="flex gap-2"><i data-lucide="check" class="mt-0.5 h-4 w-4 shrink-0 text-foreground"></i><span>Node.js 20 以降と npm</span></li>
+              </ul>
+              <h3 class="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold"><i data-lucide="app-window" class="h-4 w-4 text-muted-foreground"></i>ビルドしたあと</h3>
+              <ol class="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                <li><code class="break-all font-mono">src-tauri/target/release/bundle/macos/Tadcap.app</code> を「アプリケーション」フォルダへ移します。</li>
+                <li>署名していないアプリのため、初回は開けないことがあります。そのときは Finder で <code class="font-mono">Tadcap.app</code> を右クリック（Control＋クリック）して「開く」を選んでください。</li>
+                <li>起動するとメニューバーにオタマジャクシのアイコンが出ます（Dock には出ません）。</li>
+              </ol>
+            </div>
+            <div>
+              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold"><i data-lucide="code-2" class="h-4 w-4 text-muted-foreground"></i>ソースからビルド</h3>
+              <div data-code class="group relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-50 shadow-sm">
+                <div class="flex h-9 items-center justify-between border-b border-zinc-800 px-3">
+                  <span class="font-mono text-xs text-zinc-400">Terminal</span>
+                  <button type="button" data-copy aria-label="コマンドをコピー" title="コピー" class="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-50">
+                    <span class="i-copy inline-flex"><i data-lucide="copy" class="h-4 w-4"></i></span>
+                    <span class="i-check text-emerald-400"><i data-lucide="check" class="h-4 w-4"></i></span>
+                  </button>
+                </div>
+                <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-6"><code>git clone https://github.com/froggugugugu/tadcap.git &amp;&amp; cd tadcap
+npm install
+npm run tauri build -- --bundles app
+open src-tauri/target/release/bundle/macos</code></pre>
+              </div>
+              <p class="mt-2 text-xs leading-5 text-muted-foreground">初回のビルドは Rust の依存を取得・コンパイルするため数分かかります。<code class="font-mono">--bundles app</code> を付けると、DMG は作らず <code class="font-mono">.app</code> だけを作ります。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Setup: 画面収録の許可 -->
+      <section id="setup" class="scroll-mt-14 border-b border-border bg-muted/40">
+        <div class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div>
+            <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">初回セットアップ</h2>
+            <p class="mt-3 text-muted-foreground">画面を撮るには、macOS の「画面収録」の許可が必要です。</p>
+            <ol class="mt-6 space-y-4 text-sm">
+              <li class="flex gap-3"><span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs font-semibold">1</span><span class="text-muted-foreground">許可がないままキャプチャしようとすると、Tadcap は範囲選択を始めずに、画面の上に案内を出します。</span></li>
+              <li class="flex gap-3"><span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs font-semibold">2</span><span class="text-muted-foreground">「システム設定を開く」を押すと、「プライバシーとセキュリティ」の「画面収録」が開きます。Tadcap をオンにしてください。</span></li>
+              <li class="flex gap-3"><span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs font-semibold">3</span><span class="text-muted-foreground">許可してもすぐに反映されないときは、メニューバーのアイコンから「終了」を選び、Tadcap を起動し直してください。</span></li>
+            </ol>
+          </div>
+          <figure class="overflow-hidden rounded-xl border border-border bg-background p-1.5 shadow-lg">
+            <img src="docs/media/permission.png" width="1600" height="840" alt="画面収録の許可がないときの Tadcap。上部に「画面収録の権限が許可されていません」という案内と「システム設定を開く」ボタンが出ている" class="block h-auto w-full rounded-lg border border-border" loading="lazy" />
+          </figure>
+        </div>
+      </section>
+
+      <!-- Usage -->
+      <section id="usage" class="scroll-mt-14 border-b border-border">
+        <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div class="max-w-2xl">
+            <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">使い方</h2>
+            <p class="mt-3 text-muted-foreground">撮ってから貼るまで、手を止めずに進められます。</p>
+          </div>
+          <div class="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] [&>*]:min-w-0">
+            <ol class="space-y-5 text-sm">
+              <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">1</span><div><p class="font-semibold">撮る</p><p class="mt-1 leading-6 text-muted-foreground"><kbd class="kbd">⌘⇧2</kbd> を押して範囲をドラッグします。ウィンドウを丸ごと撮るときは、スペースキーを押してからウィンドウをクリックします。<kbd class="kbd">Esc</kbd> でやめられます。</p></div></li>
+              <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">2</span><div><p class="font-semibold">ツールと色を選ぶ</p><p class="mt-1 leading-6 text-muted-foreground">エディタが開いたら、ツールバーで矢印・矩形・円・テキスト・モザイクのどれかと、色（テキストなら文字サイズも）を選びます。</p></div></li>
+              <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">3</span><div><p class="font-semibold">描く</p><p class="mt-1 leading-6 text-muted-foreground">画像の上をドラッグします。描いた直後の図形はハンドルで大きさを変えたり動かしたりでき、<kbd class="kbd">Enter</kbd> で確定します。テキストはクリックした位置に入力欄が開くので、入力して <kbd class="kbd">Enter</kbd>。</p></div></li>
+              <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">4</span><div><p class="font-semibold">コピーする</p><p class="mt-1 leading-6 text-muted-foreground"><kbd class="kbd">⌘C</kbd>（またはツールバー右端のボタン）で、描き込んだ画像がクリップボードに入ります。</p></div></li>
+              <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">5</span><div><p class="font-semibold">貼り付ける</p><p class="mt-1 leading-6 text-muted-foreground">チャットやドキュメント、課題管理ツールなどで <kbd class="kbd">⌘V</kbd>。</p></div></li>
+            </ol>
+            <figure>
+              <div class="overflow-hidden rounded-xl border border-border bg-background p-1.5 shadow-lg">
+                <img src="docs/media/annotated.png" width="1280" height="800" alt="貼り付けた結果の画像。メールアドレス欄にモザイク、二段階認証のトグルにピンクの枠と矢印、「ここをオンにする」の文字、保存ボタンに青い円" class="block h-auto w-full rounded-lg" loading="lazy" />
+              </div>
+              <figcaption class="mt-2 text-center text-xs text-muted-foreground">⌘C でコピーされる画像（ハンドルなどの編集用の表示は含まれません）</figcaption>
+            </figure>
+          </div>
+
+          <h3 class="mt-14 text-lg font-semibold tracking-tight">ショートカット</h3>
+          <div class="mt-4 overflow-x-auto rounded-lg border border-border">
+            <table class="w-full min-w-[480px] text-left text-sm">
+              <thead class="bg-muted/60 text-xs text-muted-foreground">
+                <tr><th scope="col" class="px-4 py-2.5 font-medium">キー</th><th scope="col" class="px-4 py-2.5 font-medium">動作</th><th scope="col" class="px-4 py-2.5 font-medium">使える場面</th></tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘⇧2</kbd></td><td class="px-4 py-3">キャプチャを始める</td><td class="px-4 py-3 text-muted-foreground">どのアプリを使っていても</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Space</kbd></td><td class="px-4 py-3">範囲選択とウィンドウ選択を切り替える</td><td class="px-4 py-3 text-muted-foreground">範囲選択中</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘C</kbd></td><td class="px-4 py-3">描き込んだ画像をクリップボードにコピー</td><td class="px-4 py-3 text-muted-foreground">エディタ</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘Z</kbd></td><td class="px-4 py-3">取り消し</td><td class="px-4 py-3 text-muted-foreground">エディタ（テキスト入力中は入力欄の取り消し）</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘⇧Z</kbd></td><td class="px-4 py-3">やり直し</td><td class="px-4 py-3 text-muted-foreground">エディタ（テキスト入力中は入力欄のやり直し）</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Enter</kbd></td><td class="px-4 py-3">描いた図形・入力したテキストを確定</td><td class="px-4 py-3 text-muted-foreground">図形の調整中・テキスト入力中</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Esc</kbd></td><td class="px-4 py-3">描いた図形・入力中のテキストを取り消す</td><td class="px-4 py-3 text-muted-foreground">図形の調整中・テキスト入力中</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Shift</kbd>＋ドラッグ</td><td class="px-4 py-3">正方形・正円にする</td><td class="px-4 py-3 text-muted-foreground">矩形・円を描く／大きさを変えるとき</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq" class="scroll-mt-14 border-b border-border bg-muted/40">
+        <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
+          <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">よくある質問</h2>
+          <div class="mt-8 divide-y divide-border rounded-lg border border-border bg-background">
+            <details class="group p-5">
+              <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">撮った画像が真っ黒、または壁紙しか写りません<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
+              <p class="mt-3 text-sm leading-6 text-muted-foreground">画面収録が許可されていないときに起きます。「システム設定」→「プライバシーとセキュリティ」→「画面収録」で Tadcap をオンにし、反映されなければ Tadcap を終了して起動し直してください（<a href="#setup" class="underline decoration-border underline-offset-4 hover:text-foreground">初回セットアップ</a>）。</p>
+            </details>
+            <details class="group p-5">
+              <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">⌘⇧2 を押しても何も起きません<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
+              <p class="mt-3 text-sm leading-6 text-muted-foreground">ほかのアプリが同じショートカットを使っていると、Tadcap に届きません。そのアプリの設定でショートカットを変えるか、メニューバーのアイコンから「キャプチャ」を選んでください。いまのところ Tadcap 側でキーを変える設定はありません。</p>
+            </details>
+            <details class="group p-5">
+              <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">撮った画像はどこに保存されますか<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
+              <p class="mt-3 text-sm leading-6 text-muted-foreground">保存しません。Tadcap はクリップボードへ渡すための道具です。履歴はアプリを起動している間だけメモリに持ち、終了すると消えます。撮影時に使う一時ファイルは、起動時と終了時に自動で削除します。</p>
+            </details>
+            <details class="group p-5">
+              <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">ネットワークに接続しますか<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
+              <p class="mt-3 text-sm leading-6 text-muted-foreground">しません。キャプチャも描き込みもすべて手元の Mac の中で完結します。</p>
+            </details>
+            <details class="group p-5">
+              <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">Dock にアイコンがありません。終了するには<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
+              <p class="mt-3 text-sm leading-6 text-muted-foreground">Tadcap はメニューバーに常駐するアプリです。メニューバーのオタマジャクシのアイコンから「終了」を選んでください。エディタのウィンドウを閉じても、アプリは常駐したままです。</p>
+            </details>
+            <details class="group p-5">
+              <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">Windows や Linux で使えますか<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
+              <p class="mt-3 text-sm leading-6 text-muted-foreground">使えません。Tadcap は macOS 14 以降専用です。</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-border">
+      <div class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:px-6">
+        <div class="max-w-2xl space-y-1">
+          <p>&copy; 2026 froggugugugu. <a href="LICENSE" class="underline decoration-border underline-offset-4 transition-colors hover:text-foreground">MIT License</a>.</p>
+          <p class="text-xs">macOS は Apple Inc. の商標です。Tadcap は Apple Inc. とは関係のない、個人が作っているツールです。<a href="THIRD_PARTY_NOTICES.html" class="underline decoration-border underline-offset-4 transition-colors hover:text-foreground">ライセンス表示</a></p>
+        </div>
+        <nav aria-label="フッター" class="flex items-center gap-4">
+          <a href="README.html" class="transition-colors hover:text-foreground">README</a>
+          <a href="https://github.com/froggugugugu/tadcap" class="inline-flex items-center gap-1.5 transition-colors hover:text-foreground" target="_blank" rel="noopener">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>GitHub
+          </a>
+        </nav>
+      </div>
+    </footer>
+
+    <script src="assets/lucide-1.45.0.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ"></script>
+    <script>
+      lucide.createIcons();
+      // コードブロックのコピー: クリップボードへ書き、1.6 秒だけアイコンをチェックに変える。
+      for (const block of document.querySelectorAll("[data-code]")) {
+        const button = block.querySelector("[data-copy]");
+        let timer = null;
+        button.addEventListener("click", async () => {
+          const text = block.querySelector("code").textContent.trim();
+          block.classList.add("copied"); // feedback first: the clipboard call may be slow or refused
+          clearTimeout(timer);
+          timer = setTimeout(() => block.classList.remove("copied"), 1600);
+          try { await navigator.clipboard.writeText(text); } catch { /* http などクリップボードが使えない環境 */ }
+        });
+      }
+    </script>
+  </body>
+</html>
