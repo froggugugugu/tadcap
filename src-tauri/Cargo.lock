@@ -3515,7 +3515,7 @@ dependencies = [
 
 [[package]]
 name = "tadcap"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arboard",
  "objc2",
