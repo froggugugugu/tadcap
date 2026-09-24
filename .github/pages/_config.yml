@@ -1,5 +1,6 @@
 # Jekyll config for the GitHub Pages site. pages.yml assembles the site source from index.html (the landing page,
-# copied as-is: no front matter), README.md (→ README.html), docs/media/, LICENSE and THIRD_PARTY_NOTICES.md, then
+# copied as-is: no front matter), README.md (→ README.html), docs/media/, LICENSE, THIRD_PARTY_NOTICES.md and
+# scripts/install.sh (served as a static file), then
 # builds it with actions/jekyll-build-pages. jekyll-readme-index only kicks in when there is no index, so README stays
 # a plain page.
 title: Tadcap

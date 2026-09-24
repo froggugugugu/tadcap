@@ -1,0 +1,83 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+# Builds the macOS package for Apple silicon (ad-hoc signed, not notarized) and publishes it as a GitHub Release:
+# Tadcap-<version>-arm64.dmg and Tadcap-<version>-arm64.zip (the file scripts/install.sh installs).
+# build only reads the repository: dependency code never runs next to a token that can write. publish holds
+# contents: write, runs no repository code, and attaches the files build verified to a draft before publishing it,
+# so the release is complete when it becomes visible.
+# Actions are pinned to commit SHAs (version in the comment); runner images are pinned too.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: 24, cache: npm }
+      - name: Tag must match the version in package.json, tauri.conf.json and Cargo.toml
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          npm_v="$(node -p "require('./package.json').version")"
+          conf_v="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          cargo_v="$(sed -n 's/^version = "\(.*\)"$/\1/p' src-tauri/Cargo.toml | head -n 1)"
+          for v in "$npm_v" "$conf_v" "$cargo_v"; do
+            [ "$v" = "$want" ] || { echo "tag $GITHUB_REF_NAME does not match: package.json $npm_v, tauri.conf.json $conf_v, Cargo.toml $cargo_v"; exit 1; }
+          done
+      # The runner image ships rustup; install the toolchain here instead of through another action.
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy
+          rustup default stable
+          rustc --version
+      # Install scripts of dependencies do not run (none of them needs one).
+      - run: npm ci --ignore-scripts
+      - name: Checks (type check + frontend build, unit tests, Rust tests, clippy)
+        run: |
+          npm run build
+          npm run test:run
+          cargo test --locked --manifest-path src-tauri/Cargo.toml
+          cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings
+      # scripts/package-mac.sh runs `tauri build` with CI=true (the dmg skips the Finder layout step) and writes release/.
+      - run: npm run dist:mac
+      - name: The app in the dmg must have an intact signature (a broken one makes macOS call the download damaged)
+        run: |
+          mnt="$(mktemp -d)"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" release/Tadcap-*-arm64.dmg
+          codesign --verify --deep --strict --verbose=2 "$mnt/Tadcap.app"
+          hdiutil detach "$mnt"
+      - name: The installer puts the built app in place with an intact signature
+        run: |
+          dir="$(mktemp -d)"
+          TADCAP_ZIP="$(ls release/Tadcap-*-arm64.zip)" TADCAP_APP_DIR="$dir" TADCAP_NO_OPEN=1 bash scripts/install.sh
+          codesign --verify --deep --strict "$dir/Tadcap.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$dir/Tadcap.app/Contents/Info.plist")" = "${GITHUB_REF_NAME#v}"
+      - name: The app carries the license notices
+        run: |
+          res="src-tauri/target/release/bundle/macos/Tadcap.app/Contents/Resources"
+          for f in LICENSE.txt THIRD_PARTY_NOTICES.md; do test -s "$res/licenses/$f"; done
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mac
+          if-no-files-found: error
+          path: |
+            release/*.dmg
+            release/*.zip
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: mac, path: release }
+      - name: Create the release as a draft with dmg / zip attached, then publish it
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/*.dmg release/*.zip --repo "$GITHUB_REPOSITORY" --verify-tag --draft --title "$GITHUB_REF_NAME" --generate-notes
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+        env: { GH_TOKEN: "${{ github.token }}" }

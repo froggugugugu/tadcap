@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 # Publishes the site to GitHub Pages with Jekyll: the landing page (.github/pages/index.html, a single static file)
-# at the root, and README.md (→ README.html), LICENSE, THIRD_PARTY_NOTICES.md and the images in docs/media/ next to it.
+# at the root, and README.md (→ README.html), LICENSE, THIRD_PARTY_NOTICES.md, the images in docs/media/ and scripts/install.sh next to it.
 # Pages must be enabled once in the repository settings (Source: GitHub Actions); GITHUB_TOKEN cannot create the site.
 # Actions are pinned to commit SHAs (version in the comment); runner images are pinned too.
 # Only deploy can write to Pages: build runs the repository's content through Jekyll with read access.
@@ -34,6 +34,7 @@ jobs:
           cp -R docs/media _pages/docs/media   # screenshots and the logo, shared by the landing page and README
           cp .github/pages/_config.yml .github/pages/index.html _pages/
           cp -R .github/pages/assets _pages/assets   # the page's scripts, served from the site itself
+          cp scripts/install.sh _pages/   # the installer, served at https://froggugugugu.github.io/tadcap/install.sh
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
         with: { source: ./_pages, destination: ./_site }
