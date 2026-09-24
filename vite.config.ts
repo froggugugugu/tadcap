@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 // @ts-expect-error type error without @types/node package
 import process from "node:process";
@@ -24,7 +25,16 @@ export default defineConfig(() => ({
       : undefined,
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      //    テスト・レポートの出力先も除外する(E2E 実行中に dev 画面が再読み込みされるのを防ぐ)
+      ignored: ["**/src-tauri/**", "**/testreport/**", "**/output/**", "**/e2e/**"],
+    },
+  },
+
+  // Vitest options (`npm run test` / `npm run test:run`)
+  test: {
+    include: ["src/**/*.test.ts"],
+    coverage: {
+      reportsDirectory: "testreport/coverage",
     },
   },
 }));

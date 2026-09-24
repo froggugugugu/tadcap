@@ -18,10 +18,23 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-clipboard-manager = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "2"
+arboard = "3"
+
+# 編集ウィンドウの前面化(実機不具合①・B2)。いずれも tao が既に依存している版の範囲で
+# 直接参照するだけ(新規クレートの追加なし)。`NSApplication::activate`・
+# `NSWindow::orderFrontRegardless`/`setLevel` を型付きで呼ぶために使う。
+# `NSRunningApplication`・`NSWorkspace` は診断ログ(`[tadcap:front]`)で最前面アプリの
+# バンドルIDを出すためだけに有効化する(objc2-foundation 内の機能が増えるのみ)。
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSResponder", "NSRunningApplication", "NSWindow", "NSWorkspace"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

@@ -1,116 +1,446 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
+/* ライトテーマ固定(PRD §6、ARCH §9.3 決定ログ#8)。
+   OSのダークモード設定に追従する実装は行わない。将来対応する場合は
+   `prefers-color-scheme` メディアクエリの追加で拡張できる構成にしておく
+   (ARCH §9.3、現時点では未実装)。
 
-.logo.typescript:hover {
-  filter: drop-shadow(0 0 2em #2d79c7);
-}
+   T19: 「主役はキャプチャ画像、UIは脇役」の方針でUIを再設計した(外部の
+   デザイン監査・エディトリアル系ミニマルUI指針を参照。詳細は
+   output/reports/ui/UI_REVIEW_T19.md)。アクセントは既存の矢印色1色のみに
+   絞り、説明文を削ってアイコン中心の薄いツールバーにした。 */
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 400;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
+  color: #1a1a1a;
+  background-color: #f5f5f5;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  /* 矢印の既定色(T09、PRD FR-006)。この値を唯一の定義箇所とする(色は定数1か所)。
+     `src/canvas/tools/arrowTool.ts` は値を複製せず `getComputedStyle()` でこの変数を
+     読み取って描画する(ARCH §9.3 決定)。T19: UI全体のアクセント色もこの1色に統一する
+     (`--accent-color` は複製ではなく本変数への参照のみ、「色は1か所」の方針を維持)。 */
+  --arrow-color: #ff5c8a;
+  --accent-color: var(--arrow-color);
+
+  --border-color: #e2e2e2;
+  --text-muted: #7a7a7a;
+  --surface-color: #ffffff;
+  --hover-tint: rgb(0 0 0 / 6%);
+  --press-tint: rgb(0 0 0 / 10%);
 }
 
-.container {
+/* T19: [hidden] を常にUAスタイルシート同等の `display: none` に固定する安全策。
+   従来 `.permission-banner { display: flex; ... }` が `[hidden] { display: none }` という
+   ブラウザ既定のUAスタイルシートのルールを上書きしてしまい、`hidden` 属性を設定しても
+   バナーが常時表示される不具合があった(T13のE2Eで検出、project-config.md §11参照)。
+   `!important` は非`!important`宣言に対して詳細度に関わらず常に優先されるため、この1行で
+   同種の問題(他の要素が `display` を宣言し `[hidden]` を上書きしてしまうこと)を将来にも
+   わたって防ぐ(個別セレクタを `:not([hidden])`化する対症療法ではなく、根本原因に対する
+   一元的な対策)。 */
+[hidden] {
+  display: none !important;
+}
+
+body {
   margin: 0;
-  padding-top: 10vh;
+}
+
+/* --- エディタ画面レイアウト(T07: キャプチャ起動 + Canvas表示、T19で再設計) --- */
+
+.app {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  text-align: center;
+  min-height: 100vh;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
+/* --- ツールバー(T19: キャプチャ/編集ツール/コピーを1本の薄いバーに統合。
+   アイコン中心・説明文なし。ツールチップ/aria-labelで意味を保つ) --- */
 
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
+.toolbar {
   display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  flex: none;
+}
+
+.toolbar__divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background-color: var(--border-color);
+  flex: none;
+}
+
+.toolbar__spacer {
+  flex: 1;
+}
+
+.tool-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* --- 注釈色の選択(T28、FR-013)。丸いスウォッチを並べ、選択中は同じ色の輪で示す。
+   色の名前は aria-label / title のみ(T19方針)。`--swatch-color` は `colorPicker.ts` が設定。 --- */
+
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.color-swatch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
+  width: 24px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
   cursor: pointer;
+  flex: none;
 }
 
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
+.color-swatch::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--swatch-color);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+  transition: box-shadow 150ms ease, transform 100ms ease;
 }
 
-input,
-button {
+.color-swatch:hover::before {
+  transform: scale(1.1);
+}
+
+.color-swatch:active::before {
+  transform: scale(0.94);
+}
+
+.color-swatch[aria-pressed="true"]::before,
+.color-swatch--selected::before {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 12%),
+    0 0 0 2px var(--surface-color),
+    0 0 0 3.5px var(--swatch-color);
+}
+
+.color-swatch:focus {
   outline: none;
 }
 
-#greet-input {
-  margin-right: 5px;
+.color-swatch:focus-visible::before,
+.color-swatch--custom:has(.color-swatch__input:focus-visible)::before {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 3px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
+/* カラーピッカー: 虹色の輪。プリセット外の色を選んでいるときは中心をその色で塗る。 */
+.color-swatch--custom::before {
+  background:
+    radial-gradient(circle, var(--swatch-color) 0 4.5px, var(--surface-color) 5px 5.5px, transparent 6px),
+    conic-gradient(#ff3b30, #ffcc00, #34c759, #5ac8fa, #007aff, #af52de, #ff3b30);
+}
 
-  a:hover {
-    color: #24c8db;
-  }
+.color-swatch--custom.color-swatch--selected::before {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 12%),
+    0 0 0 2px var(--surface-color),
+    0 0 0 3.5px #8a8a8a;
+}
 
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
+/* 透明の <input type="color"> をスウォッチ全体に重ね、クリックでOSのカラーパネルを開く。 */
+.color-swatch__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* --- アイコンボタン共通(キャプチャ・コピー・矢印/モザイクツール共通、T19) --- */
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background-color: transparent;
+  color: #3a3a3a;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 100ms ease;
+}
+
+.icon-button .icon {
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+}
+
+.icon-button:hover:not(:disabled) {
+  background-color: var(--hover-tint);
+}
+
+.icon-button:active:not(:disabled) {
+  background-color: var(--press-tint);
+  transform: scale(0.94);
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.icon-button[aria-pressed="true"],
+.icon-button.tool-toolbar__button--active {
+  color: var(--accent-color);
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--accent-color);
+}
+
+/* キーボード操作時のみ可視のフォーカスリング(マウスクリックでは出さない、
+   HIG/アクセシビリティ要件)。 */
+.icon-button:focus {
+  outline: none;
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* --- 画面収録権限未許可時の案内バナー(T08、NFR-002、T19で一行+ボタンへ簡略化) --- */
+
+.permission-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 0.5em 0.75em;
+  background-color: #fdeceb;
+  border-bottom: 1px solid #f6c9c2;
+  color: #8a2c22;
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+.permission-banner__message {
+  margin: 0;
+  flex: 1;
+}
+
+.permission-banner__button {
+  flex: none;
+  height: 26px;
+  padding: 0 0.75em;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.85em;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #b23b2d;
+  box-shadow: none;
+}
+
+.permission-banner__button:hover {
+  background-color: #9a3225;
+  border-color: transparent;
+}
+
+.permission-banner__button:active {
+  background-color: #8a2c1f;
+  border-color: transparent;
+}
+
+/* --- Canvas表示領域 + セッション内履歴サイドバー(T14、FR-010、T19で余白を圧縮) --- */
+
+.main-area {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.canvas-area {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: auto;
+}
+
+/* 空状態(画像未読込): 一言 + ショートカット表示のみ(説明文を持たない、T19)。 */
+.empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.empty-state kbd {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--surface-color);
+  font-family: inherit;
+  font-size: 0.95em;
+}
+
+.history-sidebar {
+  flex: none;
+  width: 88px;
+  padding: 8px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+}
+
+.history-sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-sidebar__thumbnail-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 150ms ease, opacity 150ms ease;
+}
+
+.history-sidebar__thumbnail-button:hover {
+  opacity: 0.85;
+  border-color: transparent;
+}
+
+.history-sidebar__thumbnail-button:focus {
+  outline: none;
+}
+
+.history-sidebar__thumbnail-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.history-sidebar__item--selected .history-sidebar__thumbnail-button {
+  border-color: var(--accent-color);
+}
+
+.history-sidebar__thumbnail {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+#capture-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 12%);
+}
+
+/* 編集中の図形のハンドル(T31)。Canvasに重ねるだけで、Canvasのピクセル(コピー・履歴)には
+   含めない。操作はCanvas側で受けるため、ポインタイベントは透過する。 */
+.shape-overlay {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* テキストツール(T27)。Canvasに重ねる単一行の入力欄。文字サイズ・位置・影は
+   `src/canvas/tools/textTool.ts` が表示倍率に合わせてインラインで指定する(焼き込み結果と一致させる)。
+   枠は `outline`(レイアウトに影響しない)で示し、文字の位置をずらさない。Canvasのピクセルでは
+   ないためコピー・履歴には写らない。 */
+.capture-canvas--text-tool {
+  cursor: text;
+}
+
+.text-tool-input {
+  position: absolute;
+  box-sizing: content-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  outline: 1px dashed rgb(255 255 255 / 90%);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
+  caret-color: currentcolor;
+}
+
+/* --- 短いフィードバック表示(コピー成功等、T19: 常設の説明文ではなくトースト状に) --- */
+
+.toast-region {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.toast {
+  margin: 0;
+  padding: 0.4em 0.8em;
+  border-radius: 999px;
+  background-color: #1f1f1f;
+  color: #ffffff;
+  font-size: 0.8em;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+}
+
+.toast:empty {
+  display: none;
+}
+
+button {
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  outline: none;
 }
