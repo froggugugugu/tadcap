@@ -203,6 +203,8 @@ tadcap/
 | `src/canvas/tools/textLayout.ts`(【新設 2026-09-24 T33】) | テキストの寸法・描画・入力終了の判定の純粋関数(`textTool.ts` から分離) | `textShapeBox()`, `drawTextShape()`, `decideTextEdit()` | — |
 | `src/ui/selectionKeys.ts`(【改訂 2026-09-24 T32】`pendingShapeKeys.ts` を置き換え) | Enter/Esc で選択解除 | `bindSelectionKeys()` | documentState |
 | (廃止 T32)`src/canvas/pendingShape.ts` | `documentState.ts` に置き換え | — | — |
+| `src/history/documentArchive.ts`(【新設 2026-09-25 T34】) | 履歴項目ごとのドキュメント退避(ベースPNG + オブジェクト + 次のid + 取り消しスタック、取り消しのピクセルは1項目8MBまで) | `saveArchivedDocument()`, `getArchivedDocument()`, `trimUndoToBudget()` | — |
+| `src/ui/arrangeButtons.ts`(【新設 2026-09-25 T34】) | 最前面へ・最背面へのボタンと ⌘⇧F/⌘⇧B | `initArrangeButtons()`, `arrangeShortcutCommand()` | documentState |
 | `src/history/` | セッション内履歴の保持 | `historyStore` | historyStore |
 | `src/ui/toolbar.ts`(【改訂 2026-09-24】) | 矢印/矩形/円/テキスト/モザイクのツール切替(3ツール追加) | `initToolbar()` | canvasState |
 | `src/ui/colorPicker.ts`(【新設 2026-09-24】) | プリセット色見本＋ネイティブカラーピッカーのUI、`toolSettings`への反映 | `initColorPicker()` | toolSettings |
@@ -273,6 +275,13 @@ tadcap/
 - **画像の差し替え**: 新規キャプチャ・履歴再読込は `renderImageToCanvas()` 直後に `resetDocument()`(表示 → ベースへ複製、オブジェクト・選択・下書き・取り消しスタックを空に)。差し替え前の確定処理(旧 `commitPendingShape()`)は不要(表示は常に合成結果)。T34 で履歴項目ごとにドキュメントを保持する前提で、ドキュメントの中身(ベース + オブジェクト配列 + 取り消しスタック)を 1 か所(`documentState.ts`)に集めてある
 - **DOM 依存の分離**: `documentState.ts` はベースへの読み書き・描画を `DocumentSurface` インターフェース越しに行い、Vitest では配列ベースの偽物で検証する。実装は `documentSurface.ts`(オフスクリーン canvas と合成描画)
 
+**【改訂 2026-09-25 T34】選択中の操作と履歴ごとの保持**:
+
+- **選択中の操作**(すべて `documentState.ts`、取り消せるコマンド): 削除 `removeShapeObject()`(Delete/Backspace、`ui/selectionKeys.ts`)/ 色 `setSelectedColor()`(`update`。カラーピッカーの `input` 中は `previewSelectedColor()` で下書き、`change` で確定)/ 文字サイズ `setSelectedFontSize()`(テキストのみ。DOM で寸法を測る関数を `setTextMeasurer()` で `textTool.ts` が登録)/ 重ね順 `arrangeSelected("front" | "back")`(新コマンド `reorder {id, from, to}`)。色・文字サイズの UI と重ね順ボタンのグループに `data-preserve-selection` を付け、押しても選択が外れないようにする
+- **重ね順のショートカット**: ⌘⇧F(最前面へ)/ ⌘⇧B(最背面へ)。【判断】macOS 標準の Keynote・Pages・Numbers・フリーボードの割り当てに合わせた(Figma 系の ⌘]/⌘[ はアプリ間で意味が揃っておらず、日本語配列ではキー位置も異なるため)。1 段ずつの前面/背面は設けない(オブジェクトは通常数個で、ボタンが増えるだけのため)
+- **履歴ごとの保持**(`history/documentArchive.ts`、`main.ts`): 別の画像へ切り替える直前(新規キャプチャ・履歴切替。`commitPendingText()` の後)に、表示中の履歴 id でドキュメントを退避する。オブジェクト配列・次の id・取り消しスタックは同期に取り出し(イミュータブルなので共有)、ベースは同期に複製してから PNG 化する(待っている間の変更が混ざらない)。戻るときは退避があれば `createImageBitmap(PNG)` → `restoreDocument()`(ベース・表示 canvas のサイズも戻す)、無ければ従来どおり履歴画像(合成結果)をベースにする。履歴の上限で消えた項目の退避も消す
+- **メモリ(【設計判断】)**: 5K の RGBA は 1 枚約 56MB で、ImageBitmap / ImageData のまま履歴 50 件ぶん持つと約 2.8GB になるため、ベースは PNG の Blob で持つ(スクリーンショットは数 MB。計測: UI 風の 5K 合成画像で PNG 1.9MB、エンコード 42ms、デコード+描画 25ms、headless Chromium)。ベースを変えていなければ読み込み時の PNG をそのまま使い、再エンコードしない(`documentSurface.ts` の revision 管理)。取り消しスタックのピクセル(モザイク・上限超過の焼き込み)は 1 項目 8MB(`ARCHIVED_UNDO_BYTES_LIMIT`)まで、古い取り消しから捨てる。見積もり: ベース PNG 2〜10MB × 50 = 100〜500MB + 取り消し最大 8MB × 50 = 400MB(最悪)。履歴画像・サムネイル(既存)は別途
+
 ## 6. 状態管理設計
 
 ### 6.1 ストア一覧
@@ -285,6 +294,7 @@ tadcap/
 | `toolSettings`(`src/canvas/toolSettings.ts`、【新設 2026-09-24】) | 矢印・矩形・円・テキスト共通の現在色、テキストのフォントサイズ段階(FR-013) | なし(アプリ起動中のみ。初期値は`#FF5C8A`とfontSize既定値) | — |
 | `undoStack`(`src/canvas/undoStack.ts`、【新設 2026-09-24】) | 焼き込み操作の差分(変更矩形+焼き込み前ピクセル)のスタック(FR-014)。【改訂 2026-09-24 T32】要素を `DocumentCommand`(§5.2 T32)に変更 | なし(新規Capture読込・履歴項目切替でクリア) | — |
 | `documentState`(`src/canvas/documentState.ts`、【新設 2026-09-24 T32】) | 表示中画像のドキュメント(ベース canvas・オブジェクト配列・選択中 id・ドラッグ中の下書き) | なし(新規Capture読込・履歴項目切替で `resetDocument()`。履歴ごとの保持は T34) | — |
+| `documentArchive`(`src/history/documentArchive.ts`、【新設 2026-09-25 T34】) | 履歴 id → 退避したドキュメント(ベース PNG・オブジェクト・次の id・取り消しスタック) | なし(アプリ終了で破棄。履歴の上限で消えた項目は削除) | — |
 
 ### 6.2 永続化方針
 
@@ -337,6 +347,7 @@ PRD §11のリスク(5K Retina相当の画像はCanvas全体のImageDataで概�
 15. 【新設 2026-09-24】Capture新規読込・履歴項目の再読込(手順5・9)の直後に`undoStack.clearUndoStack()`を呼び、取り消し対象を常に「現在表示中の画像」に限定する
 16. 【改訂 2026-09-24 T31】矢印・矩形・円(手順10・11の置き換え): `pointerup`で図形を`pendingShape`に保持(編集中、ハンドルはオーバーレイ)→ リサイズ・移動のたびに base+図形 を再描画 → 確定トリガー(§5.2末尾)で`pushUndoStep()`して編集状態を解除。手順7(コピー)・手順5/9(差し替え)の前には必ず確定する。Escは破棄してbaseへ戻す
 17. 【改訂 2026-09-24 T32】矢印・矩形・円(手順16の置き換え): pointerdown で `decidePointerDown()`(選択中 → 最前面の当たり判定 → 新規作成)→ pointermove は下書きを差し替えて `renderDocument()`(ベース + 全オブジェクト)→ pointerup で `addShapeObject()`(`add` + 必要なら `flatten` の `group`)または `commitShapeEdit()`(`update`)をコマンドとして積む。モザイク・テキストは `applyBaseEdit(rect, draw)` でベースのピクセルを変え `pixels` コマンドを積む。取り消し・やり直しは `undoDocument()`/`redoDocument()` がコマンドを適用して再合成する。手順5/9 の差し替えは `resetDocument()`。手順7・8(コピー・履歴保存)は表示 canvas(合成結果)を読むだけで変更なし
+18. 【改訂 2026-09-25 T34】新規キャプチャ・履歴切替の直前に、表示中の履歴項目のドキュメントを `documentArchive` へ退避する(手順 5/9 の前)。履歴項目の再読込(手順 9)は、退避があればベース PNG・オブジェクト・取り消しスタックを復元し、無ければ従来どおり合成結果の画像を読む
 
 ### 7.2 バリデーション戦略
 

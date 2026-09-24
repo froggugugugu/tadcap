@@ -125,6 +125,12 @@ export function canRedo(): boolean {
   return canRedoState(state);
 }
 
+/** 退避しておいたスタックに置き換える(履歴項目へ戻ったとき、T34)。 */
+export function replaceUndoStackState(next: UndoStackState): void {
+  state = next;
+  notify();
+}
+
 /** Undo・Redo両スタックを空にする(新規キャプチャ・履歴切替時)。 */
 export function clearUndoStack(): void {
   state = createUndoStackState();

@@ -10,6 +10,7 @@
 //! 定義・変換は純粋関数としてユニットテストし、DOM生成・結線(`initColorPicker`)はE2Eで検証する
 //! (`toolbar.ts`と同じ方針、project-config.md §11)。
 
+import { previewSelectedColor, setSelectedColor } from "../canvas/documentState";
 import {
   DEFAULT_COLOR,
   getToolSettings,
@@ -79,6 +80,8 @@ export function initColorPicker(mount: HTMLElement): void {
       const color = colorAtPresetIndex(index);
       if (color) {
         setColor(color);
+        // T34: オブジェクトを選択中なら、その色も変える(取り消せる操作)。
+        setSelectedColor(color);
       }
     });
     mount.appendChild(button);
@@ -97,6 +100,13 @@ export function initColorPicker(mount: HTMLElement): void {
   input.addEventListener("input", () => {
     if (isValidColorCode(input.value)) {
       setColor(input.value.toUpperCase());
+      // T34: 選択中のオブジェクトは操作中は下書きで見せ、`change`(パネルを閉じた・確定)で1操作にする。
+      previewSelectedColor(input.value.toUpperCase());
+    }
+  });
+  input.addEventListener("change", () => {
+    if (isValidColorCode(input.value)) {
+      setSelectedColor(input.value.toUpperCase());
     }
   });
   custom.appendChild(input);

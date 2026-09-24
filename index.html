@@ -36,11 +36,42 @@
 
         <div class="toolbar__divider" aria-hidden="true"></div>
 
-        <div id="color-picker" class="color-picker" role="group" aria-label="色"></div>
+        <div id="color-picker" class="color-picker" role="group" aria-label="色" data-preserve-selection></div>
 
         <div class="toolbar__divider" aria-hidden="true"></div>
 
-        <div id="font-size-picker" class="tool-toolbar" role="group" aria-label="文字サイズ"></div>
+        <div id="font-size-picker" class="tool-toolbar" role="group" aria-label="文字サイズ" data-preserve-selection></div>
+
+        <div class="toolbar__divider" aria-hidden="true"></div>
+
+        <div class="tool-toolbar" role="group" aria-label="重ね順" data-preserve-selection>
+          <button
+            id="bring-front-button"
+            type="button"
+            class="icon-button"
+            disabled
+            aria-label="最前面へ(⌘⇧F)"
+            title="最前面へ(⌘⇧F)"
+          >
+            <svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <rect x="3" y="3" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.6" />
+              <rect x="8" y="8" width="9" height="9" rx="1.5" fill="currentColor" stroke="currentColor" stroke-width="1.4" />
+            </svg>
+          </button>
+          <button
+            id="send-back-button"
+            type="button"
+            class="icon-button"
+            disabled
+            aria-label="最背面へ(⌘⇧B)"
+            title="最背面へ(⌘⇧B)"
+          >
+            <svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <rect x="3" y="3" width="9" height="9" rx="1.5" fill="currentColor" stroke="currentColor" stroke-width="1.4" />
+              <rect x="8" y="8" width="9" height="9" rx="1.5" style="fill: var(--surface-color)" stroke="currentColor" stroke-width="1.4" />
+            </svg>
+          </button>
+        </div>
 
         <div class="toolbar__spacer"></div>
 

@@ -12,7 +12,13 @@
 //! ベースへの読み書きは`PixelStore`越しに行い、Canvas APIに依存しない(Vitestでは偽物を使う)。
 
 import type { Rect } from "./coords";
-import { insertObject, removeObject, replaceObjectShape, type AnnotationObject } from "./objectModel";
+import {
+  insertObject,
+  moveObjectToIndex,
+  removeObject,
+  replaceObjectShape,
+  type AnnotationObject,
+} from "./objectModel";
 import type { EditableShape } from "./shapeEdit";
 
 /**
@@ -42,6 +48,8 @@ export type DocumentCommand =
   | { type: "pixels"; rect: Rect; image: ImageDataLike }
   /** 上限超過でオブジェクトをベースへ焼き込んだ(`image`は反対側の状態の`rect`のピクセル)。 */
   | { type: "flatten"; object: AnnotationObject; index: number; rect: Rect; image: ImageDataLike }
+  /** 重ね順の変更(最前面・最背面、T34)。`from`/`to`は配列位置。 */
+  | { type: "reorder"; id: number; from: number; to: number }
   /** 1操作で起きた複数のコマンド(追加+焼き込みなど)。 */
   | { type: "group"; commands: DocumentCommand[] };
 
@@ -91,6 +99,8 @@ function apply(
           : removeObject(objects, command.object.id),
         command,
       };
+    case "reorder":
+      return { objects: moveObjectToIndex(objects, command.id, undo ? command.from : command.to), command };
     case "update":
       return {
         objects: replaceObjectShape(objects, command.id, undo ? command.before : command.after),

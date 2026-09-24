@@ -20,12 +20,23 @@ import {
   OBJECT_LIMIT,
   findObject,
   insertObject,
+  moveObjectToIndex,
   removeObject,
   replaceObjectShape,
   type AnnotationObject,
 } from "./objectModel";
-import { shapeUndoRect, type EditableShape } from "./shapeEdit";
-import { clearUndoStack, popRedo, popUndo, pushCommand } from "./undoStack";
+import { shapeUndoRect, type EditableShape, type TextMetricsSnapshot } from "./shapeEdit";
+import { computeFontSizePx } from "./tools/textLayout";
+import type { FontSize } from "./toolSettings";
+import {
+  clearUndoStack,
+  getUndoStackState,
+  popRedo,
+  popUndo,
+  pushCommand,
+  replaceUndoStackState,
+  type UndoStackState,
+} from "./undoStack";
 
 /**
  * ドラッグ中の下書き。`id`が`null`なら作成中の新しい図形(最前面に描く)、数値ならその
@@ -39,8 +50,15 @@ export interface ShapeDraft {
 /** ベースの保持と合成描画(DOM実装は`documentSurface.ts`)。 */
 export interface DocumentSurface extends PixelStore {
   size(): { width: number; height: number };
-  /** 表示中の画像(読み込み直後の表示canvas)をベースへ取り込む。 */
-  reset(): void;
+  /**
+   * 表示中の画像(読み込み直後の表示canvas)をベースへ取り込む。`blob`はその画像のPNG
+   * (分かっていれば。ベースを変えていない間の`exportBase()`で再エンコードせずに使う、T34)。
+   */
+  reset(blob?: Blob | null): void;
+  /** 退避しておいたベース画像を読み込み、表示canvasも同じサイズにする(履歴へ戻ったとき、T34)。 */
+  load(image: CanvasImageSource & { width: number; height: number }, blob: Blob | null): void;
+  /** ベースをPNGにする(呼んだ時点の内容。履歴ごとの退避用、T34)。 */
+  exportBase(): Promise<Blob>;
   /** オブジェクトをベースへ描き込む(上限超過の焼き込み)。 */
   burn(shape: EditableShape): void;
   /** ベースの描画コンテキストへ任意の加工を行う(モザイク・テキスト)。 */
@@ -76,8 +94,8 @@ export function getDocumentState(): DocumentState {
  * 新しい画像を読み込んだ直後に呼ぶ(新規キャプチャ・履歴再読込)。表示をベースへ取り込み、
  * オブジェクト・選択・下書き・取り消しスタックを空にする。
  */
-export function resetDocument(): void {
-  surface?.reset();
+export function resetDocument(baseBlob: Blob | null = null): void {
+  surface?.reset(baseBlob);
   state = { objects: [], selectedId: null, draft: null, hiddenId: null };
   clearUndoStack();
   commit();
@@ -188,6 +206,103 @@ export function undoDocument(): boolean {
 /** 取り消した操作をやり直す。やり直せなければ`false`。 */
 export function redoDocument(): boolean {
   return step("redo");
+}
+
+/** 文字の寸法を測る関数(DOM依存、`tools/textTool.ts`が登録する)。 */
+export type TextMeasurer = (text: string, fontPx: number) => TextMetricsSnapshot;
+
+let measureText: TextMeasurer | null = null;
+
+export function setTextMeasurer(measurer: TextMeasurer | null): void {
+  measureText = measurer;
+}
+
+/** 選択中のオブジェクトの色を変える(取り消せる`update`、T34)。選択が無い・同じ色なら`false`。 */
+export function setSelectedColor(color: string): boolean {
+  const selected = findObject(state.objects, state.selectedId);
+  if (!selected || selected.shape.color === color) {
+    // ピッカーの下書き(`previewSelectedColor`)が残っていれば消す。
+    if (state.draft) {
+      setDraft(null);
+    }
+    return false;
+  }
+  return commitShapeEdit(selected.id, { ...selected.shape, color });
+}
+
+/** 選択中のオブジェクトを指定色で下書き表示する(カラーピッカー操作中、確定は`setSelectedColor`)。 */
+export function previewSelectedColor(color: string): void {
+  const selected = findObject(state.objects, state.selectedId);
+  if (selected) {
+    setDraft({ id: selected.id, shape: { ...selected.shape, color } });
+  }
+}
+
+/**
+ * 選択中のテキストの文字サイズを変える(寸法を測り直した`update`、T34)。左上の位置は保つ。
+ * テキスト以外・同じサイズ・測る手段が無ければ`false`。
+ */
+export function setSelectedFontSize(fontSize: FontSize): boolean {
+  const selected = findObject(state.objects, state.selectedId);
+  if (!selected || selected.shape.kind !== "text" || selected.shape.fontSize === fontSize) {
+    return false;
+  }
+  if (!surface || !measureText) {
+    return false;
+  }
+  const { width, height } = surface.size();
+  const metrics = measureText(selected.shape.text, computeFontSizePx(fontSize, width, height));
+  return commitShapeEdit(selected.id, { ...selected.shape, fontSize, metrics });
+}
+
+/** 選択中のオブジェクトを最前面・最背面へ移す(`reorder`、T34)。既に端なら`false`。 */
+export function arrangeSelected(where: "front" | "back"): boolean {
+  const from = state.objects.findIndex((o) => o.id === state.selectedId);
+  if (from < 0) {
+    return false;
+  }
+  const to = where === "front" ? state.objects.length - 1 : 0;
+  if (from === to) {
+    return false;
+  }
+  const id = state.objects[from]!.id;
+  state = { ...state, objects: moveObjectToIndex(state.objects, id, to) };
+  pushCommand({ type: "reorder", id, from, to });
+  commit();
+  return true;
+}
+
+/** 履歴項目ごとに退避するドキュメントの中身(ベースは別に`exportDocumentBase()`で退避する、T34)。 */
+export interface DocumentSnapshot {
+  objects: readonly AnnotationObject[];
+  nextId: number;
+  undo: UndoStackState;
+}
+
+/** 今のドキュメントを退避用に取り出す(配列・スタックはイミュータブルに扱うため共有してよい)。 */
+export function snapshotDocument(): DocumentSnapshot {
+  return { objects: state.objects, nextId, undo: getUndoStackState() };
+}
+
+/** ベースをPNGで取り出す(呼んだ時点の内容。サーフェス未登録なら空のBlob)。 */
+export function exportDocumentBase(): Promise<Blob> {
+  return surface ? surface.exportBase() : Promise.resolve(new Blob());
+}
+
+/**
+ * 退避しておいたドキュメントへ戻す(履歴項目の再読込、T34)。ベース画像を読み込み、
+ * オブジェクト・取り消しスタックを戻す。選択・下書き・非表示は空にする。
+ */
+export function restoreDocument(
+  snapshot: DocumentSnapshot,
+  base: CanvasImageSource & { width: number; height: number },
+  baseBlob: Blob | null,
+): void {
+  surface?.load(base, baseBlob);
+  nextId = Math.max(nextId, snapshot.nextId);
+  state = { objects: snapshot.objects, selectedId: null, draft: null, hiddenId: null };
+  replaceUndoStackState(snapshot.undo);
+  commit();
 }
 
 /** 今の状態で表示canvasを描き直す(ドラッグ中のプレビューの下地など)。 */

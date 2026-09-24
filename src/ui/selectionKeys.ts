@@ -6,10 +6,12 @@
 //! 取り消しで、`tools/shapeTools.ts`が`preventDefault()`して処理する(本モジュールは
 //! `defaultPrevented`のイベントを無視する)。
 //!
+//! T34【改訂 2026-09-25】: Delete/Backspaceで選択中のオブジェクトを削除する。
+//!
 //! 判定は純粋関数(`selectionKeyAction`)、`window`への結線は`bindSelectionKeys`。
 //! テキスト入力中・IME変換中・修飾キー付きの入力は奪わない(`shortcutGuards.ts`と同じ方針)。
 
-import { getDocumentState, selectObject } from "../canvas/documentState";
+import { getDocumentState, removeShapeObject, selectObject } from "../canvas/documentState";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
 
 export interface SelectionKeyEvent {
@@ -21,7 +23,7 @@ export interface SelectionKeyEvent {
   isComposing: boolean;
 }
 
-export type SelectionKeyAction = "deselect" | null;
+export type SelectionKeyAction = "deselect" | "delete" | null;
 
 export function selectionKeyAction(
   event: SelectionKeyEvent,
@@ -33,6 +35,9 @@ export function selectionKeyAction(
   }
   if (isEditableTarget(target)) {
     return null;
+  }
+  if (event.key === "Delete" || event.key === "Backspace") {
+    return "delete";
   }
   return event.key === "Enter" || event.key === "Escape" ? "deselect" : null;
 }
@@ -52,7 +57,13 @@ export function bindSelectionKeys(): () => void {
       return;
     }
     event.preventDefault();
-    selectObject(null);
+    const { selectedId } = getDocumentState();
+    if (action === "delete" && selectedId !== null) {
+      // T34: 選択中のオブジェクトを削除(`remove`コマンド、取り消しで元の重ね順へ戻る)。
+      removeShapeObject(selectedId);
+    } else {
+      selectObject(null);
+    }
   };
   window.addEventListener("keydown", handleKeydown);
   return () => window.removeEventListener("keydown", handleKeydown);

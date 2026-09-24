@@ -71,14 +71,64 @@ export function createDocumentSurface(display: HTMLCanvasElement): DocumentSurfa
   const base = document.createElement("canvas");
   const baseCtx = context2d(base);
   const displayCtx = context2d(display);
+  /**
+   * T34: ベースと同じ内容のPNG(読み込んだ画像そのもの、または直前に`exportBase()`した結果)。
+   * ベースを変えるたびに`revision`を進め、変えていなければ`exportBase()`で再エンコードしない
+   * (5KのPNG化は数百ms掛かりうるため、履歴を切り替えるだけの操作を軽くする)。
+   */
+  let cleanBlob: Blob | null = null;
+  let cleanRevision = -1;
+  let revision = 0;
+  const touch = (): void => {
+    revision += 1;
+  };
+  const markClean = (blob: Blob | null): void => {
+    cleanBlob = blob;
+    cleanRevision = blob ? revision : -1;
+  };
 
   return {
     size: () => ({ width: base.width, height: base.height }),
-    reset: () => {
+    reset: (blob) => {
       base.width = display.width;
       base.height = display.height;
       baseCtx.clearRect(0, 0, base.width, base.height);
       baseCtx.drawImage(display, 0, 0);
+      touch();
+      markClean(blob ?? null);
+    },
+    load: (image, blob) => {
+      display.width = image.width;
+      display.height = image.height;
+      base.width = image.width;
+      base.height = image.height;
+      baseCtx.clearRect(0, 0, base.width, base.height);
+      baseCtx.drawImage(image, 0, 0);
+      touch();
+      markClean(blob);
+    },
+    exportBase: () => {
+      if (cleanBlob && cleanRevision === revision) {
+        return Promise.resolve(cleanBlob);
+      }
+      // 呼んだ時点の内容を同期で複製してからPNG化する(待っている間にベースが変わっても混ざらない)。
+      const copy = document.createElement("canvas");
+      copy.width = base.width;
+      copy.height = base.height;
+      context2d(copy).drawImage(base, 0, 0);
+      const at = revision;
+      return new Promise<Blob>((resolve, reject) => {
+        copy.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error("ベースのPNG化に失敗した"));
+            return;
+          }
+          if (at === revision) {
+            markClean(blob);
+          }
+          resolve(blob);
+        }, "image/png");
+      });
     },
     read: (rect: Rect): ImageDataLike =>
       rect.width > 0 && rect.height > 0
@@ -87,10 +137,15 @@ export function createDocumentSurface(display: HTMLCanvasElement): DocumentSurfa
     write: (rect: Rect, image: ImageDataLike) => {
       if (image.width > 0 && image.height > 0) {
         baseCtx.putImageData(toImageData(image), rect.x, rect.y);
+        touch();
       }
     },
-    burn: (shape: EditableShape) => drawEditableShape(baseCtx, shape, base.width, base.height),
+    burn: (shape: EditableShape) => {
+      drawEditableShape(baseCtx, shape, base.width, base.height);
+      touch();
+    },
     editBase: (draw) => {
+      touch();
       baseCtx.save();
       draw(baseCtx);
       baseCtx.restore();

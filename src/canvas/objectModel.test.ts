@@ -5,6 +5,7 @@ import {
   findObject,
   hitTestObjectOutline,
   insertObject,
+  moveObjectToIndex,
   pickObjectAt,
   removeObject,
   replaceObjectShape,
@@ -51,6 +52,18 @@ describe("insertObject / removeObject / replaceObjectShape / findObject", () => 
     expect(replaceObjectShape([a], 9, arrow)).toEqual([a]);
     expect(findObject([a, b], 2)).toBe(b);
     expect(findObject([a, b], 9)).toBeUndefined();
+  });
+});
+
+describe("moveObjectToIndex(重ね順の変更、T34)", () => {
+  const a = obj(1, rect);
+  const b = obj(2, ellipse);
+  const c = obj(3, arrow);
+  it("指定位置へ移し、範囲外は先頭・末尾へ丸める。無いidは何もしない", () => {
+    expect(moveObjectToIndex([a, b, c], 1, 2)).toEqual([b, c, a]);
+    expect(moveObjectToIndex([a, b, c], 3, 0)).toEqual([c, a, b]);
+    expect(moveObjectToIndex([a, b, c], 2, 99)).toEqual([a, c, b]);
+    expect(moveObjectToIndex([a, b, c], 9, 0)).toEqual([a, b, c]);
   });
 });
 

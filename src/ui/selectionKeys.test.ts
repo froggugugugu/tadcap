@@ -23,6 +23,14 @@ describe("selectionKeyAction", () => {
     expect(selectionKeyAction({ ...plain, key: "Enter" }, true, { tagName: "INPUT" })).toBeNull();
   });
 
+  it("選択中のDelete・Backspaceは削除(T34)", () => {
+    expect(selectionKeyAction({ ...plain, key: "Delete" }, true, null)).toBe("delete");
+    expect(selectionKeyAction({ ...plain, key: "Backspace" }, true, null)).toBe("delete");
+    expect(selectionKeyAction({ ...plain, key: "Backspace" }, false, null)).toBeNull();
+    expect(selectionKeyAction({ ...plain, key: "Backspace" }, true, { tagName: "INPUT" })).toBeNull();
+    expect(selectionKeyAction({ ...plain, key: "Backspace", metaKey: true }, true, null)).toBeNull();
+  });
+
   it("その他のキーは対象外", () => {
     expect(selectionKeyAction({ ...plain, key: "a" }, true, null)).toBeNull();
   });

@@ -9,13 +9,25 @@ import {
   loadImage,
   renderImageToCanvas,
 } from "./canvas/render";
-import { resetDocument, setDocumentSurface } from "./canvas/documentState";
+import {
+  exportDocumentBase,
+  resetDocument,
+  restoreDocument,
+  setDocumentSurface,
+  snapshotDocument,
+} from "./canvas/documentState";
 import { createDocumentSurface } from "./canvas/documentSurface";
 import { bindMosaicTool } from "./canvas/tools/mosaicTool";
 import { bindShapeTools } from "./canvas/tools/shapeTools";
 import { bindTextTool, commitPendingText } from "./canvas/tools/textTool";
 import {
+  deleteArchivedDocument,
+  getArchivedDocument,
+  saveArchivedDocument,
+} from "./history/documentArchive";
+import {
   addHistoryItem,
+  getSelectedHistoryItem,
   updateSelectedItemImage,
   type HistoryItem,
 } from "./history/historyStore";
@@ -43,10 +55,26 @@ import { bindSelectionKeys } from "./ui/selectionKeys";
 import { initSidebar } from "./ui/sidebar";
 import { initToolbar } from "./ui/toolbar";
 import { initUndoButtons } from "./ui/undoButton";
+import { initArrangeButtons } from "./ui/arrangeButtons";
 
 let canvasEl: HTMLCanvasElement | null = null;
 let statusEl: HTMLElement | null = null;
 let permissionBanner: PermissionBannerController | null = null;
+
+/**
+ * 表示中の履歴項目のドキュメント(ベースPNG・オブジェクト・取り消しスタック)を退避する
+ * (T34【新設 2026-09-25】、別の画像へ切り替える直前に呼ぶ。戻ったときに再調整できるように)。
+ * オブジェクト・スタックは呼んだ時点で同期に取り出し、ベースのPNG化だけを待つ。
+ */
+async function archiveCurrentDocument(): Promise<void> {
+  const current = getSelectedHistoryItem();
+  if (!current || !getCanvasState().image) {
+    return;
+  }
+  const snapshot = snapshotDocument();
+  const base = await exportDocumentBase();
+  saveArchivedDocument(current.id, { base, snapshot });
+}
 
 /**
  * `capture://completed` イベント受信時のハンドラ(Canvas反映の主経路、T07仕様)。
@@ -86,21 +114,28 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
       const currentAssets = await captureHistoryAssets(canvasEl);
       updateSelectedItemImage(currentAssets);
     }
+    // T34: 差し替える前に、表示中の項目のドキュメントを退避する。
+    await archiveCurrentDocument();
     const blob = await readCaptureImage(result.sourcePath);
     objectUrl = URL.createObjectURL(blob);
     const image = await loadImage(objectUrl);
     renderImageToCanvas(canvasEl, image);
     // T32: 新しいドキュメント(ベース=読み込んだ画像、オブジェクト0個)にする。Undo/Redoスタックの
-    // クリア(T24、取り消し対象を「現在表示中の画像」に限定)も含む。
-    resetDocument();
+    // クリア(T24、取り消し対象を「現在表示中の画像」に限定)も含む。T34: 読み込んだPNGをベースの
+    // 退避にそのまま使えるよう渡す(ベースを変えるまで再エンコードしない)。
+    resetDocument(blob);
     setCanvasImage({ assetUrl: objectUrl, capture: result });
     const assets = await captureHistoryAssets(canvasEl);
-    addHistoryItem({
+    const evicted = addHistoryItem({
       id: result.id,
       image: assets.image,
       thumbnail: assets.thumbnail,
       createdAt: result.createdAt,
     });
+    // T34: 履歴の上限で消えた項目の退避も消す。
+    for (const item of evicted) {
+      deleteArchivedDocument(item.id);
+    }
     if (statusEl) {
       statusEl.textContent = "";
     }
@@ -175,6 +210,8 @@ async function captureCurrentHistoryAssets(): Promise<
   }
   // T27: 履歴切替で差し替える前に入力中のテキストを確定し、保存内容に含める。
   commitPendingText();
+  // T34: 切り替える前に、表示中の項目のドキュメントを退避する。
+  await archiveCurrentDocument();
   return captureHistoryAssets(canvasEl);
 }
 
@@ -183,10 +220,20 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
     return;
   }
   try {
+    // T34: 退避したドキュメントがあれば、ベース・オブジェクト・取り消しスタックごと戻す
+    // (戻った後もオブジェクトを再調整・取り消しできる)。
+    const archived = getArchivedDocument(item.id);
+    if (archived) {
+      const bitmap = await createImageBitmap(archived.base);
+      restoreDocument(archived.snapshot, bitmap, archived.base);
+      bitmap.close();
+      setCanvasImage({ assetUrl: item.image, capture: null });
+      return;
+    }
     const image = await loadImage(item.image);
     renderImageToCanvas(canvasEl, image);
     // T32: 合成結果(編集後画像)をベースとする新しいドキュメントにする(Undo/Redoもクリア、
-    // T24と同じ理由)。履歴ごとのオブジェクト保持はT34。
+    // T24と同じ理由)。退避が無い場合(T34以前の経路・失敗時)のフォールバック。
     resetDocument();
     setCanvasImage({ assetUrl: item.image, capture: null });
   } catch (error) {
@@ -240,6 +287,12 @@ window.addEventListener("DOMContentLoaded", () => {
     const redoButtonEl = document.querySelector<HTMLButtonElement>("#redo-button");
     if (undoButtonEl && redoButtonEl) {
       initUndoButtons({ undo: undoButtonEl, redo: redoButtonEl });
+    }
+    // T34: 選択中のオブジェクトの重ね順(最前面へ・最背面へ、⌘⇧F/⌘⇧B)。
+    const frontButtonEl = document.querySelector<HTMLButtonElement>("#bring-front-button");
+    const backButtonEl = document.querySelector<HTMLButtonElement>("#send-back-button");
+    if (frontButtonEl && backButtonEl) {
+      initArrangeButtons({ front: frontButtonEl, back: backButtonEl });
     }
   }
 

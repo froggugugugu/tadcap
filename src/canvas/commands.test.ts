@@ -89,6 +89,16 @@ describe("flatten(上限超過の焼き込み)", () => {
   });
 });
 
+describe("reorder(前面/背面、T34)", () => {
+  it("取り消しで元の位置、やり直しで移動先へ", () => {
+    const pixels = fakePixels();
+    const cmd: DocumentCommand = { type: "reorder", id: 1, from: 0, to: 2 };
+    const undone = undoCommand([obj(2), obj(3), obj(1)], cmd, pixels);
+    expect(undone.objects).toEqual([obj(1), obj(2), obj(3)]);
+    expect(redoCommand(undone.objects, undone.command, pixels).objects).toEqual([obj(2), obj(3), obj(1)]);
+  });
+});
+
 describe("group", () => {
   it("取り消しは逆順、やり直しは順に適用する(追加→最古の焼き込みを1回で戻す)", () => {
     const pixels = fakePixels({ [K]: 99 });

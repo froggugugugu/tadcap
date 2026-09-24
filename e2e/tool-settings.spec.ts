@@ -92,6 +92,9 @@ test.describe("色・フォントサイズ選択UI(T28)", () => {
     expect(pageErrors).toEqual([]);
   });
 
+  // 【改訂 2026-09-25 T34】選択中のオブジェクトは色見本で色が変わるようになった。本テストはEnterで
+  // 選択を外してから色を変える(=選択が無ければ既存の図形は変わらない)ため、そのまま成り立つ。
+  // 選択中の色変更は`object-ops.spec.ts`で検証する。
   test("選んだ色が以後の描画に使われ、描いた後の色変更は焼き込み済みの図形を変えない", async ({ page }) => {
     const canvas = await captureAndWaitReady(page);
     await page.getByRole("button", { name: "矩形" }).click();

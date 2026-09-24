@@ -4,6 +4,14 @@ import type { Rect } from "./coords";
 import {
   addShapeObject,
   applyBaseEdit,
+  arrangeSelected,
+  exportDocumentBase,
+  previewSelectedColor,
+  restoreDocument,
+  setSelectedColor,
+  setSelectedFontSize,
+  setTextMeasurer,
+  snapshotDocument,
   commitShapeEdit,
   getDocumentState,
   redoDocument,
@@ -19,7 +27,7 @@ import {
   type ShapeDraft,
 } from "./documentState";
 import { OBJECT_LIMIT, type AnnotationObject } from "./objectModel";
-import { shapeUndoRect, type BoxShape, type EditableShape } from "./shapeEdit";
+import { shapeUndoRect, type BoxShape, type EditableShape, type TextShape } from "./shapeEdit";
 import { canRedo, canUndo, getUndoStackState } from "./undoStack";
 
 function last<T>(items: readonly T[]): T | undefined {
@@ -42,6 +50,7 @@ interface FakeSurface extends DocumentSurface {
   burned: EditableShape[];
   renders: { objects: readonly AnnotationObject[]; draft: ShapeDraft | null }[];
   resets: number;
+  loaded: unknown[];
 }
 
 /** 1画素=1バイトの配列をベースに見立てた偽のサーフェス(DOM無しで状態遷移を検証する)。 */
@@ -57,6 +66,7 @@ function createFakeSurface(): FakeSurface {
     burned: [],
     renders: [],
     resets: 0,
+    loaded: [],
     size: () => ({ width: W, height: H }),
     reset: () => {
       surface.resets += 1;
@@ -79,6 +89,10 @@ function createFakeSurface(): FakeSurface {
       fill(shapeUndoRect(shape, W, H), BURNED);
     },
     editBase: (draw) => draw(null as unknown as CanvasRenderingContext2D),
+    load: (image) => {
+      surface.loaded.push(image);
+    },
+    exportBase: () => Promise.resolve(new Blob(["base"])),
     render: (objects, draft) => {
       surface.renders.push({ objects, draft });
     },
@@ -271,6 +285,106 @@ describe("setHiddenObject(再編集中のテキストを入力欄と二重に描
     setHiddenObject(a.id);
     resetDocument();
     expect(getDocumentState().hiddenId).toBeNull();
+  });
+});
+
+describe("選択中のオブジェクトの操作(T34)", () => {
+  const text: TextShape = {
+    kind: "text",
+    text: "Hi",
+    x: 10,
+    top: 10,
+    fontSize: "medium",
+    color: COLOR,
+    metrics: { width: 40, left: 0, right: 38, ascent: 13, descent: 1, fontAscent: 17, fontDescent: 4 },
+  };
+
+  it("setSelectedColor: 選択中の色を変えるupdateを積み、取り消せる。選択が無い・同じ色なら何もしない", () => {
+    expect(setSelectedColor("#007AFF")).toBe(false);
+    const o = addShapeObject(box(10));
+    expect(setSelectedColor(COLOR)).toBe(false);
+    expect(setSelectedColor("#007AFF")).toBe(true);
+    expect(getDocumentState().objects[0]?.shape.color).toBe("#007AFF");
+    undoDocument();
+    expect(getDocumentState().objects[0]?.shape.color).toBe(COLOR);
+    expect(getDocumentState().selectedId).toBe(o.id);
+  });
+
+  it("previewSelectedColor: 下書きで色だけを見せ、モデル・取り消しは変えない", () => {
+    const o = addShapeObject(box(10));
+    const depth = getUndoStackState().undo.length;
+    previewSelectedColor("#34C759");
+    expect(getDocumentState().draft).toEqual({ id: o.id, shape: { ...box(10), color: "#34C759" } });
+    expect(getDocumentState().objects[0]?.shape.color).toBe(COLOR);
+    expect(getUndoStackState().undo.length).toBe(depth);
+  });
+
+  it("setSelectedFontSize: テキストだけ、寸法を測り直してupdateを積む", () => {
+    const measured: [string, number][] = [];
+    setTextMeasurer((value, fontPx) => {
+      measured.push([value, fontPx]);
+      return { ...text.metrics, width: fontPx * 2 };
+    });
+    addShapeObject(box(10));
+    expect(setSelectedFontSize("large")).toBe(false); // 矩形は対象外
+    const t = addShapeObject(text);
+    expect(setSelectedFontSize("medium")).toBe(false); // 同じサイズ
+    expect(setSelectedFontSize("large")).toBe(true);
+    const resized = getDocumentState().objects.find((o) => o.id === t.id)!.shape as TextShape;
+    expect(resized.fontSize).toBe("large");
+    expect(resized.metrics.width).toBe(measured[0]![1] * 2);
+    expect(measured[0]![0]).toBe("Hi");
+    undoDocument();
+    expect(getDocumentState().objects.find((o) => o.id === t.id)!.shape).toEqual(text);
+    setTextMeasurer(null);
+  });
+
+  it("arrangeSelected: 最前面・最背面へ動かすreorderを積み、端にあれば何もしない", () => {
+    const a = addShapeObject(box(10));
+    const b = addShapeObject(box(60));
+    const c = addShapeObject(box(110));
+    selectObject(a.id);
+    expect(arrangeSelected("back")).toBe(false);
+    expect(arrangeSelected("front")).toBe(true);
+    expect(getDocumentState().objects).toEqual([b, c, a]);
+    expect(getDocumentState().selectedId).toBe(a.id);
+    expect(arrangeSelected("front")).toBe(false);
+    expect(arrangeSelected("back")).toBe(true);
+    expect(getDocumentState().objects).toEqual([a, b, c]);
+    undoDocument();
+    expect(getDocumentState().objects).toEqual([b, c, a]);
+    selectObject(null);
+    expect(arrangeSelected("front")).toBe(false);
+  });
+});
+
+describe("snapshotDocument / restoreDocument(履歴ごとの保持、T34)", () => {
+  it("オブジェクト・次のid・取り消しスタックを退避し、別の画像を挟んで戻すと再調整・取り消しできる", async () => {
+    const a = addShapeObject(box(10));
+    commitShapeEdit(a.id, box(40));
+    const snapshot = snapshotDocument();
+    expect(await exportDocumentBase()).toBeInstanceOf(Blob);
+
+    resetDocument(); // 別の画像
+    addShapeObject(box(200));
+
+    const baseImage = { width: W, height: H };
+    restoreDocument(snapshot, baseImage as unknown as ImageBitmap, null);
+    expect(last(surface.loaded)).toBe(baseImage);
+    expect(getDocumentState()).toEqual({ objects: [{ id: a.id, shape: box(40) }], selectedId: null, draft: null, hiddenId: null });
+    expect(canUndo()).toBe(true);
+    undoDocument();
+    expect(getDocumentState().objects).toEqual([{ id: a.id, shape: box(10) }]);
+    // idは戻した後も重ならない。
+    expect(addShapeObject(box(90)).id).toBeGreaterThan(a.id);
+  });
+
+  it("退避した内容は戻した後の操作で変わらない(別々の値)", () => {
+    addShapeObject(box(10));
+    const snapshot = snapshotDocument();
+    addShapeObject(box(60));
+    expect(snapshot.objects).toHaveLength(1);
+    expect(snapshot.undo.undo).toHaveLength(1);
   });
 });
 

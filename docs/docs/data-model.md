@@ -139,6 +139,14 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 `width`・`actualBoundingBox{Left,Right,Ascent,Descent}`・`fontBoundingBox{Ascent,Descent}`)。
 `hiddenId`(T33): 再編集中で描画から一時的に外しているテキストのid(取り消し対象外)。
 
+`DocumentCommand`に`reorder {id, from, to}`(T34、最前面・最背面)を追加。
+
+### ArchivedDocument(`src/history/documentArchive.ts`、T34、FR-010改訂)
+
+履歴id → `{ base: Blob(ベースのPNG), snapshot: { objects, nextId, undo: UndoStackState } }`。別の画像へ切り替える直前に退避し、
+戻ったときに復元する。永続化しない。`snapshot.undo`は保存時にピクセルの合計を`ARCHIVED_UNDO_BYTES_LIMIT`(8MB)以下にする
+(古い取り消しから捨てる)。履歴の上限(`HISTORY_LIMIT`)で消えた項目の退避は削除する。
+
 `DocumentCommand`(取り消し・やり直しの1操作): `add {object, index}` / `update {id, before, after}` / `remove {object, index}`(T34で結線) /
 `pixels {rect, image}` / `flatten {object, index, rect, image}` / `group {commands}`。51個目の追加は`group[add, flatten]`になり、
 1回の取り消しで両方戻る。

@@ -31,6 +31,16 @@ export function insertObject(
   return [...objects.slice(0, at), object, ...objects.slice(at)];
 }
 
+/** `id`のオブジェクトを`index`の位置へ移した新しい配列を返す(重ね順の変更、T34)。無いidはそのまま。 */
+export function moveObjectToIndex(
+  objects: readonly AnnotationObject[],
+  id: number,
+  index: number,
+): AnnotationObject[] {
+  const object = objects.find((o) => o.id === id);
+  return object ? insertObject(removeObject(objects, id), object, index) : [...objects];
+}
+
 export function removeObject(objects: readonly AnnotationObject[], id: number): AnnotationObject[] {
   return objects.filter((object) => object.id !== id);
 }

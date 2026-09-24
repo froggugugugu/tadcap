@@ -37,6 +37,7 @@ import {
   removeShapeObject,
   selectObject,
   setHiddenObject,
+  setTextMeasurer,
 } from "../documentState";
 import { pickObjectAt, type AnnotationObject } from "../objectModel";
 import type { TextMetricsSnapshot, TextShape } from "../shapeEdit";
@@ -163,6 +164,8 @@ function layoutInput(canvas: HTMLCanvasElement, editor: TextEditor): void {
 export function bindTextTool(canvas: HTMLCanvasElement): () => void {
   let editor: TextEditor | null = null;
   let hadEditorAtPointerDown = false;
+  // T34: 選択中のテキストの文字サイズ変更で寸法を測り直すために登録する。
+  setTextMeasurer((text, fontPx) => measureText(canvas, text, fontPx));
 
   const toCanvasPoint = (event: MouseEvent): Point => {
     const rect = canvas.getBoundingClientRect();
@@ -376,6 +379,7 @@ export function bindTextTool(canvas: HTMLCanvasElement): () => void {
     canvas.removeEventListener("dblclick", handleDoubleClick);
     window.removeEventListener("resize", handleResize);
     unsubscribeCanvas();
+    setTextMeasurer(null);
     finish("external");
   };
 }

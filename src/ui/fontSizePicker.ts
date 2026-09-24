@@ -7,6 +7,7 @@
 //! アイコンは「A」の字形で、大きさの比を `textTool.ts::FONT_SIZE_MULTIPLIER`(実際の焼き込み
 //! サイズの比)に合わせる。定義・算出は純粋関数としてユニットテストし、DOM結線はE2Eで検証する。
 
+import { setSelectedFontSize } from "../canvas/documentState";
 import {
   getToolSettings,
   setFontSize,
@@ -61,6 +62,8 @@ export function initFontSizePicker(mount: HTMLElement): void {
     button.setAttribute("aria-pressed", "false");
     button.addEventListener("click", () => {
       setFontSize(option.size);
+      // T34: テキストを選択中なら、その文字サイズも変える(寸法を測り直す取り消せる操作)。
+      setSelectedFontSize(option.size);
     });
     mount.appendChild(button);
     return { size: option.size, button };
