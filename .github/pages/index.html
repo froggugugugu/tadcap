@@ -125,7 +125,7 @@
           <div>
             <a href="#install" class="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:text-foreground">
               <span class="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-              <span class="font-mono text-foreground">v0.1.2</span>
+              <span class="font-mono text-foreground">v0.2.0</span>
               <span class="h-3 w-px bg-border"></span>
               <span>配布版を公開しました・Apple silicon 向け</span>
               <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
@@ -215,7 +215,7 @@
             <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
               <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="move" class="h-5 w-5"></i></div>
               <h3 class="mt-4 text-base font-semibold">描いた直後なら調整できる</h3>
-              <p class="mt-2 text-sm leading-6 text-muted-foreground">直前に描いた矢印・矩形・円は、ハンドルでリサイズ、内側のドラッグで移動できます。<kbd class="kbd">Enter</kbd> で確定、<kbd class="kbd">Esc</kbd> で取り消し。<kbd class="kbd">Shift</kbd> を押しながらで正方形・正円になります。</p>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground">矢印・矩形・円・テキストは、描いた後もクリックで選び直して移動・リサイズできます(テキストはダブルクリックで打ち直し)。選択中は色や文字サイズの変更、<kbd class="kbd">Delete</kbd> で削除、<kbd class="kbd">⌘⇧F</kbd> / <kbd class="kbd">⌘⇧B</kbd> で重ね順の変更。1 枚に 50 個まで置けて、履歴を切り替えて戻っても続きから調整できます。</p>
             </div>
             <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
               <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="undo-2" class="h-5 w-5"></i></div>
@@ -354,7 +354,7 @@ open src-tauri/target/release/bundle/macos</code></pre>
             <ol class="space-y-5 text-sm">
               <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">1</span><div><p class="font-semibold">撮る</p><p class="mt-1 leading-6 text-muted-foreground"><kbd class="kbd">⌘⇧2</kbd> を押して範囲をドラッグします。ウィンドウを丸ごと撮るときは、スペースキーを押してからウィンドウをクリックします。<kbd class="kbd">Esc</kbd> でやめられます。</p></div></li>
               <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">2</span><div><p class="font-semibold">ツールと色を選ぶ</p><p class="mt-1 leading-6 text-muted-foreground">エディタが開いたら、ツールバーで矢印・矩形・円・テキスト・モザイクのどれかと、色（テキストなら文字サイズも）を選びます。</p></div></li>
-              <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">3</span><div><p class="font-semibold">描く</p><p class="mt-1 leading-6 text-muted-foreground">画像の上をドラッグします。描いた直後の図形はハンドルで大きさを変えたり動かしたりでき、<kbd class="kbd">Enter</kbd> で確定します。テキストはクリックした位置に入力欄が開くので、入力して <kbd class="kbd">Enter</kbd>。</p></div></li>
+              <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">3</span><div><p class="font-semibold">描く</p><p class="mt-1 leading-6 text-muted-foreground">画像の上をドラッグします。描いたものはあとからクリックで選び直して、大きさや位置、色を変えられます。テキストはクリックした位置に入力欄が開くので、入力して <kbd class="kbd">Enter</kbd>。</p></div></li>
               <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">4</span><div><p class="font-semibold">コピーする</p><p class="mt-1 leading-6 text-muted-foreground"><kbd class="kbd">⌘C</kbd>（またはツールバー右端のボタン）で、描き込んだ画像がクリップボードに入ります。</p></div></li>
               <li class="flex gap-3"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">5</span><div><p class="font-semibold">貼り付ける</p><p class="mt-1 leading-6 text-muted-foreground">チャットやドキュメント、課題管理ツールなどで <kbd class="kbd">⌘V</kbd>。</p></div></li>
             </ol>
@@ -378,8 +378,10 @@ open src-tauri/target/release/bundle/macos</code></pre>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘C</kbd></td><td class="px-4 py-3">描き込んだ画像をクリップボードにコピー</td><td class="px-4 py-3 text-muted-foreground">エディタ</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘Z</kbd></td><td class="px-4 py-3">取り消し</td><td class="px-4 py-3 text-muted-foreground">エディタ（テキスト入力中は入力欄の取り消し）</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘⇧Z</kbd></td><td class="px-4 py-3">やり直し</td><td class="px-4 py-3 text-muted-foreground">エディタ（テキスト入力中は入力欄のやり直し）</td></tr>
-                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Enter</kbd></td><td class="px-4 py-3">描いた図形・入力したテキストを確定</td><td class="px-4 py-3 text-muted-foreground">図形の調整中・テキスト入力中</td></tr>
-                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Esc</kbd></td><td class="px-4 py-3">描いた図形・入力中のテキストを取り消す</td><td class="px-4 py-3 text-muted-foreground">図形の調整中・テキスト入力中</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Enter</kbd> / <kbd class="kbd">Esc</kbd></td><td class="px-4 py-3">選択を外す(テキスト入力中は <kbd class="kbd">Enter</kbd> で確定、<kbd class="kbd">Esc</kbd> で取り消し)</td><td class="px-4 py-3 text-muted-foreground">エディタ</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Delete</kbd> / <kbd class="kbd">⌫</kbd></td><td class="px-4 py-3">選択中のオブジェクトを削除</td><td class="px-4 py-3 text-muted-foreground">オブジェクト選択中</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘⇧F</kbd> / <kbd class="kbd">⌘⇧B</kbd></td><td class="px-4 py-3">選択中のオブジェクトを最前面 / 最背面へ</td><td class="px-4 py-3 text-muted-foreground">オブジェクト選択中</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3">ダブルクリック</td><td class="px-4 py-3">テキストを打ち直す</td><td class="px-4 py-3 text-muted-foreground">テキストの上</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Shift</kbd>＋ドラッグ</td><td class="px-4 py-3">正方形・正円にする</td><td class="px-4 py-3 text-muted-foreground">矩形・円を描く／大きさを変えるとき</td></tr>
               </tbody>
             </table>
