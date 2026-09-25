@@ -111,6 +111,8 @@ const injectTauriMocks: InjectedMockScript = (config) => {
     __TAURI_EVENT_PLUGIN_INTERNALS__: Record<string, unknown>;
     __tadcapE2E?: {
       clipboardWriteCount: number;
+      /** `activate_app`(v0.2.2、IMEが効くようにアプリをアクティブにする)の呼び出し回数。 */
+      activateAppCount: number;
       /** 直近に`plugin:image|new`へ渡されたRGBA(コピー内容の検証用、T31)。 */
       lastImage?: { rgba: Uint8Array; width: number; height: number };
     };
@@ -118,7 +120,7 @@ const injectTauriMocks: InjectedMockScript = (config) => {
 
   w.__TAURI_INTERNALS__ = w.__TAURI_INTERNALS__ ?? {};
   w.__TAURI_EVENT_PLUGIN_INTERNALS__ = w.__TAURI_EVENT_PLUGIN_INTERNALS__ ?? {};
-  w.__tadcapE2E = { clipboardWriteCount: 0 };
+  w.__tadcapE2E = { clipboardWriteCount: 0, activateAppCount: 0 };
 
   // mockWindows("main") 相当。
   w.__TAURI_INTERNALS__.metadata = {
@@ -269,6 +271,10 @@ const injectTauriMocks: InjectedMockScript = (config) => {
         w.__tadcapE2E!.clipboardWriteCount += 1;
         return null;
 
+      case "activate_app":
+        w.__tadcapE2E!.activateAppCount += 1;
+        return null;
+
       default:
         // eslint-disable-next-line no-console
         console.warn(`[tauriMock] unhandled IPC command: ${cmd}`);
@@ -325,6 +331,14 @@ export async function routeCrossOriginAssets(
  * `plugin:clipboard-manager|write_image` が呼ばれた回数を返す(クリップボードコピー
  * 成功の検証用)。`installTauriMocks()` 実行後、ページ遷移後に呼ぶこと。
  */
+/** `activate_app` が呼ばれた回数(テキスト入力欄のフォーカスでアプリをアクティブにする、v0.2.2)。 */
+export async function getActivateAppCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const w = window as unknown as { __tadcapE2E?: { activateAppCount: number } };
+    return w.__tadcapE2E?.activateAppCount ?? 0;
+  });
+}
+
 export async function getClipboardWriteCount(page: Page): Promise<number> {
   return page.evaluate(() => {
     const w = window as unknown as { __tadcapE2E?: { clipboardWriteCount: number } };

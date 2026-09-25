@@ -8,6 +8,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { captureAndWaitReady } from "./fixtures/captureReady";
 import { createFixtureCapturePng } from "./fixtures/sampleCapturePng";
 import {
+  getActivateAppCount,
   getClipboardImageStats,
   getClipboardWriteCount,
   installTauriMocks,
@@ -138,6 +139,95 @@ test.describe("テキストツール(T27)", () => {
     await page.keyboard.press("Enter");
     await expect(input).toHaveCount(0);
     expect(await countAnnotationPixelsAll(canvas)).toBeGreaterThan(20);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("日本語IME(実際の変換パイプライン)で「てすと」→「テスト」と変換・確定でき、Enterで描かれる", async ({
+    page,
+  }) => {
+    const canvas = await captureAndSelectText(page);
+    const input = await openInput(page, canvas);
+
+    // CDPのIME入力(Chromiumの実際の変換経路。compositionstart/update・beforeinput・inputが
+    // ブラウザ自身から順に発火する)。擬似イベントを手で並べるのではなく、入力欄のハンドラが
+    // 変換中の文字を消したり入力欄を閉じたりしないことを確かめる。
+    const cdp = await page.context().newCDPSession(page);
+    for (const text of ["t", "て", "てs", "てす", "てすt", "てすと", "テスト"]) {
+      await cdp.send("Input.imeSetComposition", { text, selectionStart: text.length, selectionEnd: text.length });
+      await expect(input).toHaveValue(text);
+      await expect(input).toBeFocused();
+    }
+    await cdp.send("Input.insertText", { text: "テスト" });
+    await expect(input).toHaveValue("テスト");
+    await expect(input).toBeFocused();
+    expect(await countAnnotationPixelsAll(canvas)).toBe(0);
+
+    await page.keyboard.press("Enter");
+    await expect(input).toHaveCount(0);
+    expect(await countAnnotationPixelsAll(canvas)).toBeGreaterThan(20);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("WebKitのIMEイベント順(keydown 229→composition→確定Enterのkeydown 229)で変換中の文字が残り、確定Enterでは閉じない", async ({
+    page,
+  }) => {
+    const canvas = await captureAndSelectText(page);
+    const input = await openInput(page, canvas);
+
+    // WKWebView(macOS)で観測される順序を再現する: 変換開始のkeydownは isComposing=false・
+    // keyCode 229、変換中は isComposing=true、確定のEnterは compositionend の後に
+    // isComposing=false・keyCode 229 で届く。各keydownは既定動作を止められてはならない
+    // (止めるとWebKitは変換を取り消す)ため、defaultPrevented も確かめる。
+    const prevented = await input.evaluate((el: HTMLInputElement) => {
+      const results: boolean[] = [];
+      const key = (init: KeyboardEventInit & { keyCode: number }): void => {
+        const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init });
+        Object.defineProperty(event, "keyCode", { get: () => init.keyCode });
+        el.dispatchEvent(event);
+        results.push(event.defaultPrevented);
+      };
+      const compose = (data: string, inputType: string, composing: boolean): void => {
+        el.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data, inputType, isComposing: composing }));
+        el.value = data;
+        el.dispatchEvent(new InputEvent("input", { bubbles: true, data, inputType, isComposing: composing }));
+      };
+      key({ key: "t", keyCode: 229, isComposing: false });
+      el.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "" }));
+      for (const [k, text] of [["t", "t"], ["e", "て"], ["s", "てs"], ["u", "てす"], ["t", "てすt"], ["o", "てすと"], [" ", "テスト"]]) {
+        if (text !== "t") {
+          key({ key: k, keyCode: 229, isComposing: true });
+        }
+        el.dispatchEvent(new CompositionEvent("compositionupdate", { bubbles: true, data: text }));
+        compose(text, "insertCompositionText", true);
+      }
+      el.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "テスト" }));
+      key({ key: "Enter", keyCode: 229, isComposing: false });
+      // Escで変換を取り消すときも(変換中のEsc)入力欄は閉じない。
+      el.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "" }));
+      key({ key: "Escape", keyCode: 229, isComposing: true });
+      el.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "" }));
+      return results;
+    });
+    expect(prevented.every((p) => !p)).toBe(true);
+    await expect(input).toHaveValue("テスト");
+    await expect(input).toBeFocused();
+    expect(await countAnnotationPixelsAll(canvas)).toBe(0);
+
+    await page.keyboard.press("Enter");
+    await expect(input).toHaveCount(0);
+    expect(await countAnnotationPixelsAll(canvas)).toBeGreaterThan(20);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("入力欄が開いてフォーカスを得ると、IMEが効くようにアプリのアクティブ化(activate_app)を要求する", async ({
+    page,
+  }) => {
+    const canvas = await captureAndSelectText(page);
+    expect(await getActivateAppCount(page)).toBe(0);
+    await openInput(page, canvas);
+
+    // すぐに1回 + 短い遅延(`ipc/app.ts::ACTIVATION_RETRY_DELAY_MS`)で1回。
+    await expect.poll(() => getActivateAppCount(page)).toBe(2);
     expect(pageErrors).toEqual([]);
   });
 

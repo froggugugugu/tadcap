@@ -155,13 +155,22 @@ function layoutInput(canvas: HTMLCanvasElement, editor: TextEditor): void {
   input.style.width = `${width * scale}px`;
 }
 
+export interface TextToolOptions {
+  /**
+   * 入力欄がフォーカスを得たときに呼ぶ(v0.2.2: `main.ts`がアプリのアクティブ化を要求する。
+   * Dock非表示のアプリが非アクティブのままだと日本語IMEが効かないため。canvas層から
+   * IPC層へ直接依存しないよう、呼び出し側から注入する)。
+   */
+  onEditorFocus?: () => void;
+}
+
 /**
  * テキストツールをCanvasへ結線する(DOM依存、E2Eで検証)。戻り値は解除関数。
  * テキストツール選択中の空白クリックで入力欄を開く。入力中にCanvasを押すと確定だけ行う
  * (続けて新しい入力欄は開かない。誤って空の入力欄が増えないように)。テキストオブジェクトの
  * ダブルクリックで再編集する(T33)。
  */
-export function bindTextTool(canvas: HTMLCanvasElement): () => void {
+export function bindTextTool(canvas: HTMLCanvasElement, options: TextToolOptions = {}): () => void {
   let editor: TextEditor | null = null;
   let hadEditorAtPointerDown = false;
   // T34: 選択中のテキストの文字サイズ変更で寸法を測り直すために登録する。
@@ -252,6 +261,8 @@ export function bindTextTool(canvas: HTMLCanvasElement): () => void {
       created.composing = false;
     });
     input.addEventListener("input", () => layoutInput(canvas, created));
+    // 開いた直後の`focus()`と、他アプリから戻ってきたときの再フォーカスの両方で呼ばれる。
+    input.addEventListener("focus", () => options.onEditorFocus?.());
     input.addEventListener("blur", () => {
       // ウィンドウ自体がフォーカスを失った(他アプリへの切替等)ときのblurでは確定しない。
       // ウィンドウへ戻ると入力欄のフォーカスも戻り、入力を続けられる。

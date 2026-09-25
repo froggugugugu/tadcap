@@ -20,6 +20,7 @@ import { createDocumentSurface } from "./canvas/documentSurface";
 import { bindMosaicTool } from "./canvas/tools/mosaicTool";
 import { bindShapeTools } from "./canvas/tools/shapeTools";
 import { bindTextTool, commitPendingText } from "./canvas/tools/textTool";
+import { requestAppActivation } from "./ipc/app";
 import {
   archivedDocumentBytes,
   deleteArchivedDocument,
@@ -304,7 +305,8 @@ window.addEventListener("DOMContentLoaded", () => {
     bindShapeTools(canvasEl);
     bindMosaicTool(canvasEl);
     // T27: テキストツール(クリック位置に入力欄を重ね、Enter/blurで確定・Escで取消)。
-    bindTextTool(canvasEl);
+    // v0.2.2: 入力欄のフォーカスでアプリのアクティブ化を要求する(日本語IMEが効くように)。
+    bindTextTool(canvasEl, { onEditorFocus: () => requestAppActivation() });
     bindSelectionKeys();
     // T29: 取り消し・やり直し(ボタン + Cmd+Z/Cmd+Shift+Z)。Undo/Redoスタックのクリアは
     // 画像差し替え完了後の`resetDocument()`(`handleCaptureCompleted`/`reloadHistoryItemIntoCanvas`)。

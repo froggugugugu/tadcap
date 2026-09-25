@@ -380,6 +380,72 @@ fn run_attempt(
     }
 }
 
+/// エディタのアクティブ化要求のきっかけ(v0.2.2、実機不具合「テキスト入力で全角文字が入らない」)。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ActivationOrigin {
+    /// エディタウィンドウがキーになった(`WindowEvent::Focused(true)`)。
+    WindowFocused,
+    /// テキスト入力欄がフォーカスを得た(フロントの `activate_app` コマンド)。
+    TextInput,
+}
+
+impl ActivationOrigin {
+    fn label(self) -> &'static str {
+        match self {
+            ActivationOrigin::WindowFocused => "window_focused",
+            ActivationOrigin::TextInput => "text_input",
+        }
+    }
+}
+
+/// アプリのアクティブ化を要求すべきか(純粋関数)。
+///
+/// macOSの入力メソッド(日本語IME)はアクティブなアプリの入力にだけ働く。Dock非表示
+/// (Accessory)の本アプリは撮影後に非アクティブのまま前面化されうる(B2)ため、エディタを
+/// 使い始めた時点で非アクティブなら要求する。既にアクティブなら何もしない(他アプリの
+/// 操作を邪魔しない・二重要求しない)。ウィンドウが見えていない(閉じて`hide()`済み・
+/// 最小化中)ときは、ユーザーがエディタを使っていないので要求しない。
+pub(crate) fn should_request_activation(
+    app_active: bool,
+    win_visible: bool,
+    win_minimized: bool,
+) -> bool {
+    !app_active && win_visible && !win_minimized
+}
+
+/// 非アクティブならアプリのアクティブ化を要求する(どのスレッドからでも呼べる。
+/// AppKit呼び出しは `run_on_main_thread` でメインスレッドへ戻す)。
+///
+/// 要求したときだけ `[tadcap:front]` ログを出す(フォーカスのたびにログが出ないように)。
+pub(crate) fn ensure_app_active(app: &AppHandle, origin: ActivationOrigin) {
+    let handle = app.clone();
+    let scheduled = app.run_on_main_thread(move || {
+        let Some(window) = handle.get_webview_window(MAIN_WINDOW_LABEL) else {
+            return;
+        };
+        let Some(before) = native::snapshot(&window) else {
+            return;
+        };
+        if !should_request_activation(before.app_active, before.win_visible, before.win_minimized) {
+            return;
+        }
+        let result = match native::activate_app() {
+            Ok(()) => "ok".to_string(),
+            Err(err) => format!("err:{err}"),
+        };
+        log_front(
+            origin.label(),
+            "-",
+            "ActivateForInput",
+            &result,
+            native::snapshot(&window).as_ref(),
+        );
+    });
+    if let Err(err) = scheduled {
+        log_route(origin.label(), "run_on_main_thread", &format!("err:{err}"));
+    }
+}
+
 fn execute_step(window: &WebviewWindow, step: BringToFrontStep) -> Result<(), String> {
     match step {
         S::Unminimize => window.unminimize().map_err(|e| e.to_string()),
@@ -706,5 +772,28 @@ mod tests {
         assert!(line.contains(" z_index=none/0 "), "{line}");
         assert!(line.contains(" result=err:not_found "), "{line}");
         assert!(line.ends_with(" frontmost=My_App"), "{line}");
+    }
+
+    #[test]
+    fn 非アクティブで見えているときだけアクティブ化を要求する() {
+        assert!(should_request_activation(false, true, false));
+    }
+
+    #[test]
+    fn 既にアクティブなら要求しない() {
+        assert!(!should_request_activation(true, true, false));
+    }
+
+    #[test]
+    fn ウィンドウが見えていない_最小化中なら要求しない() {
+        assert!(!should_request_activation(false, false, false));
+        assert!(!should_request_activation(false, true, true));
+        assert!(!should_request_activation(false, false, true));
+    }
+
+    #[test]
+    fn アクティブ化のきっかけはログで区別できる() {
+        assert_eq!(ActivationOrigin::WindowFocused.label(), "window_focused");
+        assert_eq!(ActivationOrigin::TextInput.label(), "text_input");
     }
 }

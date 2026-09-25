@@ -16,6 +16,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::capture::{self, CaptureKind, CaptureOutcome, CaptureResult, RunError, ScreenRecordingPermission};
 use crate::clipboard;
 use crate::error::AppError;
+use crate::window_front::{self, ActivationOrigin};
 
 /// `capture::run()` の結果を通知する Tauri イベント名(ARCH §7.1 手順4)。
 ///
@@ -397,6 +398,20 @@ fn parse_image_dimensions(
 /// 集約する(YAGNI、`error.rs` のバリアント追加方針と同じ)。
 fn app_error_from_clipboard_error(err: clipboard::ClipboardFallbackError) -> AppError {
     AppError::Internal(err.to_string())
+}
+
+
+/// テキスト入力欄がフォーカスを得たときに、アプリが非アクティブならアクティブ化を要求する
+/// (v0.2.2、実機不具合「テキスト入力で全角文字が入らない」)。
+///
+/// macOSの入力メソッド(日本語IME)はアクティブなアプリの入力にだけ働く。Dock非表示の本アプリは
+/// 撮影後に非アクティブのまま前面化されうる(`window_front.rs`、B2)。既にアクティブ・
+/// ウィンドウ非表示なら何もしない(`window_front::should_request_activation`)。要求はOSに
+/// 拒否されうるが失敗扱いにはしない(フロントが短い遅延で1回だけ再試行する、`src/ipc/app.ts`)。
+#[tauri::command]
+pub async fn activate_app(app: AppHandle) -> Result<(), AppError> {
+    window_front::ensure_app_active(&app, ActivationOrigin::TextInput);
+    Ok(())
 }
 
 #[cfg(test)]

@@ -6,6 +6,8 @@ mod shortcuts;
 mod tray;
 mod window_front;
 
+use tauri::Manager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -32,19 +34,26 @@ pub fn run() {
             shortcuts::register_capture_shortcut(app)?;
             Ok(())
         })
-        .on_window_event(|window, event| {
+        .on_window_event(|window, event| match event {
             // ウィンドウを閉じてもプロセスは継続する(終了はトレイメニューの「終了」のみ、FR-009)。
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
                 window.hide().ok();
                 api.prevent_close();
             }
+            // v0.2.2: エディタがキーになったとき、アプリが非アクティブならアクティブ化を要求する
+            // (日本語IMEはアクティブなアプリにだけ働くため。既にアクティブなら何もしない)。
+            tauri::WindowEvent::Focused(true) => {
+                window_front::ensure_app_active(window.app_handle(), window_front::ActivationOrigin::WindowFocused);
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             commands::capture_screen,
             commands::check_screen_recording_permission,
             commands::open_screen_recording_settings,
             commands::write_image_fallback,
-            commands::read_capture_image
+            commands::read_capture_image,
+            commands::activate_app
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

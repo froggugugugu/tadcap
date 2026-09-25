@@ -440,6 +440,7 @@ output/reports/                ← 人間向けサマリー（Git管理）
 | ローカルの `npm run tauri build`(dmg)が失敗し `src-tauri/target/release/bundle/dmg/rw.*.dmg` が残る(2026-09-24、リリース作業で確認) | Tauri の `bundle_dmg.sh` は環境変数 `CI` が `true` でないとき、DMG の窓の配置を `osascript` で Finder に指示する。実行元(ターミナル・エージェント)に Finder の自動操作の許可が無いと失敗する。`CI=true` なら bundler が `--skip-jenkins` を渡してこの手順を飛ばす(tauri-bundler `bundle/macos/dmg/mod.rs`) | 配布物は `npm run dist:mac`(`CI=true` で実行)で作る。GitHub Actions は既定で `CI=true`。窓のアイコン配置は既定のまま(App と Applications へのリンク) |
 | 配布版はアドホック署名(`bundle.macOS.signingIdentity: "-"`)で Team ID が無いため、更新するたびに画面収録の許可が外れることがある | TCC が記録する要件がビルドごとのコードハッシュに結び付く | README・紹介ページの FAQ と `install.sh` の最後の案内で、許可のオフ→オンまたは削除→追加を案内する。解消には Developer ID 署名が要る |
 | `npm run tauri icon <png>` は macOS 用以外に `icons/android/`・`icons/ios/`・`icons/64x64.png` も生成する | CLI が全プラットフォーム分を作る | macOS 専用なので生成後に削除し、コミットしない。元画像は `src-tauri/icons/app-icon.svg`(1024px PNG に書き出して `app-icon.png`) |
+| 日本語IMEの不具合は、Chromium(E2E)の擬似イベントやCDPのIME入力が緑でも実機のWKWebViewで起きうる(2026-09-26、「全角が入らない」報告) | E2EはChromiumでIMEも実物ではなく、WKWebViewではIMEの経路(NSTextInputContext→入力メソッド)がアプリのアクティブ状態などネイティブ側に左右されるため | Web層はE2E(`text-tool.spec.ts`のCDP IME入力・WebKit順のイベント列、keydownを止めないこと)で守り、実WebKitの検証は画面外のWKWebViewでNSTextInputClient(`setMarkedText`/`insertText`)を呼んで行う。IMEが効くか(かな/ローマ字・変換・確定・Esc・再編集)は実機確認に必ず含める |
 
 ### フレームワーク固有パターン
 
