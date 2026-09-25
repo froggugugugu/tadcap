@@ -438,6 +438,18 @@ body {
   display: none;
 }
 
+/* 自動消去(`ui/toast.ts`)のフェードアウト。長さは`TOAST_FADE_MS`と揃える。 */
+.toast--leaving {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast--leaving {
+    transition: none;
+  }
+}
+
 button {
   border-radius: 6px;
   border: 1px solid transparent;

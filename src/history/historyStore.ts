@@ -35,12 +35,18 @@
 //!   `src/canvas/render.ts` の抽出関数を呼ぶだけに留める(ARCH §3.1「履歴層は canvas層
 //!   (編集後画像の取得)に依存可能」)
 //!
-//! # 件数上限(【仮定】、PRDに明記なし)
+//! # 上限(v0.2.0後の人間フィードバックで改訂、旧【仮定】50件)
 //!
-//! PRDには件数上限の記載が無いが、5K Retina全画面相当の編集後画像(PNG)を無制限に
-//! メモリ保持するとブラウザタブ(WebView)のメモリを圧迫しうるため、[`HISTORY_LIMIT`]
-//! (50件)を超えたら最も古い項目から破棄する仮定を採用した。破棄された項目のObjectURLは
-//! [`addHistoryItem`]が内部でrevokeする。
+//! T34で履歴ごとにベースPNG・オブジェクト・取り消しスタック(1件8MBまで)を退避するように
+//! なり、5K × 50件では最悪1GB近くになるため、次の2つの上限を設けた。
+//!
+//! - 件数 [`HISTORY_LIMIT`](20件): 超えたら最も古い項目から破棄する([`addHistoryItem`])
+//! - 合計バイト数 [`HISTORY_BYTES_LIMIT`](300MB): 履歴画像・サムネイルのPNG(`HistoryItem.bytes`)と
+//!   退避(`documentArchive.ts::archivedDocumentBytes()`)の実測値の合計。超えたら最も古い項目から
+//!   破棄する([`enforceHistoryBudget`]、`main.ts`が保存点のたびに呼ぶ)
+//!
+//! どちらも表示中(選択中)の項目は破棄しない([`selectHistoryEvictions`])。破棄された項目の
+//! ObjectURLは本モジュールがrevokeし、退避の削除は呼び出し元(`main.ts`)が行う。
 
 import { captureHistoryAssets } from "../canvas/render";
 
@@ -52,6 +58,8 @@ export interface HistoryItem {
   thumbnail: string;
   /** Canvas再読込用の画像データ。編集後(マークアップ済み)画像。ObjectURL。 */
   image: string;
+  /** `image`・`thumbnail`のPNG(Blob)の実測バイト数の合計(履歴のメモリ上限の判定用)。 */
+  bytes: number;
   /** ISO8601(UTC)文字列。一覧の並び順に使う(新しいものが上)。 */
   createdAt: string;
 }
@@ -64,10 +72,63 @@ export interface HistoryState {
 }
 
 /**
- * 保持する履歴の件数上限(【仮定】、PRDに記載なし。上記モジュールdoc参照)。
- * 超過分は最も古い項目(配列末尾)から破棄する。
+ * 保持する履歴の件数上限(上記モジュールdoc参照)。超過分は最も古い項目(配列末尾)から破棄する。
+ * 1件あたり最悪で履歴画像・サムネイル + 退避(ベースPNG 2〜10MB + 取り消し8MB)≒ 15〜25MB
+ * (5K)を想定し、20件で合計バイト数の上限(300MB)と同程度の規模になるようにした。
  */
-export const HISTORY_LIMIT = 50;
+export const HISTORY_LIMIT = 20;
+
+/**
+ * 履歴が持つデータ(履歴画像・サムネイルのPNG + 退避)の合計バイト数の上限(300MB)。
+ * WebView 1枚が使うメモリとして現実的な範囲に抑える(件数上限だけでは、5Kで編集の多い
+ * 画像が続くと数百MB〜1GBに達しうるため)。
+ */
+export const HISTORY_BYTES_LIMIT = 300 * 1024 * 1024;
+
+/** 破棄判定に使う1件分の情報(`items`と同じく新しいものが先頭)。 */
+export interface HistoryBudgetEntry {
+  id: string;
+  /** その項目が持つデータの実測バイト数の合計。 */
+  bytes: number;
+}
+
+/**
+ * 件数`maxCount`以下かつ合計`maxBytes`以下になるよう、破棄する項目のidを古い順に返す純粋関数。
+ * `selectedId`(表示中)の項目は破棄しない。それ以外をすべて捨てても上限を超える場合は、そこで止める。
+ */
+export function selectHistoryEvictions(
+  entries: readonly HistoryBudgetEntry[],
+  selectedId: string | null,
+  maxCount: number,
+  maxBytes: number,
+): string[] {
+  let count = entries.length;
+  let total = entries.reduce((sum, entry) => sum + entry.bytes, 0);
+  const evicted: string[] = [];
+  for (let i = entries.length - 1; i >= 0 && (count > maxCount || total > maxBytes); i -= 1) {
+    const entry = entries[i]!;
+    if (entry.id === selectedId) {
+      continue;
+    }
+    evicted.push(entry.id);
+    count -= 1;
+    total -= entry.bytes;
+  }
+  return evicted;
+}
+
+/** `evictedIds`を除いた状態と、除いた項目(古い順)を返す(内部ヘルパー)。 */
+function withoutItems(
+  state: HistoryState,
+  evictedIds: readonly string[],
+): { state: HistoryState; evicted: HistoryItem[] } {
+  if (evictedIds.length === 0) {
+    return { state, evicted: [] };
+  }
+  const removed = new Set(evictedIds);
+  const evicted = evictedIds.map((id) => state.items.find((it) => it.id === id)!);
+  return { state: { ...state, items: state.items.filter((it) => !removed.has(it.id)) }, evicted };
+}
 
 /** 画像なし・未選択の初期状態を返す純粋関数。 */
 export function createHistoryState(): HistoryState {
@@ -88,10 +149,9 @@ export function withAddedItem(
   state: HistoryState,
   item: HistoryItem,
 ): AddHistoryItemResult {
-  const items = [item, ...state.items];
-  const kept = items.slice(0, HISTORY_LIMIT);
-  const evicted = items.slice(HISTORY_LIMIT);
-  return { state: { items: kept, selectedId: item.id }, evicted };
+  const added: HistoryState = { items: [item, ...state.items], selectedId: item.id };
+  const evictedIds = selectHistoryEvictions(added.items, item.id, HISTORY_LIMIT, Infinity);
+  return withoutItems(added, evictedIds);
 }
 
 /**
@@ -108,6 +168,8 @@ export function withSelectedId(state: HistoryState, id: string): HistoryState {
 export interface HistoryItemImagePatch {
   image: string;
   thumbnail: string;
+  /** `image`・`thumbnail`のPNGの実測バイト数の合計。 */
+  bytes: number;
 }
 
 export interface UpdateHistoryItemImageResult {
@@ -134,10 +196,10 @@ export function withUpdatedItemImage(
   }
   const target = state.items[index]!;
   const items = state.items.slice();
-  items[index] = { ...target, image: patch.image, thumbnail: patch.thumbnail };
+  items[index] = { ...target, image: patch.image, thumbnail: patch.thumbnail, bytes: patch.bytes };
   return {
     state: { ...state, items },
-    replaced: { image: target.image, thumbnail: target.thumbnail },
+    replaced: { image: target.image, thumbnail: target.thumbnail, bytes: target.bytes },
   };
 }
 
@@ -169,12 +231,39 @@ export function getSelectedHistoryItem(): HistoryItem | null {
 export function addHistoryItem(item: HistoryItem): HistoryItem[] {
   const result = withAddedItem(state, item);
   state = result.state;
-  for (const evicted of result.evicted) {
-    URL.revokeObjectURL(evicted.image);
-    URL.revokeObjectURL(evicted.thumbnail);
-  }
+  revokeItems(result.evicted);
   notify();
   return result.evicted;
+}
+
+/**
+ * 合計バイト数(各項目の`bytes` + `extraBytesOf(id)`、退避分を渡す)が[`HISTORY_BYTES_LIMIT`]を
+ * 超えていれば、表示中以外の古い項目から破棄してObjectURLをrevokeし、破棄した項目を返す
+ * (呼び出し元は退避も消す)。破棄が無ければ通知しない。
+ */
+export function enforceHistoryBudget(extraBytesOf: (id: string) => number): HistoryItem[] {
+  const entries = state.items.map((it) => ({ id: it.id, bytes: it.bytes + extraBytesOf(it.id) }));
+  const evictedIds = selectHistoryEvictions(
+    entries,
+    state.selectedId,
+    HISTORY_LIMIT,
+    HISTORY_BYTES_LIMIT,
+  );
+  if (evictedIds.length === 0) {
+    return [];
+  }
+  const result = withoutItems(state, evictedIds);
+  state = result.state;
+  revokeItems(result.evicted);
+  notify();
+  return result.evicted;
+}
+
+function revokeItems(items: readonly HistoryItem[]): void {
+  for (const item of items) {
+    URL.revokeObjectURL(item.image);
+    URL.revokeObjectURL(item.thumbnail);
+  }
 }
 
 /** 項目を選択状態にし、購読者へ通知する。存在しないidの場合は選択を変えない。 */

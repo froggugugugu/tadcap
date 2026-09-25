@@ -25,6 +25,7 @@ import {
   subscribeHistoryState,
   updateSelectedItemImage,
   type HistoryItem,
+  type HistoryItemImagePatch,
 } from "../history/historyStore";
 
 export interface SidebarCallbacks {
@@ -33,7 +34,7 @@ export interface SidebarCallbacks {
    * (`src/main.ts`が`canvas/render.ts::captureHistoryAssets()`経由で実装する)。
    * Canvas未初期化・画像未読込時は`null`を返す想定。
    */
-  captureCurrentAssets: () => Promise<{ image: string; thumbnail: string } | null>;
+  captureCurrentAssets: () => Promise<HistoryItemImagePatch | null>;
   /** 指定した履歴項目の画像をCanvasへ再読込する(`src/main.ts`が実装する)。 */
   reloadImage: (item: HistoryItem) => Promise<void>;
 }

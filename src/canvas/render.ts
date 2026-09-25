@@ -80,14 +80,14 @@ export function getCanvasImageData(canvas: HTMLCanvasElement): {
 }
 
 /** `canvas`をPNG化しObjectURLを返す(内部ヘルパー、T14)。 */
-function canvasToObjectUrl(canvas: HTMLCanvasElement): Promise<string> {
+function canvasToObjectUrl(canvas: HTMLCanvasElement): Promise<{ url: string; bytes: number }> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) {
         reject(new Error("CanvasのPNG化に失敗した"));
         return;
       }
-      resolve(URL.createObjectURL(blob));
+      resolve({ url: URL.createObjectURL(blob), bytes: blob.size });
     }, "image/png");
   });
 }
@@ -132,10 +132,12 @@ function createScaledCanvas(
 export async function captureHistoryAssets(
   canvas: HTMLCanvasElement,
   thumbnailMaxSize = 160,
-): Promise<{ image: string; thumbnail: string }> {
+): Promise<{ image: string; thumbnail: string; bytes: number }> {
   const [image, thumbnail] = await Promise.all([
     canvasToObjectUrl(canvas),
     canvasToObjectUrl(createScaledCanvas(canvas, thumbnailMaxSize)),
   ]);
-  return { image, thumbnail };
+  // 履歴のメモリ上限(`historyStore.ts::HISTORY_BYTES_LIMIT`)の判定用に、2枚のPNGの実測バイト数
+  // (`Blob.size`)の合計も返す。
+  return { image: image.url, thumbnail: thumbnail.url, bytes: image.bytes + thumbnail.bytes };
 }

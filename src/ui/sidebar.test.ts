@@ -13,6 +13,7 @@ function makeItem(id: string): HistoryItem {
     id,
     image: `blob:tadcap/${id}-image`,
     thumbnail: `blob:tadcap/${id}-thumb`,
+    bytes: 100,
     createdAt: "2024-01-01T00:00:00.000Z",
   };
 }
@@ -25,6 +26,7 @@ describe("handleItemClick(MUST-2/SHOULD-3: 連続クリックの直列化、レ�
     const captureCurrentAssets = vi.fn(async () => ({
       image: "x",
       thumbnail: "y",
+      bytes: 1,
     }));
     const reloadImage = vi.fn(async () => {});
     const callbacks: SidebarCallbacks = { captureCurrentAssets, reloadImage };
@@ -57,7 +59,7 @@ describe("handleItemClick(MUST-2/SHOULD-3: 連続クリックの直列化、レ�
         captureCallCount += 1;
         const label = `capture-${captureCallCount}`;
         callOrder.push(label);
-        return { image: `captured-${captureCallCount}`, thumbnail: `${label}-thumb` };
+        return { image: `captured-${captureCallCount}`, thumbnail: `${label}-thumb`, bytes: 1 };
       });
       const reloadImage = vi.fn(async (item: HistoryItem) => {
         callOrder.push(`reload:${item.id}`);
@@ -101,7 +103,7 @@ describe("handleItemClick(MUST-2/SHOULD-3: 連続クリックの直列化、レ�
     const callOrder: string[] = [];
     const captureCurrentAssets = vi.fn(async () => {
       callOrder.push("capture");
-      return { image: "captured", thumbnail: "captured-thumb" };
+      return { image: "captured", thumbnail: "captured-thumb", bytes: 1 };
     });
     const reloadImage = vi.fn(async (item: HistoryItem) => {
       callOrder.push(`reload:${item.id}`);

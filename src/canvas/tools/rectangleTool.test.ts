@@ -4,8 +4,29 @@ import {
   computeRectangleBoundingRect,
   computeRectangleGeometry,
   constrainToSquare,
+  rectangleCornerRadius,
   rectangleLineWidth,
 } from "./rectangleTool";
+
+describe("rectangleCornerRadius(角丸の半径、決定論的)", () => {
+  it("十分大きい矩形では線幅×係数(2.5)になる", () => {
+    expect(rectangleCornerRadius({ x: 0, y: 0, width: 1000, height: 500 }, 8)).toBe(20);
+    expect(rectangleCornerRadius({ x: 0, y: 0, width: 1000, height: 500 }, 14)).toBe(35);
+  });
+
+  it("小さい矩形では短辺の1/4で頭打ちになる(辺の直線部分を残す)", () => {
+    expect(rectangleCornerRadius({ x: 0, y: 0, width: 40, height: 24 }, 8)).toBe(6);
+    expect(rectangleCornerRadius({ x: 0, y: 0, width: 24, height: 40 }, 8)).toBe(6);
+  });
+
+  it("正方形(Shift)でも同じ式で決まる", () => {
+    expect(rectangleCornerRadius({ x: 0, y: 0, width: 200, height: 200 }, 8)).toBe(20);
+  });
+
+  it("幅・高さ0以下では0(負の半径にしない)", () => {
+    expect(rectangleCornerRadius({ x: 0, y: 0, width: 0, height: 10 }, 8)).toBe(0);
+  });
+});
 
 describe("rectangleLineWidth", () => {
   it("典型的な画像サイズ(2000x1000)では対角線比率から8pxになる(矢印と同じ考え方のローカル定数)", () => {

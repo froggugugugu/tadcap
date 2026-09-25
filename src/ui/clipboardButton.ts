@@ -35,6 +35,7 @@ import {
   type CanvasState,
 } from "../canvas/canvasState";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
+import { clearToast, showToast } from "./toast";
 
 export interface ClipboardButtonElements {
   button: HTMLButtonElement;
@@ -104,17 +105,17 @@ export function initClipboardButton(
     if (!payload) {
       return;
     }
-    elements.status.textContent = "";
+    clearToast(elements.status);
     elements.button.disabled = true;
     try {
       const method = await copyToClipboard(payload);
-      elements.status.textContent = clipboardCopyFeedbackMessage(method);
+      showToast(elements.status, clipboardCopyFeedbackMessage(method), "info");
       onCopySuccess?.();
     } catch (error) {
       // SHOULD-4(レビュー2026-09-24): 原因調査のため実際のエラー(`ClipboardCopyError`、
       // プラグイン・フォールバック両方の失敗理由を保持)を握りつぶさずに出す。
       console.error("クリップボードへのコピーに失敗しました", error);
-      elements.status.textContent = clipboardCopyFeedbackMessage("error");
+      showToast(elements.status, clipboardCopyFeedbackMessage("error"), "error");
     } finally {
       updateEnabled();
     }

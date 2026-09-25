@@ -45,6 +45,18 @@ const MAX_LINE_WIDTH = 14;
  */
 const LINE_WIDTH_RATIO = 0.0035;
 
+/**
+ * 角丸の半径 = 線幅 × この係数(v0.2.0後の人間フィードバック「矩形を角丸に」)。
+ * 2.5は、線幅8px(2000x1000程度)で半径20px・上限14px(5K)で35pxになり、角がはっきり丸いと
+ * 分かる一方で「角丸の四角」に見える程度(カプセル状にならない)に収まる値として、
+ * `output/reports/ui/rounded-rect.png`で目視して決めた。線幅に比例させるのは、画像が大きく
+ * 線が太いほど同じ見た目の丸みにするため(線幅自体がCanvas対角線に比例する)。
+ */
+const CORNER_RADIUS_PER_LINE_WIDTH = 2.5;
+
+/** 角丸の半径の上限 = 短辺 × この比率(小さい矩形で辺の直線部分が消えて楕円に見えないように)。 */
+const CORNER_RADIUS_MAX_SIDE_RATIO = 0.25;
+
 export interface RectangleGeometry {
   /** 正規化・Canvas範囲内クリップ済みの選択矩形(枠線の外形)。 */
   rect: Rect;
@@ -61,6 +73,20 @@ export function rectangleLineWidth(canvasWidth: number, canvasHeight: number): n
   const diagonal = Math.hypot(canvasWidth, canvasHeight);
   const raw = Math.round(diagonal * LINE_WIDTH_RATIO);
   return clamp(raw, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
+}
+
+/**
+ * 矩形(枠線の中心線)の角丸の半径を決定論的に算出する純粋関数:
+ * `min(線幅 × CORNER_RADIUS_PER_LINE_WIDTH, 短辺 × CORNER_RADIUS_MAX_SIDE_RATIO)`。
+ * 描画(`drawRectangleOutline()`)と当たり判定(`objectModel.ts::hitTestObjectOutline()`)が同じ値を使う。
+ * 角丸は矩形の内側に収まるため、外接矩形・ハンドル・焼き込み範囲は角丸でない矩形と同じでよい。
+ */
+export function rectangleCornerRadius(rect: Rect, lineWidth: number): number {
+  const shortSide = Math.min(rect.width, rect.height);
+  if (shortSide <= 0) {
+    return 0;
+  }
+  return Math.min(lineWidth * CORNER_RADIUS_PER_LINE_WIDTH, shortSide * CORNER_RADIUS_MAX_SIDE_RATIO);
 }
 
 /**
@@ -135,8 +161,9 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Canvas 2D contextへ矩形の枠線(塗りつぶしなし)を焼き込む(DOM/Canvas依存、自動テスト
- * 対象外)。
+ * Canvas 2D contextへ角丸矩形の枠線(塗りつぶしなし)を焼き込む(DOM/Canvas依存、自動テスト
+ * 対象外)。`ctx.roundRect()`はSafari/WKWebView 16以降で使える(本アプリの最小要件は
+ * macOS 14 = Safari 17系のWKWebView、`tauri.conf.json`の`minimumSystemVersion`)。
  */
 export function drawRectangleOutline(
   ctx: CanvasRenderingContext2D,
@@ -147,7 +174,9 @@ export function drawRectangleOutline(
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineWidth = lineWidth;
-  ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+  ctx.beginPath();
+  ctx.roundRect(rect.x, rect.y, rect.width, rect.height, rectangleCornerRadius(rect, lineWidth));
+  ctx.stroke();
   ctx.restore();
 }
 

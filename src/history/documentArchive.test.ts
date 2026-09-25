@@ -4,6 +4,7 @@ import type { DocumentCommand, ImageDataLike } from "../canvas/commands";
 import type { DocumentSnapshot } from "../canvas/documentState";
 import {
   ARCHIVED_UNDO_BYTES_LIMIT,
+  archivedDocumentBytes,
   clearArchivedDocuments,
   commandPixelBytes,
   deleteArchivedDocument,
@@ -73,5 +74,21 @@ describe("退避ストア", () => {
     deleteArchivedDocument("a");
     expect(getArchivedDocument("a")).toBeUndefined();
     expect(getArchivedDocument("b")).toBeDefined();
+  });
+});
+
+describe("archivedDocumentBytes(退避の実測バイト数)", () => {
+  beforeEach(() => {
+    clearArchivedDocuments();
+  });
+
+  it("ベースPNGのBlob.sizeと、上限に収めた後の取り消し・やり直しのピクセルを合計する。無ければ0", () => {
+    const base = new Blob([new Uint8Array(1234)]);
+    saveArchivedDocument("a", {
+      base,
+      snapshot: { objects: [], nextId: 1, undo: { undo: [pixels(100), add(1)], redo: [pixels(50)] } },
+    });
+    expect(archivedDocumentBytes("a")).toBe(1234 + 150);
+    expect(archivedDocumentBytes("missing")).toBe(0);
   });
 });

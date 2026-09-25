@@ -4,10 +4,10 @@
 //! 末尾が最前面(後から描いたもの)。T33でテキストを`shape`の種類に加える。
 //! 状態(配列・選択中id)の保持と操作は`documentState.ts`、取り消し・やり直しは`commands.ts`。
 
-import type { Point } from "./coords";
+import type { Point, Rect } from "./coords";
 import { hitTestShape, type EditableShape } from "./shapeEdit";
 import { computeEllipseCenterAndRadii, ellipseLineWidth } from "./tools/ellipseTool";
-import { rectangleLineWidth } from "./tools/rectangleTool";
+import { rectangleCornerRadius, rectangleLineWidth } from "./tools/rectangleTool";
 
 /**
  * 1画像あたりのオブジェクト上限(人間決定 2026-09-24)。超えた分は最も古いものから
@@ -80,18 +80,10 @@ export function hitTestObjectOutline(
   }
   const { rect } = shape;
   if (shape.kind === "rectangle") {
-    const reach = rectangleLineWidth(canvasWidth, canvasHeight) + tolerance;
-    const insideOuter =
-      point.x >= rect.x - reach &&
-      point.x <= rect.x + rect.width + reach &&
-      point.y >= rect.y - reach &&
-      point.y <= rect.y + rect.height + reach;
-    const insideInner =
-      point.x > rect.x + reach &&
-      point.x < rect.x + rect.width - reach &&
-      point.y > rect.y + reach &&
-      point.y < rect.y + rect.height - reach;
-    return insideOuter && !insideInner;
+    const lineWidth = rectangleLineWidth(canvasWidth, canvasHeight);
+    const reach = lineWidth + tolerance;
+    // 角丸の枠線(描画と同じ半径)からの距離が掴める幅以内か。角の外側(丸めて線が無い所)は当たらない。
+    return Math.abs(roundedRectSignedDistance(point, rect, rectangleCornerRadius(rect, lineWidth))) <= reach;
   }
   const reach = ellipseLineWidth(canvasWidth, canvasHeight) + tolerance;
   const { center, radiusX, radiusY } = computeEllipseCenterAndRadii(rect);
@@ -117,6 +109,18 @@ export function pickObjectAt(
     }
   }
   return null;
+}
+
+/**
+ * 角丸矩形の輪郭(線の中心)までの符号付き距離(外側が正、内側が負)。角の円弧は半径`radius`。
+ * 角丸でない部分は辺までの距離、角は円弧までの距離になる。
+ */
+function roundedRectSignedDistance(point: Point, rect: Rect, radius: number): number {
+  const qx = Math.abs(point.x - (rect.x + rect.width / 2)) - (rect.width / 2 - radius);
+  const qy = Math.abs(point.y - (rect.y + rect.height / 2)) - (rect.height / 2 - radius);
+  const outside = Math.hypot(Math.max(qx, 0), Math.max(qy, 0));
+  const inside = Math.min(Math.max(qx, qy), 0);
+  return outside + inside - radius;
 }
 
 function normalizedRadius(point: Point, center: Point, rx: number, ry: number): number {

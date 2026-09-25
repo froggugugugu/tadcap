@@ -21,15 +21,18 @@ import { bindMosaicTool } from "./canvas/tools/mosaicTool";
 import { bindShapeTools } from "./canvas/tools/shapeTools";
 import { bindTextTool, commitPendingText } from "./canvas/tools/textTool";
 import {
+  archivedDocumentBytes,
   deleteArchivedDocument,
   getArchivedDocument,
   saveArchivedDocument,
 } from "./history/documentArchive";
 import {
   addHistoryItem,
+  enforceHistoryBudget,
   getSelectedHistoryItem,
   updateSelectedItemImage,
   type HistoryItem,
+  type HistoryItemImagePatch,
 } from "./history/historyStore";
 import type { ClipboardImagePayload } from "./ipc/clipboard";
 import {
@@ -56,6 +59,7 @@ import { initSidebar } from "./ui/sidebar";
 import { initToolbar } from "./ui/toolbar";
 import { initUndoButtons } from "./ui/undoButton";
 import { initArrangeButtons } from "./ui/arrangeButtons";
+import { clearToast, showToast } from "./ui/toast";
 
 let canvasEl: HTMLCanvasElement | null = null;
 let statusEl: HTMLElement | null = null;
@@ -74,6 +78,24 @@ async function archiveCurrentDocument(): Promise<void> {
   const snapshot = snapshotDocument();
   const base = await exportDocumentBase();
   saveArchivedDocument(current.id, { base, snapshot });
+}
+
+/**
+ * 履歴の破棄で消えた項目の退避を消す(件数上限・合計バイト数の上限、v0.2.0後の人間フィードバック)。
+ */
+function deleteArchivesOf(items: readonly HistoryItem[]): void {
+  for (const item of items) {
+    deleteArchivedDocument(item.id);
+  }
+}
+
+/**
+ * 履歴の合計バイト数(履歴画像・サムネイル + 退避)が上限を超えていれば、表示中以外の古い項目から
+ * 破棄する(ObjectURLのrevokeは`historyStore`、退避の削除はここ)。退避・履歴画像が増える保存点の
+ * 後に呼ぶ。
+ */
+function enforceHistoryMemoryBudget(): void {
+  deleteArchivesOf(enforceHistoryBudget(archivedDocumentBytes));
 }
 
 /**
@@ -130,20 +152,20 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
       id: result.id,
       image: assets.image,
       thumbnail: assets.thumbnail,
+      bytes: assets.bytes,
       createdAt: result.createdAt,
     });
-    // T34: 履歴の上限で消えた項目の退避も消す。
-    for (const item of evicted) {
-      deleteArchivedDocument(item.id);
-    }
+    // T34: 履歴の上限で消えた項目の退避も消す(件数上限)。続けて合計バイト数の上限を確かめる。
+    deleteArchivesOf(evicted);
+    enforceHistoryMemoryBudget();
     if (statusEl) {
-      statusEl.textContent = "";
+      clearToast(statusEl);
     }
   } catch (error) {
     // 原因調査のため実際のエラーは握りつぶさずに出す(ユーザー向け文言は短いまま)。
     console.error("キャプチャ画像の表示に失敗しました", error);
     if (statusEl) {
-      statusEl.textContent = "画像の表示に失敗しました。";
+      showToast(statusEl, "画像の表示に失敗しました。", "error");
     }
   } finally {
     // 描画後はCanvasがピクセルを保持するため、読込用のObjectURLは解放してよい。
@@ -191,6 +213,7 @@ function handleClipboardCopySuccess(): void {
   }
   void captureHistoryAssets(canvasEl).then((assets) => {
     updateSelectedItemImage(assets);
+    enforceHistoryMemoryBudget();
   });
 }
 
@@ -202,9 +225,7 @@ function handleClipboardCopySuccess(): void {
  * `reloadImage`: 選択された履歴項目の編集後画像をCanvasへ再読込する(元画像には戻さない、
  * PRD §5決定ログ#3)。`capture`メタデータは履歴由来のため`null`にする(`canvasState.ts`参照)。
  */
-async function captureCurrentHistoryAssets(): Promise<
-  { image: string; thumbnail: string } | null
-> {
+async function captureCurrentHistoryAssets(): Promise<HistoryItemImagePatch | null> {
   if (!canvasEl || canvasEl.width === 0 || canvasEl.height === 0) {
     return null;
   }
@@ -239,8 +260,12 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
   } catch (error) {
     console.error("履歴画像の再読込に失敗しました", error);
     if (statusEl) {
-      statusEl.textContent = "履歴画像の再読込に失敗しました。";
+      showToast(statusEl, "履歴画像の再読込に失敗しました。", "error");
     }
+  } finally {
+    // 切り替え前の項目を退避し履歴画像も上書きした後なので、合計バイト数の上限を確かめる
+    // (表示中になった`item`は破棄されない)。
+    enforceHistoryMemoryBudget();
   }
 }
 

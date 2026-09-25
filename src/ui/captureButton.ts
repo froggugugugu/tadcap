@@ -8,6 +8,7 @@
 
 import { startCapture } from "../ipc/capture";
 import { isPermissionDeniedError } from "../ipc/permissions";
+import { clearToast, showToast } from "./toast";
 
 export interface CaptureButtonElements {
   button: HTMLButtonElement;
@@ -37,7 +38,7 @@ async function handleCaptureClick(
   elements: CaptureButtonElements,
   onPermissionDenied?: () => void,
 ): Promise<void> {
-  elements.status.textContent = "";
+  clearToast(elements.status);
   elements.button.disabled = true;
   try {
     await startCapture();
@@ -48,7 +49,7 @@ async function handleCaptureClick(
     // SHOULD-4(レビュー2026-09-24): 原因調査のため実際のエラーは握りつぶさずに出す
     // (ユーザー向け文言は`captureErrorMessage()`の短いままにする)。
     console.error("キャプチャの開始に失敗しました", error);
-    elements.status.textContent = captureErrorMessage(error);
+    showToast(elements.status, captureErrorMessage(error), "error");
     if (isPermissionDeniedError(error)) {
       onPermissionDenied?.();
     }

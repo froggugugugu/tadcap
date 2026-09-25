@@ -79,6 +79,12 @@ export interface TauriMockConfig {
     result: MockCaptureResult;
     captureImageBase64: string;
   };
+  /**
+   * n回目の `capture_screen` 呼び出しで `captureResults[n-1]` を返す(履歴の件数上限の検証用。
+   * 各回で別のid・createdAtにするため)。範囲外の回は `capture.result` を返す。画像は
+   * `captureImageBase64`(`sourcePath`が同じでも構わない)。
+   */
+  captureResults?: MockCaptureResult[];
 }
 
 /**
@@ -223,9 +229,10 @@ const injectTauriMocks: InjectedMockScript = (config) => {
         // 2回目以降は`secondCapture`があればそちらを返す(MUST-1回帰テスト:
         // ドラッグ中に別経路のキャプチャが完了する状況を再現するため)。
         const result =
-          captureCallCount >= 2 && config.secondCapture
+          config.captureResults?.[captureCallCount - 1] ??
+          (captureCallCount >= 2 && config.secondCapture
             ? config.secondCapture.result
-            : config.capture.result;
+            : config.capture.result);
         // 実際のRust側(commands.rs::run_capture)はemit → 戻り値の順(emit後にOk(Some(result))を
         // 返す)。Canvas反映の主経路はイベント購読側(src/main.ts::handleCaptureCompleted)。
         emitEvent("capture://completed", result);

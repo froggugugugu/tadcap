@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  HISTORY_BYTES_LIMIT,
   HISTORY_LIMIT,
   addHistoryItem,
   createHistoryState,
+  enforceHistoryBudget,
+  selectHistoryEvictions,
   getHistoryState,
   getSelectedItem,
   selectHistoryItem,
@@ -20,10 +23,48 @@ function makeItem(overrides: Partial<HistoryItem> = {}): HistoryItem {
     id: "capture-1",
     image: "blob:tadcap/image-1",
     thumbnail: "blob:tadcap/thumb-1",
+    bytes: 100,
     createdAt: "2024-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
+
+describe("上限の定数", () => {
+  it("件数上限は20件、合計バイト数の上限は300MB", () => {
+    expect(HISTORY_LIMIT).toBe(20);
+    expect(HISTORY_BYTES_LIMIT).toBe(300 * 1024 * 1024);
+  });
+});
+
+describe("selectHistoryEvictions(どれを破棄するかの判定、純粋関数)", () => {
+  // 新しいものが先頭。
+  const entries = (bytes: number[]) => bytes.map((b, i) => ({ id: `h${i}`, bytes: b }));
+
+  it("件数・バイト数とも上限以内なら何も破棄しない", () => {
+    expect(selectHistoryEvictions(entries([10, 10, 10]), "h0", 3, 30)).toEqual([]);
+    expect(selectHistoryEvictions([], null, 3, 30)).toEqual([]);
+  });
+
+  it("件数上限を超えた分を古いもの(末尾)から破棄する", () => {
+    expect(selectHistoryEvictions(entries([1, 1, 1, 1, 1]), "h0", 3, 1000)).toEqual(["h4", "h3"]);
+  });
+
+  it("合計バイト数が上限を超えたら、上限以下になるまで古いものから破棄する", () => {
+    // 合計100、上限60 → h3(40)を捨てて60。
+    expect(selectHistoryEvictions(entries([10, 20, 30, 40]), "h0", 10, 60)).toEqual(["h3"]);
+    // 上限59 → h3・h2を捨てて30。
+    expect(selectHistoryEvictions(entries([10, 20, 30, 40]), "h0", 10, 59)).toEqual(["h3", "h2"]);
+  });
+
+  it("表示中(選択中)の項目は最も古くても破棄しない", () => {
+    expect(selectHistoryEvictions(entries([10, 20, 30, 40]), "h3", 10, 60)).toEqual(["h2", "h1"]);
+    expect(selectHistoryEvictions(entries([1, 1, 1, 1]), "h3", 2, 1000)).toEqual(["h2", "h1"]);
+  });
+
+  it("選択中の項目だけで上限を超える場合は、それ以外を全部捨てたところで止まる", () => {
+    expect(selectHistoryEvictions(entries([10, 500]), "h1", 10, 100)).toEqual(["h0"]);
+  });
+});
 
 describe("createHistoryState", () => {
   it("項目なし・未選択の初期状態を返す", () => {
@@ -119,6 +160,7 @@ describe("withUpdatedItemImage(上書き、純粋関数)", () => {
     const { state: next, replaced } = withUpdatedItemImage(state, item.id, {
       image: "blob:tadcap/image-1-edited",
       thumbnail: "blob:tadcap/thumb-1-edited",
+      bytes: 321,
     });
 
     const updated = next.items.find((it) => it.id === item.id);
@@ -127,8 +169,9 @@ describe("withUpdatedItemImage(上書き、純粋関数)", () => {
       createdAt: item.createdAt,
       image: "blob:tadcap/image-1-edited",
       thumbnail: "blob:tadcap/thumb-1-edited",
+      bytes: 321,
     });
-    expect(replaced).toEqual({ image: item.image, thumbnail: item.thumbnail });
+    expect(replaced).toEqual({ image: item.image, thumbnail: item.thumbnail, bytes: item.bytes });
   });
 
   it("存在しないidを指定した場合は元の状態のまま、replacedはnull", () => {
@@ -137,6 +180,7 @@ describe("withUpdatedItemImage(上書き、純粋関数)", () => {
     const { state: next, replaced } = withUpdatedItemImage(state, "not-exist", {
       image: "x",
       thumbnail: "y",
+      bytes: 1,
     });
 
     expect(next).toEqual(state);
@@ -147,7 +191,7 @@ describe("withUpdatedItemImage(上書き、純粋関数)", () => {
     const item = makeItem();
     const state = withAddedItem(createHistoryState(), item).state;
 
-    withUpdatedItemImage(state, item.id, { image: "x", thumbnail: "y" });
+    withUpdatedItemImage(state, item.id, { image: "x", thumbnail: "y", bytes: 1 });
 
     expect(state.items[0]).toEqual(item);
   });
@@ -211,12 +255,37 @@ describe("historyStoreストア(モジュール単位の薄い状態オブジェ
     const replaced = updateSelectedItemImage({
       image: "blob:new-image",
       thumbnail: "blob:new-thumb",
+      bytes: 7,
     });
 
     const updated = getHistoryState().items.find((it) => it.id === id);
     expect(updated?.image).toBe("blob:new-image");
     expect(updated?.thumbnail).toBe("blob:new-thumb");
-    expect(replaced).toEqual({ image: "blob:old-image", thumbnail: "blob:old-thumb" });
+    expect(updated?.bytes).toBe(7);
+    expect(replaced).toEqual({ image: "blob:old-image", thumbnail: "blob:old-thumb", bytes: 100 });
+  });
+
+  it("enforceHistoryBudgetは合計バイト数(履歴画像+追加分)の上限を超えた古い項目を破棄し、ObjectURLをrevokeする", () => {
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const half = HISTORY_BYTES_LIMIT / 2;
+    const idA = `store-budget-a-${Date.now()}`;
+    const idB = `store-budget-b-${Date.now()}`;
+    const idC = `store-budget-c-${Date.now()}`;
+    addHistoryItem(makeItem({ id: idA, bytes: half, image: "blob:a-image", thumbnail: "blob:a-thumb" }));
+    addHistoryItem(makeItem({ id: idB, bytes: half }));
+    addHistoryItem(makeItem({ id: idC, bytes: 10 }));
+
+    // 退避分(extraBytesOf)も合計に含める。Cは表示中なので大きくても残る。
+    const evicted = enforceHistoryBudget((id) => (id === idC ? half : 0));
+    const ids = getHistoryState().items.map((it) => it.id);
+
+    expect(evicted.map((it) => it.id)).toContain(idA);
+    expect(evicted.map((it) => it.id)).not.toContain(idC);
+    expect(ids).not.toContain(idA);
+    expect(ids).toContain(idC);
+    expect(revoke).toHaveBeenCalledWith("blob:a-image");
+    expect(revoke).toHaveBeenCalledWith("blob:a-thumb");
+    revoke.mockRestore();
   });
 
   it("unsubscribe後は通知されない", () => {

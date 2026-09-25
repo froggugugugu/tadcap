@@ -8,13 +8,15 @@
 //! # メモリ(【設計判断】)
 //!
 //! - ベースは`ImageBitmap`や`ImageData`ではなくPNGの`Blob`で持つ。5K(5120x2880)のRGBAは1枚約59MBで、
-//!   履歴50件(`HISTORY_LIMIT`)ぶん展開したまま持つと約2.9GBになるため。PNGはスクリーンショットでは
+//!   履歴50件ぶん展開したまま持つと約2.9GBになるため。PNGはスクリーンショットでは
 //!   数MB程度に縮む。ベースを変えていなければ読み込み時のPNGを再エンコードせずに使う(`documentSurface.ts`)。
 //! - 取り消しスタックのピクセル(モザイク・上限超過の焼き込み)は、退避時に合計
 //!   [`ARCHIVED_UNDO_BYTES_LIMIT`]へ収める(古い取り消しから捨てる。捨てた操作は取り消せなくなるだけで、
 //!   結果はベース・オブジェクトに残る)。オブジェクトの追加・変更・削除・重ね順はピクセルを持たないため
 //!   ほぼ無料で残る。
 //! - 履歴の上限超過で消えた項目の退避は`deleteArchivedDocument()`で消す(`main.ts`)。
+//! - 履歴全体の合計バイト数の上限(`historyStore.ts::HISTORY_BYTES_LIMIT`)の判定には、
+//!   [`archivedDocumentBytes`]の実測値(ベースPNGの`Blob.size` + 取り消しスタックのピクセル)を使う。
 
 import type { DocumentCommand } from "../canvas/commands";
 import type { DocumentSnapshot } from "../canvas/documentState";
@@ -72,6 +74,19 @@ export function saveArchivedDocument(id: string, doc: ArchivedDocument): void {
 
 export function getArchivedDocument(id: string): ArchivedDocument | undefined {
   return archive.get(id);
+}
+
+/**
+ * 履歴id`id`の退避が持つバイト数(ベースPNGの`Blob.size` + 上限に収めた後の取り消し・やり直しの
+ * ピクセル)。退避が無ければ0。オブジェクト配列などの小さなJSオブジェクトは数えない。
+ */
+export function archivedDocumentBytes(id: string): number {
+  const doc = archive.get(id);
+  if (!doc) {
+    return 0;
+  }
+  const { undo, redo } = doc.snapshot.undo;
+  return doc.base.size + [...undo, ...redo].reduce((sum, c) => sum + commandPixelBytes(c), 0);
 }
 
 export function deleteArchivedDocument(id: string): void {

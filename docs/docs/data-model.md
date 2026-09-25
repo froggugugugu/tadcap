@@ -60,8 +60,9 @@ Rust `capture::CaptureResult`(`camelCase` でシリアライズ)に対応する�
 PRD §5は`thumbnail`を「binary / dataURL」、`image`を「binary (PNG)」としているが、実装時にいずれも
 `Blob` + `URL.createObjectURL()`のObjectURL文字列に統一した(【仮定】。dataURL(Base64)は元データの
 約1.33倍に膨らむため、5K Retina全画面相当のPNGを複数件保持しうる本機能では不利と判断。理由の詳細は
-`historyStore.ts`モジュールdoc・project-config.md §11参照)。上限件数`HISTORY_LIMIT`(50件、【仮定】、
-PRDに記載なし)超過時・上書き時の旧ObjectURLは`historyStore.ts`が内部で`URL.revokeObjectURL()`する。
+`historyStore.ts`モジュールdoc・project-config.md §11参照)。上限件数`HISTORY_LIMIT`(20件)・
+合計バイト数`HISTORY_BYTES_LIMIT`(300MB、`HistoryItem.bytes`(PNGの`Blob.size`)+退避の実測値。表示中の項目は破棄しない)
+超過時・上書き時の旧ObjectURLは`historyStore.ts`が内部で`URL.revokeObjectURL()`する。
 
 派生型: `HistoryState = { items: HistoryItem[], selectedId: string | null }`(`items`は新しいものが先頭)
 
@@ -145,7 +146,7 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 
 履歴id → `{ base: Blob(ベースのPNG), snapshot: { objects, nextId, undo: UndoStackState } }`。別の画像へ切り替える直前に退避し、
 戻ったときに復元する。永続化しない。`snapshot.undo`は保存時にピクセルの合計を`ARCHIVED_UNDO_BYTES_LIMIT`(8MB)以下にする
-(古い取り消しから捨てる)。履歴の上限(`HISTORY_LIMIT`)で消えた項目の退避は削除する。
+(古い取り消しから捨てる)。履歴の上限(`HISTORY_LIMIT`・`HISTORY_BYTES_LIMIT`)で消えた項目の退避は削除する。合計バイト数の判定には`archivedDocumentBytes()`(ベースPNGの`Blob.size`+取り消しのピクセル)を使う。
 
 `DocumentCommand`(取り消し・やり直しの1操作): `add {object, index}` / `update {id, before, after}` / `remove {object, index}`(T34で結線) /
 `pixels {rect, image}` / `flatten {object, index, rect, image}` / `group {commands}`。51個目の追加は`group[add, flatten]`になり、

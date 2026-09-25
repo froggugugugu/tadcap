@@ -75,6 +75,18 @@ describe("hitTestObjectOutline(未選択オブジェクトの掴める範囲)", 
     expect(hitTestObjectOutline(rect, { x: 60, y: 130 }, 6, W, H)).toBe(false);
   });
 
+  it("矩形は角丸なので、外接矩形の角の外側(丸めた線から離れた所)は当たらない", () => {
+    // rect(100,100,100,60)・線幅2px → 角の半径 min(2×2.5, 60/4)=5。掴める幅 = 線幅2 + 許容6 = 8。
+    // 角の円弧の中心は(105,105)。(93,93)は円弧から約12px離れる(角丸でなければ掴めた位置)。
+    expect(hitTestObjectOutline(rect, { x: 93, y: 93 }, 6, W, H)).toBe(false);
+    // 円弧上(45°)とその少し外側は当たる。
+    expect(hitTestObjectOutline(rect, { x: 101.5, y: 101.5 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(rect, { x: 97, y: 97 }, 6, W, H)).toBe(true);
+    // 右下の角も同じ(対称)。
+    expect(hitTestObjectOutline(rect, { x: 207, y: 167 }, 6, W, H)).toBe(false);
+    expect(hitTestObjectOutline(rect, { x: 198.5, y: 158.5 }, 6, W, H)).toBe(true);
+  });
+
   it("円は楕円の線の付近だけ当たる", () => {
     // 中心(150,130)、半径(50,30)。右端(200,130)・上端(150,100)は線上。
     expect(hitTestObjectOutline(ellipse, { x: 199, y: 130 }, 6, W, H)).toBe(true);
