@@ -319,7 +319,7 @@ test.describe("追加機能(T20〜T29)の横断フロー(T30)", () => {
 
     await page.getByRole("button", { name: "クリップボードにコピー" }).click();
     await expect(page.locator("#clipboard-status")).toHaveText("クリップボードにコピーしました。");
-    expect(await getClipboardWriteCount(page)).toBe(1);
+    expect(await getClipboardWriteCount(page)).toBe(2); // キャプチャ直後の自動コピーを含む
 
     // コピー直前に編集中の矩形が確定され、ハンドルは消える。
     expect(await overlayHasHandles(page)).toBe(false);
@@ -338,7 +338,7 @@ test.describe("追加機能(T20〜T29)の横断フロー(T30)", () => {
 
     await page.getByRole("button", { name: "クリップボードにコピー" }).click();
     await expect(page.locator("#clipboard-status")).toHaveText("クリップボードにコピーしました。");
-    expect(await getClipboardWriteCount(page)).toBe(2);
+    expect(await getClipboardWriteCount(page)).toBe(3); // キャプチャ直後の自動コピーを含む
 
     // コピー直前に入力中のテキストが確定され、入力欄(枠線)は消える。
     await expect(input).toHaveCount(0);

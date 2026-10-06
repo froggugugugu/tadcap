@@ -129,7 +129,7 @@ test.describe("色・フォントサイズ選択UI(T28)", () => {
     await expect(picker).toBeFocused();
     await page.keyboard.press("Meta+C");
     await expect(page.locator("#clipboard-status")).toHaveText("クリップボードにコピーしました。");
-    expect(await getClipboardWriteCount(page)).toBe(1);
+    expect(await getClipboardWriteCount(page)).toBe(2); // キャプチャ直後の自動コピーを含む
 
     await page.getByRole("button", { name: "矩形" }).click();
     await drawRectangleAndCommit(page, canvas);

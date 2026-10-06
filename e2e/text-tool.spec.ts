@@ -239,13 +239,13 @@ test.describe("テキストツール(T27)", () => {
     await page.keyboard.type("Copy");
 
     await page.keyboard.press("Meta+C");
-    expect(await getClipboardWriteCount(page)).toBe(0);
+    expect(await getClipboardWriteCount(page)).toBe(1); // キャプチャ直後の自動コピーを含む
     await expect(input).toBeFocused();
 
     await page.getByRole("button", { name: "クリップボードにコピー" }).click();
     await expect(page.locator("#clipboard-status")).toHaveText("クリップボードにコピーしました。");
     await expect(input).toHaveCount(0);
-    expect(await getClipboardWriteCount(page)).toBe(1);
+    expect(await getClipboardWriteCount(page)).toBe(2); // キャプチャ直後の自動コピーを含む
 
     const stats = await getClipboardImageStats(page, ANNOTATION_COLOR, COLOR_TOLERANCE);
     expect(stats).not.toBeNull();

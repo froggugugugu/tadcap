@@ -134,7 +134,7 @@ test.describe("直前に描いた図形の編集(T31)", () => {
 
     await page.getByRole("button", { name: "クリップボードにコピー" }).click();
     await expect(page.locator("#clipboard-status")).toHaveText("クリップボードにコピーしました。");
-    expect(await getClipboardWriteCount(page)).toBe(1);
+    expect(await getClipboardWriteCount(page)).toBe(2); // キャプチャ直後の自動コピーを含む
 
     const stats = await getClipboardImageStats(page, ANNOTATION_COLOR, COLOR_TOLERANCE);
     expect(stats).not.toBeNull();

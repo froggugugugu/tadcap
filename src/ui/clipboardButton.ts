@@ -23,6 +23,9 @@
 //! T22【改訂 2026-09-24】: 入力欄判定(`isEditableTarget()`)は `./shortcutGuards.ts` へ
 //! 抽出した(T29の取り消し/やり直し・T27のテキストツールが同じ判定を再利用するため)。
 //! 本ファイルは抽出後の関数を再importして使う(挙動不変)。
+//!
+//! v0.2.2後の人間フィードバック: 無編集で使うときのため、キャプチャ直後に画像をそのまま
+//! クリップボードへ入れる(`copyAfterCapture`、`main.ts::handleCaptureCompleted`が呼ぶ)。
 
 import {
   copyToClipboard,
@@ -77,6 +80,27 @@ export function clipboardCopyFeedbackMessage(result: ClipboardFeedback): string 
 }
 
 /**
+ * キャプチャ直後の自動コピーのフィードバック文言(純粋関数、v0.2.2後の人間フィードバック)。
+ * 手動コピーと区別できるよう「キャプチャを」と付ける。成功の経路(フォールバック)は出し分けない。
+ */
+export function autoCopyFeedbackMessage(result: ClipboardFeedback): string {
+  return result === "error"
+    ? "キャプチャをクリップボードにコピーできませんでした。"
+    : "キャプチャをクリップボードにコピーしました。";
+}
+
+export interface ClipboardButtonController {
+  /**
+   * キャプチャした画像をそのままクリップボードへ入れる(`main.ts`が取り込み完了直後に呼ぶ)。
+   * 画素は呼んだ時点で同期に読み取るため、直後に編集を始めても無編集の画像が入る。
+   * 履歴は同じ画素から作ったばかりなので、`onCopySuccess`(履歴の上書き)は呼ばない。
+   */
+  copyAfterCapture: () => Promise<void>;
+  /** 購読・イベントリスナーを解除する。 */
+  dispose: () => void;
+}
+
+/**
  * クリップボードコピーのボタン・`Cmd+C`ショートカットを結線する(Container相当)。
  *
  * `getPayload` は現在のCanvas最終画像をRGBAで取得するコールバック(`main.ts`が
@@ -87,35 +111,38 @@ export function clipboardCopyFeedbackMessage(result: ClipboardFeedback): string 
  * 任意コールバック(T14。`main.ts`がセッション内履歴の選択中項目を現在のCanvas
  * 内容で上書きするために使う)。
  *
- * 戻り値は購読解除・イベントリスナー解除用の関数。
+ * 戻り値はキャプチャ直後の自動コピーと、購読・イベントリスナーの解除([`ClipboardButtonController`])。
  */
 export function initClipboardButton(
   elements: ClipboardButtonElements,
   getPayload: () => ClipboardImagePayload | null,
   onCopySuccess?: () => void,
-): () => void {
+): ClipboardButtonController {
   const updateEnabled = (): void => {
     elements.button.disabled = !isClipboardCopyEnabled(getCanvasState());
   };
   updateEnabled();
   const unsubscribe = subscribeCanvasState(updateEnabled);
 
-  const runCopy = async (): Promise<void> => {
+  const runCopy = async (auto = false): Promise<void> => {
     const payload = getPayload();
     if (!payload) {
       return;
     }
+    const message = auto ? autoCopyFeedbackMessage : clipboardCopyFeedbackMessage;
     clearToast(elements.status);
     elements.button.disabled = true;
     try {
       const method = await copyToClipboard(payload);
-      showToast(elements.status, clipboardCopyFeedbackMessage(method), "info");
-      onCopySuccess?.();
+      showToast(elements.status, message(method), "info");
+      if (!auto) {
+        onCopySuccess?.();
+      }
     } catch (error) {
       // SHOULD-4(レビュー2026-09-24): 原因調査のため実際のエラー(`ClipboardCopyError`、
       // プラグイン・フォールバック両方の失敗理由を保持)を握りつぶさずに出す。
       console.error("クリップボードへのコピーに失敗しました", error);
-      showToast(elements.status, clipboardCopyFeedbackMessage("error"), "error");
+      showToast(elements.status, message("error"), "error");
     } finally {
       updateEnabled();
     }
@@ -140,8 +167,11 @@ export function initClipboardButton(
   };
   window.addEventListener("keydown", handleKeydown);
 
-  return () => {
-    unsubscribe();
-    window.removeEventListener("keydown", handleKeydown);
+  return {
+    copyAfterCapture: () => runCopy(true),
+    dispose: () => {
+      unsubscribe();
+      window.removeEventListener("keydown", handleKeydown);
+    },
   };
 }

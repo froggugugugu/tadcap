@@ -69,6 +69,8 @@ import { clearToast, showToast } from "./ui/toast";
 let canvasEl: HTMLCanvasElement | null = null;
 let statusEl: HTMLElement | null = null;
 let permissionBanner: PermissionBannerController | null = null;
+/** キャプチャ直後の自動コピー(`ui/clipboardButton.ts`、v0.2.2後)。初期化前は`null`。 */
+let copyAfterCapture: (() => Promise<void>) | null = null;
 
 /**
  * 表示中の履歴項目のドキュメント(ベースPNG・オブジェクト・取り消しスタック)を退避する
@@ -171,6 +173,9 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
     if (statusEl) {
       clearToast(statusEl);
     }
+    // 無編集でそのまま貼れるよう、取り込んだ画像をクリップボードへ入れる(v0.2.2後の人間フィード
+    // バック)。画素は呼んだ時点で読むので完了は待たない(キューの後続を止めない)。
+    void copyAfterCapture?.();
   } catch (error) {
     // 原因調査のため実際のエラーは握りつぶさずに出す(ユーザー向け文言は短いまま)。
     console.error("キャプチャ画像の表示に失敗しました", error);
@@ -382,11 +387,11 @@ window.addEventListener("DOMContentLoaded", () => {
     "#clipboard-status",
   );
   if (clipboardButtonEl && clipboardStatusEl) {
-    initClipboardButton(
+    copyAfterCapture = initClipboardButton(
       { button: clipboardButtonEl, status: clipboardStatusEl },
       getClipboardPayload,
       handleClipboardCopySuccess,
-    );
+    ).copyAfterCapture;
   }
 
   // セッション内履歴サイドバー(FR-010、T14)。

@@ -23,6 +23,8 @@
 
 import { expect, type Locator, type Page } from "@playwright/test";
 
+import { getClipboardWriteCount } from "./tauriMock";
+
 /**
  * 「キャプチャ」ボタンをクリックし、画像の反映完了(コピーボタン有効化 + 履歴件数一致)を
  * 待ったうえで `#capture-canvas` の `Locator` を返す。
@@ -34,6 +36,7 @@ export async function captureAndWaitReady(
   page: Page,
   expectedHistoryCount = 1,
 ): Promise<Locator> {
+  const writesBefore = await getClipboardWriteCount(page);
   await page.getByRole("button", { name: "キャプチャ" }).click();
   await expect(
     page.getByRole("button", { name: "クリップボードにコピー" }),
@@ -41,5 +44,8 @@ export async function captureAndWaitReady(
   await expect(page.locator("#history-sidebar li")).toHaveCount(
     expectedHistoryCount,
   );
+  // キャプチャ直後の自動コピー(v0.2.2後)が済むまで待つ。呼び出し側のコピー回数の検証が、
+  // 自動コピーの1回を含めた決まった値になるように。
+  await expect.poll(() => getClipboardWriteCount(page)).toBe(writesBefore + 1);
   return page.locator("#capture-canvas");
 }

@@ -13,6 +13,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { captureAndWaitReady } from "./fixtures/captureReady";
 import { createFixtureCapturePng } from "./fixtures/sampleCapturePng";
 import {
+  getClipboardImageStats,
   getClipboardWriteCount,
   installTauriMocks,
   routeCrossOriginAssets,
@@ -194,7 +195,7 @@ test.describe("キャプチャ→編集→クリップボードコピー→履�
     await expect(page.locator("#clipboard-status")).toHaveText(
       "クリップボードにコピーしました。",
     );
-    expect(await getClipboardWriteCount(page)).toBe(1);
+    expect(await getClipboardWriteCount(page)).toBe(2); // キャプチャ直後の自動コピーを含む
 
     // 履歴は引き続き1件・選択状態のまま(コピー成功時は選択中項目の画像を上書きするのみ、T14)。
     await expect(page.locator(".history-sidebar__item")).toHaveCount(1);
@@ -206,6 +207,33 @@ test.describe("キャプチャ→編集→クリップボードコピー→履�
     await expect(page.locator("#capture-status")).not.toHaveText(
       "画像の表示に失敗しました。",
     );
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("キャプチャするとボタンを押さなくても、無編集の画像がそのままクリップボードに入る(v0.2.2後)", async ({
+    page,
+  }) => {
+    await installTauriMocks(page, {
+      initialPermissionState: "granted",
+      capture: { kind: "success", result: sampleCaptureResult },
+      captureImageBase64,
+    });
+    await page.goto("/");
+    expect(await getClipboardWriteCount(page)).toBe(0);
+
+    const canvas = await captureAndWaitReady(page); // 自動コピーの1回を待つ
+
+    expect(await getClipboardWriteCount(page)).toBe(1);
+    await expect(page.locator("#clipboard-status")).toHaveText("キャプチャをクリップボードにコピーしました。");
+    const stats = await getClipboardImageStats(page, ARROW_COLOR, COLOR_TOLERANCE);
+    expect(stats?.equalsCanvas).toBe(true);
+    expect(stats?.targetColorPixels).toBe(0);
+
+    // 後から描いても、自動コピーされた画像は無編集のまま(手動でコピーするまで変わらない)。
+    await page.getByRole("button", { name: "矢印" }).click();
+    await dragOnCanvas(page, canvas, [20, 20], [120, 90]);
+    expect(await getClipboardWriteCount(page)).toBe(1);
+    expect((await getClipboardImageStats(page, ARROW_COLOR, COLOR_TOLERANCE))?.targetColorPixels).toBe(0);
     expect(pageErrors).toEqual([]);
   });
 

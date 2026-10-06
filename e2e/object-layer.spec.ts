@@ -188,7 +188,7 @@ test.describe("オブジェクト層(T32)", () => {
 
     await page.keyboard.press("Meta+C");
     await expect(page.locator("#clipboard-status")).toHaveText("クリップボードにコピーしました。");
-    expect(await getClipboardWriteCount(page)).toBe(1);
+    expect(await getClipboardWriteCount(page)).toBe(2); // キャプチャ直後の自動コピーを含む
     // キー操作ではポインタが動かないため選択は保たれている(ハンドル表示中のコピー)。
     expect(await overlayHasHandles(page)).toBe(true);
 

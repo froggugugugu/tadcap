@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createCanvasState, withImage } from "../canvas/canvasState";
 import {
+  autoCopyFeedbackMessage,
   clipboardCopyFeedbackMessage,
   isClipboardCopyEnabled,
   isCopyShortcut,
@@ -63,5 +64,16 @@ describe("clipboardCopyFeedbackMessage", () => {
 
   it("errorのときは失敗した旨を返す", () => {
     expect(clipboardCopyFeedbackMessage("error")).toContain("失敗");
+  });
+});
+
+describe("autoCopyFeedbackMessage(キャプチャ直後の自動コピー、v0.2.2後)", () => {
+  it("成功は経路(プラグイン・フォールバック)に関わらず、キャプチャをコピーしたと伝える", () => {
+    expect(autoCopyFeedbackMessage("plugin")).toBe("キャプチャをクリップボードにコピーしました。");
+    expect(autoCopyFeedbackMessage("fallback")).toBe("キャプチャをクリップボードにコピーしました。");
+  });
+
+  it("失敗は手動コピーと区別できる文言にする", () => {
+    expect(autoCopyFeedbackMessage("error")).toBe("キャプチャをクリップボードにコピーできませんでした。");
   });
 });
