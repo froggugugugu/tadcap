@@ -55,10 +55,13 @@ body {
 
 /* --- エディタ画面レイアウト(T07: キャプチャ起動 + Canvas表示、T19で再設計) --- */
 
+/* ウィンドウの高さに固定する(v0.2.2後): 中身(履歴の件数・画像の大きさ)でページ全体を伸ばさず、
+   スクロールは履歴の一覧(`.history-sidebar__list`)とCanvas表示領域(`.canvas-area`)の中だけで起こす。 */
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* --- ツールバー(T19: キャプチャ/編集ツール/コピーを1本の薄いバーに統合。
@@ -321,20 +324,92 @@ body {
 
 .history-sidebar {
   flex: none;
+  display: flex;
+  flex-direction: column;
   width: 88px;
-  padding: 8px;
-  overflow-y: auto;
+  min-height: 0;
   border-left: 1px solid var(--border-color);
   background-color: var(--surface-color);
 }
 
+/* 一覧の上の「すべて削除」。一覧と一緒にスクロールしないよう外に置く。 */
+.history-sidebar__header {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 4px 0;
+}
+
+.history-sidebar__clear-all .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* 履歴が増えたら一覧だけがスクロールする(v0.2.2後)。 */
 .history-sidebar__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin: 0;
-  padding: 0;
+  padding: 4px 8px 8px;
   list-style: none;
+}
+
+.history-sidebar__item {
+  position: relative;
+  flex: none;
+}
+
+/* サムネイル右上の×(1件削除)。ホバーかキーボードフォーカスのときだけ出す。 */
+.history-sidebar__delete-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: rgb(0 0 0 / 62%);
+  color: #ffffff;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 70%);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+.history-sidebar__delete-button .icon {
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+.history-sidebar__item:hover .history-sidebar__delete-button,
+.history-sidebar__item:focus-within .history-sidebar__delete-button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.history-sidebar__delete-button:hover {
+  background-color: rgb(0 0 0 / 82%);
+}
+
+.history-sidebar__delete-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-sidebar__delete-button {
+    transition: none;
+  }
 }
 
 .history-sidebar__thumbnail-button {
@@ -455,4 +530,60 @@ button {
   border: 1px solid transparent;
   font-family: inherit;
   outline: none;
+}
+
+/* --- 確認ダイアログ(履歴の「すべて削除」、v0.2.2後) --- */
+
+.confirm-dialog {
+  max-width: 320px;
+  padding: 16px;
+  border: none;
+  border-radius: 10px;
+  background-color: var(--surface-color);
+  color: inherit;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
+}
+
+.confirm-dialog::backdrop {
+  background-color: rgb(0 0 0 / 25%);
+}
+
+.confirm-dialog__message {
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm-dialog__button {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: inherit;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.confirm-dialog__button:hover {
+  background-color: #f0f0f0;
+}
+
+.confirm-dialog__button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.confirm-dialog__button--danger {
+  border-color: transparent;
+  background-color: #b23b2d;
+  color: #ffffff;
+}
+
+.confirm-dialog__button--danger:hover {
+  background-color: #9a3225;
 }

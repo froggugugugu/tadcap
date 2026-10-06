@@ -93,7 +93,11 @@ export function createDocumentSurface(display: HTMLCanvasElement): DocumentSurfa
       base.width = display.width;
       base.height = display.height;
       baseCtx.clearRect(0, 0, base.width, base.height);
-      baseCtx.drawImage(display, 0, 0);
+      // 空状態(表示canvasが0×0、履歴の全削除)では取り込む画素が無い(0×0のcanvasを
+      // drawImageに渡すとInvalidStateErrorになる)。
+      if (display.width > 0 && display.height > 0) {
+        baseCtx.drawImage(display, 0, 0);
+      }
       touch();
       markClean(blob ?? null);
     },

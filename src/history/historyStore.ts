@@ -203,6 +203,28 @@ export function withUpdatedItemImage(
   };
 }
 
+export interface RemoveHistoryItemResult {
+  state: HistoryState;
+  /** 消した項目(呼び出し元がObjectURLをrevokeするために返す)。該当項目が無ければ`null`。 */
+  removed: HistoryItem | null;
+}
+
+/**
+ * 指定idの項目を消す純粋関数(イミュータブル、v0.2.2後の人間フィードバック)。表示中の項目を消した
+ * 場合は、1つ古い項目(消した後に同じ位置へ来る項目)、無ければ1つ新しい項目を選択し、どちらも
+ * 無ければ未選択にする。存在しないidの場合は元の状態のまま、`removed`は`null`。
+ */
+export function withRemovedItem(state: HistoryState, id: string): RemoveHistoryItemResult {
+  const index = state.items.findIndex((it) => it.id === id);
+  if (index === -1) {
+    return { state, removed: null };
+  }
+  const items = state.items.filter((it) => it.id !== id);
+  const selectedId =
+    state.selectedId === id ? (items[index] ?? items[index - 1])?.id ?? null : state.selectedId;
+  return { state: { items, selectedId }, removed: state.items[index]! };
+}
+
 /** 選択中の項目を返す純粋関数。未選択、または選択idが指す項目が無ければ`null`。 */
 export function getSelectedItem(state: HistoryState): HistoryItem | null {
   return state.items.find((it) => it.id === state.selectedId) ?? null;
@@ -264,6 +286,34 @@ function revokeItems(items: readonly HistoryItem[]): void {
     URL.revokeObjectURL(item.image);
     URL.revokeObjectURL(item.thumbnail);
   }
+}
+
+/**
+ * 指定idの項目を消してObjectURLをrevokeし、購読者へ通知する(サムネイルの×ボタン)。表示中の
+ * 項目を消したときの選択の移り先は[`withRemovedItem`]参照。存在しないidなら何もせず`null`を返す
+ * (退避の削除は呼び出し元が行う)。
+ */
+export function removeHistoryItem(id: string): HistoryItem | null {
+  const result = withRemovedItem(state, id);
+  if (!result.removed) {
+    return null;
+  }
+  state = result.state;
+  revokeItems([result.removed]);
+  notify();
+  return result.removed;
+}
+
+/**
+ * 全項目を消して未選択にし、ObjectURLをrevokeして購読者へ通知する(「すべて削除」)。
+ * 消した項目を返す(退避の削除は呼び出し元が行う)。
+ */
+export function clearHistory(): HistoryItem[] {
+  const removed = state.items;
+  state = createHistoryState();
+  revokeItems(removed);
+  notify();
+  return removed;
 }
 
 /** 項目を選択状態にし、購読者へ通知する。存在しないidの場合は選択を変えない。 */

@@ -1,12 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   addHistoryItem,
+  clearHistory,
   getHistoryState,
   selectHistoryItem,
   type HistoryItem,
 } from "../history/historyStore";
-import { handleItemClick, type SidebarCallbacks } from "./sidebar";
+import {
+  handleClearAll,
+  handleItemClick,
+  handleItemDelete,
+  type ItemClickCallbacks,
+  type SidebarCallbacks,
+} from "./sidebar";
 
 function makeItem(id: string): HistoryItem {
   return {
@@ -29,7 +36,7 @@ describe("handleItemClick(MUST-2/SHOULD-3: 連続クリックの直列化、レ�
       bytes: 1,
     }));
     const reloadImage = vi.fn(async () => {});
-    const callbacks: SidebarCallbacks = { captureCurrentAssets, reloadImage };
+    const callbacks: ItemClickCallbacks = { captureCurrentAssets, reloadImage };
 
     await handleItemClick(item, callbacks);
     await handleItemClick(item, callbacks);
@@ -64,7 +71,7 @@ describe("handleItemClick(MUST-2/SHOULD-3: 連続クリックの直列化、レ�
       const reloadImage = vi.fn(async (item: HistoryItem) => {
         callOrder.push(`reload:${item.id}`);
       });
-      const callbacks: SidebarCallbacks = { captureCurrentAssets, reloadImage };
+      const callbacks: ItemClickCallbacks = { captureCurrentAssets, reloadImage };
 
       // Bクリック直後(await前)にCもクリックする(サイドバーの連打を模す)。
       const clickB = handleItemClick(b, callbacks);
@@ -112,6 +119,158 @@ describe("handleItemClick(MUST-2/SHOULD-3: 連続クリックの直列化、レ�
     await handleItemClick(b, { captureCurrentAssets, reloadImage });
 
     expect(callOrder).toEqual(["capture", `reload:${b.id}`]);
+    expect(getHistoryState().selectedId).toBe(b.id);
+  });
+});
+
+function makeDeleteCallbacks(callOrder: string[] = []): SidebarCallbacks {
+  return {
+    captureCurrentAssets: vi.fn(async () => {
+      callOrder.push("capture");
+      return { image: "captured", thumbnail: "captured-thumb", bytes: 1 };
+    }),
+    reloadImage: vi.fn(async (item: HistoryItem) => {
+      callOrder.push(`reload:${item.id}`);
+    }),
+    onItemsRemoved: vi.fn((items: readonly HistoryItem[]) => {
+      callOrder.push(`removed:${items.map((it) => it.id).join(",")}`);
+    }),
+    clearEditor: vi.fn(() => {
+      callOrder.push("clear-editor");
+    }),
+  };
+}
+
+describe("handleItemDelete(履歴の1件削除)", () => {
+  beforeEach(() => {
+    clearHistory();
+  });
+
+  it("表示中でない項目を消すと、表示はそのままで消した項目だけを通知する", async () => {
+    const a = makeItem("del-a");
+    const b = makeItem("del-b");
+    addHistoryItem(a);
+    addHistoryItem(b); // bが表示中
+    const callbacks = makeDeleteCallbacks();
+
+    await handleItemDelete(a, callbacks);
+
+    expect(getHistoryState().items.map((it) => it.id)).toEqual([b.id]);
+    expect(getHistoryState().selectedId).toBe(b.id);
+    expect(callbacks.onItemsRemoved).toHaveBeenCalledWith([a]);
+    expect(callbacks.reloadImage).not.toHaveBeenCalled();
+    expect(callbacks.clearEditor).not.toHaveBeenCalled();
+  });
+
+  it("表示中の項目を消すと、編集内容は保存せずに隣の項目を読み込む", async () => {
+    const a = makeItem("del-sel-a");
+    const b = makeItem("del-sel-b");
+    const c = makeItem("del-sel-c");
+    addHistoryItem(a);
+    addHistoryItem(b);
+    addHistoryItem(c);
+    selectHistoryItem(b.id);
+    const callOrder: string[] = [];
+    const callbacks = makeDeleteCallbacks(callOrder);
+
+    await handleItemDelete(b, callbacks);
+
+    expect(getHistoryState().selectedId).toBe(a.id);
+    expect(callOrder).toEqual([`removed:${b.id}`, `reload:${a.id}`]);
+    expect(callbacks.captureCurrentAssets).not.toHaveBeenCalled();
+  });
+
+  it("最後の1件を消すとエディタを空状態に戻す", async () => {
+    const a = makeItem("del-last");
+    addHistoryItem(a);
+    const callOrder: string[] = [];
+    const callbacks = makeDeleteCallbacks(callOrder);
+
+    await handleItemDelete(a, callbacks);
+
+    expect(getHistoryState()).toEqual({ items: [], selectedId: null });
+    expect(callOrder).toEqual([`removed:${a.id}`, "clear-editor"]);
+  });
+
+  it("既に消えた項目への2回目の削除は何もしない(連打)", async () => {
+    const a = makeItem("del-twice-a");
+    const b = makeItem("del-twice-b");
+    addHistoryItem(a);
+    addHistoryItem(b);
+    const callbacks = makeDeleteCallbacks();
+
+    await Promise.all([handleItemDelete(a, callbacks), handleItemDelete(a, callbacks)]);
+
+    expect(callbacks.onItemsRemoved).toHaveBeenCalledTimes(1);
+  });
+
+  it("切替中のクリックと直列化され、切替が終わってから削除する", async () => {
+    const a = makeItem("del-queue-a");
+    const b = makeItem("del-queue-b");
+    addHistoryItem(a);
+    addHistoryItem(b); // bが表示中
+    const callOrder: string[] = [];
+    const callbacks = makeDeleteCallbacks(callOrder);
+
+    // aへ切り替える途中でaを削除する: 切替完了後にaは表示中なので、隣のbを読み込み直す。
+    await Promise.all([handleItemClick(a, callbacks), handleItemDelete(a, callbacks)]);
+
+    expect(callOrder).toEqual([
+      "capture",
+      `reload:${a.id}`,
+      `removed:${a.id}`,
+      `reload:${b.id}`,
+    ]);
+    expect(getHistoryState().selectedId).toBe(b.id);
+  });
+});
+
+describe("handleClearAll(履歴の全削除)", () => {
+  beforeEach(() => {
+    clearHistory();
+  });
+
+  it("全項目を消して通知し、エディタを空状態に戻す", async () => {
+    const a = makeItem("clear-a");
+    const b = makeItem("clear-b");
+    addHistoryItem(a);
+    addHistoryItem(b);
+    const callOrder: string[] = [];
+    const callbacks = makeDeleteCallbacks(callOrder);
+
+    await handleClearAll(callbacks);
+
+    expect(getHistoryState()).toEqual({ items: [], selectedId: null });
+    expect(callbacks.onItemsRemoved).toHaveBeenCalledWith([b, a]);
+    expect(callOrder).toEqual([`removed:${b.id},${a.id}`, "clear-editor"]);
+  });
+
+  it("履歴が空なら何もしない", async () => {
+    const callbacks = makeDeleteCallbacks();
+
+    await handleClearAll(callbacks);
+
+    expect(callbacks.onItemsRemoved).not.toHaveBeenCalled();
+    expect(callbacks.clearEditor).not.toHaveBeenCalled();
+  });
+});
+
+describe("削除とクリックの組み合わせ(レビュー 2026-10-07)", () => {
+  beforeEach(() => {
+    clearHistory();
+  });
+
+  it("×で消した項目への遅れたクリックは何もしない(revoke済みの画像を読まない)", async () => {
+    const a = makeItem("stale-a");
+    const b = makeItem("stale-b");
+    addHistoryItem(a);
+    addHistoryItem(b); // bが表示中
+    const callbacks = makeDeleteCallbacks();
+
+    await Promise.all([handleItemDelete(a, callbacks), handleItemClick(a, callbacks)]);
+
+    expect(callbacks.captureCurrentAssets).not.toHaveBeenCalled();
+    expect(callbacks.reloadImage).not.toHaveBeenCalled();
     expect(getHistoryState().selectedId).toBe(b.id);
   });
 });

@@ -64,7 +64,7 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 ├── main.ts                   # エントリーポイント。DOM初期化・IPCイベント購読(T07)。T08で権限バナー初期化・3入口の結線を追加。T09でツールバー初期化・矢印ツール結線を追加。T10でモザイクツール結線を追加。T14でサイドバー初期化・履歴追加/上書きの結線を追加
 ├── styles.css                # レイアウト・スタイル(T07でgreetスキャフォールド撤去、エディタ画面用に置換)。T08で `.permission-banner` 系を追加。T09で `--arrow-color`・`.tool-toolbar` 系を追加(T10は既存の`--arrow-color`をモザイク選択矩形のプレビュー枠線色として流用、CSS変更なし)。T14で `.main-area`・`.history-sidebar` 系を追加
 ├── history/                  # セッション内履歴のメモリ管理(T14、FR-010)
-│   └── historyStore.ts       # HistoryItem[]の追加・選択・上書き・上限超過時の破棄(純粋関数+薄いストア、canvasStateと同じ作法)。`captureHistoryAssets`は`canvas/render.ts`のre-export
+│   └── historyStore.ts       # HistoryItem[]の追加・選択・上書き・上限超過時の破棄・1件削除・全削除(純粋関数+薄いストア、canvasStateと同じ作法)。`captureHistoryAssets`は`canvas/render.ts`のre-export
 ├── ipc/                      # Rustコマンド呼び出し・イベント購読の薄いラッパー(T07〜)
 │   ├── capture.ts            # startCapture()・onCaptureCompleted()(T07)。T08で onCaptureError()(capture://error購読)を追加
 │   ├── permissions.ts        # checkScreenRecordingPermission()・openScreenRecordingSettings()・isPermissionDeniedError()(T08)
@@ -98,7 +98,7 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 │   ├── toast.ts              # 右下トーストの自動消去(`showToast()`/`clearToast()`、成功・情報2.5秒/エラー5秒、reduced-motionはフェードなし。v0.2.0後フィードバック)
 │   ├── shortcutGuards.ts     # `isEditableTarget()`(編集可能要素の判定、T22、`clipboardButton.ts`から抽出)
 │   ├── clipboardButton.ts    # 「クリップボードにコピー」ボタン + Cmd+C(T12)。T14で成功時フック`onCopySuccess`を追加。T22で`isEditableTarget()`を`shortcutGuards.ts`へ抽出
-│   └── sidebar.ts            # セッション内履歴サイドバー(T14、FR-010)。項目クリックでCanvasへ再読込
+│   └── sidebar.ts            # セッション内履歴サイドバー(T14、FR-010)。項目クリックでCanvasへ再読込。v0.2.2後: サムネイルのホバーで右上に×(1件削除、表示中なら隣を表示・最後の1件なら空状態)、一覧の上の「すべて削除」(`<dialog>`で確認)。クリックと削除は同じキューで直列化。一覧だけがスクロールする
 ├── assets/                   # 既存(vite/tauri/typescriptロゴ。index.htmlからは参照撤去済み、T07)
 └── test/
     ├── smoke.test.ts         # Vitest 配線確認用プレースホルダ(T01)
@@ -135,7 +135,7 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | テストファイル | 対象 |
 | -------------- | ---- |
 | `src/canvas/canvasState.test.ts` | `createCanvasState()`/`withImage()`/`withoutImage()`/`withActiveTool()`/`toggleTool()`/`withDrawing()`(純粋関数)、`getCanvasState()`/`setCanvasImage()`/`clearCanvasImage()`/`setActiveTool()`/`toggleActiveTool()`/`setDrawing()`/`subscribeCanvasState()`(シングルトンストア、通知・購読解除を含む)(T07。ツール状態・描画中フラグはT09で追加) |
-| `src/history/historyStore.test.ts` | `createHistoryState()`/`withAddedItem()`(追加・新しいものが先頭・`HISTORY_LIMIT`超過時の破棄)/`selectHistoryEvictions()`(件数・合計バイト数の上限、表示中は破棄しない)/`enforceHistoryBudget()`/`withSelectedId()`(選択・存在しないid時は無変更)/`withUpdatedItemImage()`(image/thumbnail上書き・id/createdAt維持・存在しないid時は無変更)/`getSelectedItem()`(純粋関数)、`getHistoryState()`/`addHistoryItem()`/`selectHistoryItem()`/`updateSelectedItemImage()`/`subscribeHistoryState()`(シングルトンストア、破棄・上書き時の`URL.revokeObjectURL()`呼び出しを含む。Node環境でも`Blob`/`URL`はグローバルに存在するため自動テスト可能、project-config.md §11参照)(T14)。DOM/Canvas依存の`captureHistoryAssets()`(re-export元は`canvas/render.ts`)は対象外 |
+| `src/history/historyStore.test.ts` | `createHistoryState()`/`withAddedItem()`(追加・新しいものが先頭・`HISTORY_LIMIT`超過時の破棄)/`selectHistoryEvictions()`(件数・合計バイト数の上限、表示中は破棄しない)/`enforceHistoryBudget()`/`withSelectedId()`(選択・存在しないid時は無変更)/`withUpdatedItemImage()`(image/thumbnail上書き・id/createdAt維持・存在しないid時は無変更)/`withRemovedItem()`(1件削除・表示中を消したら1つ古い→無ければ1つ新しい項目を選択・最後の1件で未選択)/`getSelectedItem()`(純粋関数)、`getHistoryState()`/`addHistoryItem()`/`selectHistoryItem()`/`updateSelectedItemImage()`/`removeHistoryItem()`/`clearHistory()`/`subscribeHistoryState()`(シングルトンストア、破棄・上書き時の`URL.revokeObjectURL()`呼び出しを含む。Node環境でも`Blob`/`URL`はグローバルに存在するため自動テスト可能、project-config.md §11参照)(T14)。DOM/Canvas依存の`captureHistoryAssets()`(re-export元は`canvas/render.ts`)は対象外 |
 | `src/canvas/toolSettings.test.ts` | `createToolSettings()`(既定色`#FF5C8A`・既定フォントサイズ`"medium"`)/`withColor()`/`withFontSize()`(純粋関数、イミュータブル)、`isValidColorCode()`(`#RRGGBB`形式の判定、大文字/小文字/桁数不足/桁数超過/16進数以外/空文字列)、`getToolSettings()`/`setColor()`/`setFontSize()`/`subscribeToolSettings()`(シングルトンストア、通知・購読解除を含む)(T21、FR-013) |
 | `src/canvas/undoStack.test.ts` | 【改訂 2026-09-24 T32】要素を`DocumentCommand`に変更: `withPushedCommand()`(Redoクリア・上限30件)/`withPoppedUndo()`・`withPoppedRedo()`(LIFO・`apply`の戻り値を反対側へ積む・空は`null`で`apply`を呼ばない・Redo側の上限)/`canUndoState()`/`canRedoState()`、ストア(`pushCommand`・`popUndo/popRedo`の往復・新規操作でRedoクリア・`clearUndoStack`・購読解除)(T23、FR-014) |
 | `src/canvas/objectModel.test.ts` | T32: `OBJECT_LIMIT`=50、`insertObject`(範囲外の丸め・イミュータブル)/`removeObject`/`replaceObjectShape`/`findObject`、`hitTestObjectOutline`(矩形・円は線の付近のみ・内側中央と円の外接矩形の角は当たらない・矢印は胴体。矩形の角丸の外側は当たらない)、`pickObjectAt`(最前面優先・外れは`null`) |
@@ -217,6 +217,7 @@ Vite dev server上のページを開き `e2e/fixtures/tauriMock.ts` が `page.ad
 | `e2e/text-tool.spec.ts` | T27: 入力+Enterで注釈色の画素が増え入力欄が消える/Escで何も残らない/IME変換中のEnterでは確定しない/入力中のCmd+Cはアプリのコピーに奪われず、コピーボタンで確定後の画像がコピーされ入力欄の枠(白)は写らない/空のままツール切替で何も焼き込まない |
 | `e2e/text-object.spec.ts` | T33: テキストツール中に確定済みテキストをクリックで選択(入力欄は開かない)→移動→Cmd+Zで元の位置とバイト一致/ダブルクリックで元の文字入りの入力欄→IME変換中のEnterで確定しない→Enterで変更→Cmd+Z・Cmd+Shift+Zで往復/再編集のEscは編集前のまま・空にして確定で削除・Cmd+Zで戻る/ツール未選択・矢印ツール中もダブルクリックで再編集、モザイク中は開かない |
 | `e2e/v020-feedback.spec.ts` | v0.2.0後フィードバック: トーストの自動消去(`page.clock`で時計を止め、コピー成功は2.5秒+フェード200ms・エラーは5秒で消え権限バナーは残る・reduced-motionはフェードなし)/矩形の角丸(白画像で角の外側が白・辺の中央と円弧上が注釈色)/21件目のキャプチャで最古の履歴が消え20件(`tauriMock`の`captureResults`で回ごとに別id) |
+| `e2e/history-delete.spec.ts` | v0.2.2後フィードバック: サムネイルの×はホバー時だけ表示・表示中でない項目を消しても表示は変わらない・表示中を消すと隣を表示・最後の1件で空状態(コピーとすべて削除が無効、canvas 0×0)・空状態から再キャプチャできる/すべて削除は確認ダイアログ(件数表示・既定フォーカスはキャンセル)、キャンセル・Escでは消えず削除で全件消える/800×600で12件キャプチャしてもページはスクロールせず一覧だけがスクロールし、Canvasの位置・大きさは1件目と同じ |
 | `e2e/object-ops.spec.ts` | T34: Delete/Backspaceで削除・Cmd+Zで戻る・入力欄のBackspaceは文字削除/選択中に色見本で色が変わり選択は外れず取り消せる・以後の描画色も変わる/テキスト選択中に文字サイズ大で大きくなり取り消せる/最前面へ・最背面へ(ボタン・⌘⇧F/⌘⇧B)で交点の色が入れ替わり選択中のみ有効・取り消せる/2枚目をキャプチャして1枚目へ戻っても矩形を選んで動かせ、Cmd+Zで移動→切り替え前の描画の順に戻る・2枚目の矩形も選べる |
 | `e2e/shape-edit.spec.ts` | T31: 編集中の図形はコピー時に確定されて写りハンドル(白)は写らない(コピーRGBA=Canvas、近白画素0)/矩形の右下ハンドルでリサイズ/矢印の胴体ドラッグで移動+Enter確定/Escで破棄/次の図形の描き始めで直前の図形が確定。T32で後ろ2件を「Escは選択解除でCmd+Zで描く前に戻る」「次の図形を描いても前の図形は残り、取り消しは新しい方から」に変更 |
 | `e2e/object-layer.spec.ts` | T32: 確定後の矢印を選び直して移動・リサイズ→Cmd+Z×2で編集前とバイト一致/51個目で最古が焼き込まれ選べなくなり、1回の取り消しで戻る/選択中(ハンドル表示中)のCmd+Cでもコピー結果にハンドルが写らない/モザイクはベースにだけ効き上の矩形は隠れず後から動かせる/テキストはベースへ焼き込まれ矩形より下(T33で「テキストもオブジェクトとして重ね順に入り、後から置けば矩形より上・Cmd+Zで消える」に変更) |

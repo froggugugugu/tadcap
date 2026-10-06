@@ -4,15 +4,18 @@ import {
   HISTORY_BYTES_LIMIT,
   HISTORY_LIMIT,
   addHistoryItem,
+  clearHistory,
   createHistoryState,
   enforceHistoryBudget,
   selectHistoryEvictions,
   getHistoryState,
   getSelectedItem,
+  removeHistoryItem,
   selectHistoryItem,
   subscribeHistoryState,
   updateSelectedItemImage,
   withAddedItem,
+  withRemovedItem,
   withSelectedId,
   withUpdatedItemImage,
   type HistoryItem,
@@ -210,6 +213,55 @@ describe("getSelectedItem", () => {
   });
 });
 
+describe("withRemovedItem(1件削除、純粋関数)", () => {
+  // 新しいものが先頭: [c, b, a]
+  const a = makeItem({ id: "a" });
+  const b = makeItem({ id: "b" });
+  const c = makeItem({ id: "c" });
+
+  it("選択中でない項目を消しても選択は変わらない", () => {
+    const result = withRemovedItem({ items: [c, b, a], selectedId: "c" }, "b");
+
+    expect(result.state).toEqual({ items: [c, a], selectedId: "c" });
+    expect(result.removed).toBe(b);
+  });
+
+  it("選択中の項目を消すと、1つ古い項目(同じ位置に来る項目)を選択する", () => {
+    const result = withRemovedItem({ items: [c, b, a], selectedId: "b" }, "b");
+
+    expect(result.state).toEqual({ items: [c, a], selectedId: "a" });
+  });
+
+  it("選択中の最も古い項目を消すと、1つ新しい項目を選択する", () => {
+    const result = withRemovedItem({ items: [c, b, a], selectedId: "a" }, "a");
+
+    expect(result.state).toEqual({ items: [c, b], selectedId: "b" });
+  });
+
+  it("最後の1件を消すと空・未選択になる", () => {
+    const result = withRemovedItem({ items: [a], selectedId: "a" }, "a");
+
+    expect(result.state).toEqual({ items: [], selectedId: null });
+    expect(result.removed).toBe(a);
+  });
+
+  it("存在しないidの場合は元の状態のまま、removedはnull", () => {
+    const state = { items: [c, b, a], selectedId: "c" };
+    const result = withRemovedItem(state, "missing");
+
+    expect(result.state).toBe(state);
+    expect(result.removed).toBeNull();
+  });
+
+  it("元の状態を変更しない(イミュータブル)", () => {
+    const state = { items: [c, b, a], selectedId: "b" };
+    withRemovedItem(state, "b");
+
+    expect(state.items).toEqual([c, b, a]);
+    expect(state.selectedId).toBe("b");
+  });
+});
+
 describe("historyStoreストア(モジュール単位の薄い状態オブジェクト、canvasStateと同じ作法)", () => {
   beforeEach(() => {
     // 各テスト間で状態を独立させるため、モジュール内シングルトンを初期状態相当にリセットする。
@@ -285,6 +337,54 @@ describe("historyStoreストア(モジュール単位の薄い状態オブジェ
     expect(ids).toContain(idC);
     expect(revoke).toHaveBeenCalledWith("blob:a-image");
     expect(revoke).toHaveBeenCalledWith("blob:a-thumb");
+    revoke.mockRestore();
+  });
+
+  it("removeHistoryItemは項目を消してObjectURLをrevokeし、購読者に通知する", () => {
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const idA = `store-remove-a-${Date.now()}`;
+    const idB = `store-remove-b-${Date.now()}`;
+    addHistoryItem(makeItem({ id: idA, image: "blob:ra-image", thumbnail: "blob:ra-thumb" }));
+    addHistoryItem(makeItem({ id: idB }));
+    const received: unknown[] = [];
+    const unsubscribe = subscribeHistoryState((state) => received.push(state));
+
+    const removed = removeHistoryItem(idA);
+
+    expect(removed?.id).toBe(idA);
+    expect(getHistoryState().items.map((it) => it.id)).not.toContain(idA);
+    expect(getHistoryState().selectedId).toBe(idB);
+    expect(revoke).toHaveBeenCalledWith("blob:ra-image");
+    expect(revoke).toHaveBeenCalledWith("blob:ra-thumb");
+    expect(received).toHaveLength(1);
+    unsubscribe();
+    revoke.mockRestore();
+  });
+
+  it("removeHistoryItemは存在しないidなら何もせず通知もしない", () => {
+    const received: unknown[] = [];
+    const unsubscribe = subscribeHistoryState((state) => received.push(state));
+
+    expect(removeHistoryItem("store-remove-missing")).toBeNull();
+    expect(received).toHaveLength(0);
+    unsubscribe();
+  });
+
+  it("clearHistoryは全項目を消して未選択にし、全ObjectURLをrevokeして消した項目を返す", () => {
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    addHistoryItem(makeItem({ id: `store-clear-${Date.now()}`, image: "blob:c-image", thumbnail: "blob:c-thumb" }));
+    const before = getHistoryState().items;
+    const received: unknown[] = [];
+    const unsubscribe = subscribeHistoryState((state) => received.push(state));
+
+    const removed = clearHistory();
+
+    expect(removed).toEqual(before);
+    expect(getHistoryState()).toEqual({ items: [], selectedId: null });
+    expect(revoke).toHaveBeenCalledWith("blob:c-image");
+    expect(revoke).toHaveBeenCalledWith("blob:c-thumb");
+    expect(received).toHaveLength(1);
+    unsubscribe();
     revoke.mockRestore();
   });
 

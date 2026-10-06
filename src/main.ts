@@ -1,4 +1,5 @@
 import {
+  clearCanvasImage,
   getCanvasState,
   setCanvasImage,
   subscribeCanvasState,
@@ -30,6 +31,7 @@ import {
 import {
   addHistoryItem,
   enforceHistoryBudget,
+  getHistoryState,
   getSelectedHistoryItem,
   updateSelectedItemImage,
   type HistoryItem,
@@ -78,11 +80,16 @@ async function archiveCurrentDocument(): Promise<void> {
   }
   const snapshot = snapshotDocument();
   const base = await exportDocumentBase();
+  // PNG化を待つ間に履歴から削除された項目(×・すべて削除)の退避は残さない。
+  if (!getHistoryState().items.some((it) => it.id === current.id)) {
+    return;
+  }
   saveArchivedDocument(current.id, { base, snapshot });
 }
 
 /**
- * 履歴の破棄で消えた項目の退避を消す(件数上限・合計バイト数の上限、v0.2.0後の人間フィードバック)。
+ * 履歴の破棄・削除で消えた項目の退避を消す(件数上限・合計バイト数の上限、v0.2.0後の人間フィードバック。
+ * サムネイルの×・すべて削除も同じ、v0.2.2後)。
  */
 function deleteArchivesOf(items: readonly HistoryItem[]): void {
   for (const item of items) {
@@ -241,6 +248,9 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
   if (!canvasEl) {
     return;
   }
+  // 表示中の項目を削除した後の読込では保存点を経ないため、入力中のテキストをここで閉じる
+  // (項目クリックの経路では`captureCurrentHistoryAssets`で確定済みなので何もしない)。
+  commitPendingText();
   try {
     // T34: 退避したドキュメントがあれば、ベース・オブジェクト・取り消しスタックごと戻す
     // (戻った後もオブジェクトを再調整・取り消しできる)。
@@ -268,6 +278,21 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
     // (表示中になった`item`は破棄されない)。
     enforceHistoryMemoryBudget();
   }
+}
+
+/**
+ * エディタを空状態(画像なし)に戻す(履歴の最後の1件の削除・全削除、v0.2.2後の人間フィードバック)。
+ * 表示canvasを0×0にしてからドキュメント(オブジェクト・取り消しスタック・ベース)を空にする。
+ */
+function clearEditor(): void {
+  if (!canvasEl) {
+    return;
+  }
+  commitPendingText();
+  canvasEl.width = 0;
+  canvasEl.height = 0;
+  resetDocument();
+  clearCanvasImage();
 }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -364,6 +389,8 @@ window.addEventListener("DOMContentLoaded", () => {
     initSidebar(sidebarEl, {
       captureCurrentAssets: captureCurrentHistoryAssets,
       reloadImage: reloadHistoryItemIntoCanvas,
+      onItemsRemoved: deleteArchivesOf,
+      clearEditor,
     });
   }
 

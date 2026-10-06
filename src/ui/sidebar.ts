@@ -17,10 +17,16 @@
 //! `handleItemClick`はDOM非依存(`SidebarCallbacks`経由でDOM操作を注入される側)
 //! なのでエクスポートし、`sidebar.test.ts`が非同期オーケストレーション(直列化)を
 //! 直接テストする(SHOULD-3、レビュー2026-09-24)。
+//!
+//! v0.2.2後の人間フィードバック: サムネイルのホバーで右上に×ボタンを出して1件削除
+//! (`handleItemDelete`)、一覧の上の「すべて削除」から確認ダイアログを経て全削除
+//! (`handleClearAll`)できる。どちらもクリックと同じキューで直列化する。
 
 import {
+  clearHistory,
   getSelectedHistoryItem,
   getHistoryState,
+  removeHistoryItem,
   selectHistoryItem,
   subscribeHistoryState,
   updateSelectedItemImage,
@@ -37,7 +43,23 @@ export interface SidebarCallbacks {
   captureCurrentAssets: () => Promise<HistoryItemImagePatch | null>;
   /** 指定した履歴項目の画像をCanvasへ再読込する(`src/main.ts`が実装する)。 */
   reloadImage: (item: HistoryItem) => Promise<void>;
+  /** 履歴から消えた項目の後始末(退避の削除。`src/main.ts`が実装する)。 */
+  onItemsRemoved: (items: readonly HistoryItem[]) => void;
+  /** エディタを空状態(画像なし)に戻す(`src/main.ts`が実装する)。 */
+  clearEditor: () => void;
 }
+
+/** 項目クリック([`handleItemClick`])が使うコールバック。 */
+export type ItemClickCallbacks = Pick<SidebarCallbacks, "captureCurrentAssets" | "reloadImage">;
+
+/** 1件削除([`handleItemDelete`])が使うコールバック。 */
+export type ItemDeleteCallbacks = Pick<
+  SidebarCallbacks,
+  "reloadImage" | "onItemsRemoved" | "clearEditor"
+>;
+
+/** 全削除([`handleClearAll`])が使うコールバック。 */
+export type ClearAllCallbacks = Pick<SidebarCallbacks, "onItemsRemoved" | "clearEditor">;
 
 /**
  * `handleItemClick`の直列化キュー(MUST-2、レビュー2026-09-24)。
@@ -55,6 +77,19 @@ export interface SidebarCallbacks {
 let clickQueue: Promise<void> = Promise.resolve();
 
 /**
+ * サイドバー操作(クリック・削除・全削除)を`clickQueue`へ直列に積む。削除も選択中の項目を読んで
+ * 再読込するため、クリックと同じ理由(MUST-2)で直列化する。
+ */
+function enqueue(task: () => Promise<void>): Promise<void> {
+  const next = clickQueue.then(task);
+  clickQueue = next.catch(() => {
+    // 直列化のためのチェーンは失敗しても止めない(次の呼び出しは進める)。
+    // 呼び出し元へのエラー伝播は`next`(この関数の戻り値)自体が担う。
+  });
+  return next;
+}
+
+/**
  * 既に選択中の項目を再度クリックした場合は何もしない(切替・再読込ともに不要)。
  * それ以外は、選択中項目があれば現在のCanvas内容で上書きしてから、対象項目を
  * 選択・再読込する(Container相当)。
@@ -67,20 +102,20 @@ let clickQueue: Promise<void> = Promise.resolve();
  */
 export function handleItemClick(
   item: HistoryItem,
-  callbacks: SidebarCallbacks,
+  callbacks: ItemClickCallbacks,
 ): Promise<void> {
-  const next = clickQueue.then(() => processItemClick(item, callbacks));
-  clickQueue = next.catch(() => {
-    // 直列化のためのチェーンは失敗しても止めない(次の呼び出しは進める)。
-    // 呼び出し元へのエラー伝播は`next`(この関数の戻り値)自体が担う。
-  });
-  return next;
+  return enqueue(() => processItemClick(item, callbacks));
 }
 
 async function processItemClick(
   item: HistoryItem,
-  callbacks: SidebarCallbacks,
+  callbacks: ItemClickCallbacks,
 ): Promise<void> {
+  // ×の直後に同じサムネイルを押した場合など、待っている間に消えた項目は読み込まない
+  // (ObjectURLはrevoke済み)。
+  if (!getHistoryState().items.some((it) => it.id === item.id)) {
+    return;
+  }
   const current = getSelectedHistoryItem();
   if (current?.id === item.id) {
     return;
@@ -95,11 +130,63 @@ async function processItemClick(
   await callbacks.reloadImage(item);
 }
 
+/**
+ * 履歴項目を1件消す(サムネイルの×ボタン、v0.2.2後の人間フィードバック)。表示中の項目なら、
+ * 編集内容は保存せずに隣の項目を読み込み、最後の1件ならエディタを空状態に戻す。既に消えた
+ * 項目(連打)なら何もしない。クリックと同じキューで直列化する。
+ */
+export function handleItemDelete(
+  item: HistoryItem,
+  callbacks: ItemDeleteCallbacks,
+): Promise<void> {
+  return enqueue(async () => {
+    const wasSelected = getSelectedHistoryItem()?.id === item.id;
+    const removed = removeHistoryItem(item.id);
+    if (!removed) {
+      return;
+    }
+    callbacks.onItemsRemoved([removed]);
+    if (!wasSelected) {
+      return;
+    }
+    const next = getSelectedHistoryItem();
+    if (next) {
+      await callbacks.reloadImage(next);
+    } else {
+      callbacks.clearEditor();
+    }
+  });
+}
+
+/** 履歴をすべて消し、エディタを空状態に戻す(確認後に呼ぶ)。履歴が空なら何もしない。 */
+export function handleClearAll(callbacks: ClearAllCallbacks): Promise<void> {
+  return enqueue(async () => {
+    if (getHistoryState().items.length === 0) {
+      return;
+    }
+    callbacks.onItemsRemoved(clearHistory());
+    callbacks.clearEditor();
+  });
+}
+
+const DELETE_ICON =
+  '<svg class="icon" viewBox="0 0 12 12" aria-hidden="true" focusable="false">' +
+  '<path d="M3.5 3.5l5 5M8.5 3.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+  "</svg>";
+
+const CLEAR_ALL_ICON =
+  '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
+  '<path d="M3.5 5.5h13M8 5.5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M5.5 5.5l.8 10.6a1.5 1.5 0 0 0 1.5 1.4h4.4' +
+  'a1.5 1.5 0 0 0 1.5-1.4l.8-10.6M8.5 9v5M11.5 9v5" fill="none" stroke="currentColor" stroke-width="1.4" ' +
+  'stroke-linecap="round" stroke-linejoin="round"/>' +
+  "</svg>";
+
 /** 履歴項目1件分のDOM構造を組み立てる(Presentational)。 */
 function renderItemView(
   item: HistoryItem,
   selected: boolean,
   onClick: () => void,
+  onDelete: () => void,
 ): HTMLLIElement {
   const li = document.createElement("li");
   li.className = "history-sidebar__item";
@@ -118,8 +205,67 @@ function renderItemView(
   img.alt = "";
   button.appendChild(img);
 
-  li.appendChild(button);
+  // サムネイルのボタンの中にボタンは入れられないため、兄弟として右上に重ねる(ホバー・
+  // キーボードフォーカスで表示、`styles.css`)。
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "history-sidebar__delete-button";
+  deleteButton.setAttribute("aria-label", "この履歴を削除");
+  deleteButton.title = "この履歴を削除";
+  deleteButton.innerHTML = DELETE_ICON;
+  deleteButton.addEventListener("click", onDelete);
+
+  li.append(button, deleteButton);
   return li;
+}
+
+/**
+ * 「すべて削除」の確認ダイアログ(`<dialog>`のモーダル)を組み立てる。`ask(count)`は
+ * 「削除」で`true`、キャンセル・Escで`false`に解決する。既定のフォーカスはキャンセル
+ * (元に戻せない操作のため)。
+ */
+function createClearAllDialog(): {
+  element: HTMLDialogElement;
+  ask: (count: number) => Promise<boolean>;
+} {
+  const dialog = document.createElement("dialog");
+  dialog.className = "confirm-dialog";
+  dialog.setAttribute("aria-labelledby", "clear-history-title");
+
+  const form = document.createElement("form");
+  form.method = "dialog";
+
+  const title = document.createElement("p");
+  title.id = "clear-history-title";
+  title.className = "confirm-dialog__message";
+
+  const actions = document.createElement("div");
+  actions.className = "confirm-dialog__actions";
+  const cancel = document.createElement("button");
+  cancel.value = "cancel";
+  cancel.className = "confirm-dialog__button";
+  cancel.textContent = "キャンセル";
+  cancel.autofocus = true;
+  const confirm = document.createElement("button");
+  confirm.value = "delete";
+  confirm.className = "confirm-dialog__button confirm-dialog__button--danger";
+  confirm.textContent = "削除";
+  actions.append(cancel, confirm);
+
+  form.append(title, actions);
+  dialog.appendChild(form);
+
+  const ask = (count: number): Promise<boolean> => {
+    title.textContent = `履歴を${count}件すべて削除します。元に戻せません。`;
+    dialog.returnValue = "";
+    dialog.showModal();
+    return new Promise((resolve) => {
+      dialog.addEventListener("close", () => resolve(dialog.returnValue === "delete"), {
+        once: true,
+      });
+    });
+  };
+  return { element: dialog, ask };
 }
 
 /**
@@ -132,17 +278,52 @@ export function initSidebar(
   mount: HTMLElement,
   callbacks: SidebarCallbacks,
 ): () => void {
+  const dialog = createClearAllDialog();
+
+  const header = document.createElement("div");
+  header.className = "history-sidebar__header";
+  const clearAllButton = document.createElement("button");
+  clearAllButton.type = "button";
+  clearAllButton.className = "icon-button history-sidebar__clear-all";
+  clearAllButton.setAttribute("aria-label", "履歴をすべて削除");
+  clearAllButton.title = "履歴をすべて削除";
+  clearAllButton.innerHTML = CLEAR_ALL_ICON;
+  // 確認中にキャプチャが届いて件数が変わったら、見ていない項目まで黙って消さないよう聞き直す。
+  const confirmClearAll = async (): Promise<void> => {
+    let count = getHistoryState().items.length;
+    while (await dialog.ask(count)) {
+      if (getHistoryState().items.length === count) {
+        await handleClearAll(callbacks);
+        return;
+      }
+      count = getHistoryState().items.length;
+    }
+  };
+  clearAllButton.addEventListener("click", () => {
+    void confirmClearAll();
+  });
+  header.appendChild(clearAllButton);
+
+  // 履歴が増えても一覧だけがスクロールする(ウィンドウ全体は伸ばさない、`styles.css`)。
   const listEl = document.createElement("ul");
   listEl.className = "history-sidebar__list";
-  mount.appendChild(listEl);
+  mount.append(header, listEl, dialog.element);
 
   const render = (): void => {
     const { items, selectedId } = getHistoryState();
+    clearAllButton.disabled = items.length === 0;
     listEl.replaceChildren(
       ...items.map((item) =>
-        renderItemView(item, item.id === selectedId, () => {
-          void handleItemClick(item, callbacks);
-        }),
+        renderItemView(
+          item,
+          item.id === selectedId,
+          () => {
+            void handleItemClick(item, callbacks);
+          },
+          () => {
+            void handleItemDelete(item, callbacks);
+          },
+        ),
       ),
     );
   };
