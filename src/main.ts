@@ -30,6 +30,7 @@ import {
 } from "./history/documentArchive";
 import {
   addHistoryItem,
+  deselectHistoryItem,
   enforceHistoryBudget,
   getHistoryState,
   getSelectedHistoryItem,
@@ -37,6 +38,7 @@ import {
   type HistoryItem,
   type HistoryItemImagePatch,
 } from "./history/historyStore";
+import { enqueueHistoryTask } from "./history/historyQueue";
 import type { ClipboardImagePayload } from "./ipc/clipboard";
 import {
   onCaptureCompleted,
@@ -269,9 +271,13 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
     resetDocument();
     setCanvasImage({ assetUrl: item.image, capture: null });
   } catch (error) {
+    // 読めなかった項目の選択とCanvasの中身(前の画像)がずれたまま次の保存点を迎えると、別の項目の
+    // 内容で上書きしてしまう。エディタを空にして未選択にし、履歴から選び直してもらう(人間の決定)。
     console.error("履歴画像の再読込に失敗しました", error);
+    clearEditor();
+    deselectHistoryItem();
     if (statusEl) {
-      showToast(statusEl, "履歴画像の再読込に失敗しました。", "error");
+      showToast(statusEl, "履歴画像を読み込めませんでした。履歴から選び直してください。", "error");
     }
   } finally {
     // 切り替え前の項目を退避し履歴画像も上書きした後なので、合計バイト数の上限を確かめる
@@ -396,7 +402,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // 起動直後から購読を開始する(グローバルショートカット・トレイ起点の
   // キャプチャ結果を受信するため、ARCH §11 フロントエンド初期化順序#2)。
-  void onCaptureCompleted(handleCaptureCompleted);
+  // 取り込みは履歴のクリック・削除と同じキューに並べる(選択中の項目への保存・退避が、削除や
+  // 切替と重ならないように。`history/historyQueue.ts`参照)。
+  void onCaptureCompleted((result) => {
+    void enqueueHistoryTask(() => handleCaptureCompleted(result));
+  });
 
   // 入口2: トレイ・グローバルショートカット起点の `capture://error` イベント
   // (T15で新設、payloadは `invoke` reject値と同じ文字列形式)。

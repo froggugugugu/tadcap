@@ -323,6 +323,15 @@ export function selectHistoryItem(id: string): void {
 }
 
 /**
+ * 項目を残したまま未選択にし、購読者へ通知する(履歴画像の読込に失敗してエディタを空にしたとき。
+ * ユーザーに履歴から選び直してもらう、v0.2.2後の人間の決定)。
+ */
+export function deselectHistoryItem(): void {
+  state = { ...state, selectedId: null };
+  notify();
+}
+
+/**
  * 選択中の項目のimage/thumbnailを現在のCanvas内容で上書きし、購読者へ通知する
  * (「別の履歴項目へ切り替える直前」「クリップボードコピー成功時」に呼ぶ、PJM決定)。
  * 上書きで不要になった旧URLはrevokeしたうえで返す(未選択時は`null`)。

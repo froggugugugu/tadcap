@@ -128,6 +128,35 @@ test.describe("履歴の削除と一覧のスクロール(v0.2.2後)", () => {
     expect(pageErrors).toEqual([]);
   });
 
+  test("表示中を消した後に隣の履歴を読み込めなければ、エディタを空にして未選択にし、選び直せば表示できる", async ({
+    page,
+  }) => {
+    await captureTimes(page, 2); // 1は2のキャプチャ時に退避済み
+    // 退避からの復元(createImageBitmap)を失敗させる。
+    await page.evaluate(() => {
+      const w = window as unknown as { __origCreateImageBitmap?: typeof createImageBitmap };
+      w.__origCreateImageBitmap = window.createImageBitmap;
+      window.createImageBitmap = () => Promise.reject(new Error("e2e: 読込失敗"));
+    });
+
+    await deleteItem(page, 0);
+
+    await expect(historyItems(page)).toHaveCount(1);
+    await expect(page.locator(".history-sidebar__item--selected")).toHaveCount(0);
+    await expect(page.locator("#empty-state")).toBeVisible();
+    await expect(page.getByRole("button", { name: "クリップボードにコピー" })).toBeDisabled();
+    await expect(page.locator("#capture-status")).toHaveText("履歴画像を読み込めませんでした。履歴から選び直してください。");
+
+    await page.evaluate(() => {
+      const w = window as unknown as { __origCreateImageBitmap?: typeof createImageBitmap };
+      window.createImageBitmap = w.__origCreateImageBitmap!;
+    });
+    await historyItems(page).nth(0).locator(".history-sidebar__thumbnail-button").click();
+    await expect(page.locator(".history-sidebar__item--selected")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "クリップボードにコピー" })).toBeEnabled();
+    await expect(page.locator("#empty-state")).toBeHidden();
+  });
+
   test("履歴が増えてもウィンドウ全体はスクロールせず、履歴の一覧だけがスクロールする", async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 600 });
     await captureAndWaitReady(page, 1);

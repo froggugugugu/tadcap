@@ -64,6 +64,7 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 ├── main.ts                   # エントリーポイント。DOM初期化・IPCイベント購読(T07)。T08で権限バナー初期化・3入口の結線を追加。T09でツールバー初期化・矢印ツール結線を追加。T10でモザイクツール結線を追加。T14でサイドバー初期化・履歴追加/上書きの結線を追加
 ├── styles.css                # レイアウト・スタイル(T07でgreetスキャフォールド撤去、エディタ画面用に置換)。T08で `.permission-banner` 系を追加。T09で `--arrow-color`・`.tool-toolbar` 系を追加(T10は既存の`--arrow-color`をモザイク選択矩形のプレビュー枠線色として流用、CSS変更なし)。T14で `.main-area`・`.history-sidebar` 系を追加
 ├── history/                  # セッション内履歴のメモリ管理(T14、FR-010)
+│   ├── historyQueue.ts       # 履歴を読み書きする非同期処理(履歴のクリック・削除、キャプチャ完了の取り込み)を1本に並べる直列化キュー(v0.2.2後)
 │   └── historyStore.ts       # HistoryItem[]の追加・選択・上書き・上限超過時の破棄・1件削除・全削除(純粋関数+薄いストア、canvasStateと同じ作法)。`captureHistoryAssets`は`canvas/render.ts`のre-export
 ├── ipc/                      # Rustコマンド呼び出し・イベント購読の薄いラッパー(T07〜)
 │   ├── capture.ts            # startCapture()・onCaptureCompleted()(T07)。T08で onCaptureError()(capture://error購読)を追加
@@ -141,6 +142,7 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `src/canvas/objectModel.test.ts` | T32: `OBJECT_LIMIT`=50、`insertObject`(範囲外の丸め・イミュータブル)/`removeObject`/`replaceObjectShape`/`findObject`、`hitTestObjectOutline`(矩形・円は線の付近のみ・内側中央と円の外接矩形の角は当たらない・矢印は胴体。矩形の角丸の外側は当たらない)、`pickObjectAt`(最前面優先・外れは`null`) |
 | `src/canvas/commands.test.ts` | T32: add/update/remove の取り消し・やり直し、pixels・flatten の入れ替え方式(往復でピクセルとオブジェクトが戻る)、group は逆順取り消し・順やり直し |
 | `src/canvas/documentState.test.ts` | T32(偽のサーフェス): `resetDocument`、`addShapeObject`(最前面追加・選択・取り消しで選択解除・やり直し・新規操作でRedoクリア)、上限(50個まで焼き込まない/51個目で最古をベースへ焼き込み1回の取り消しで両方戻る・やり直しは再描画せずピクセルを戻す/超過し続けても50個)、`commitShapeEdit`(update・形が同じなら積まない・存在しないidは無視)、`applyBaseEdit`(ベースだけ変えpixelsで往復・空矩形は無視)、選択は取り消し対象外、下書き・購読通知、サーフェス未登録時 |
+| `src/history/historyQueue.test.ts` | 前の処理が終わるまで次を始めない/失敗は呼び出し元へ返し後続は止めない |
 | `src/history/documentArchive.test.ts` | T34: `commandPixelBytes`(pixels・flatten・groupの中)、`trimUndoToBudget`(上限以内はそのまま/古い取り消し→遠いやり直しの順に連続して捨てる)、8MB上限、履歴idごとの保存・取得・削除と保存時の上限適用、`archivedDocumentBytes`(実測バイト数) |
 | `src/ui/arrangeButtons.test.ts` | T34: `arrangeShortcutCommand`(⇧⌘F=最前面・⇧⌘B=最背面、修飾違い・他キー・入力欄フォーカス中は対象外) |
 
@@ -217,7 +219,7 @@ Vite dev server上のページを開き `e2e/fixtures/tauriMock.ts` が `page.ad
 | `e2e/text-tool.spec.ts` | T27: 入力+Enterで注釈色の画素が増え入力欄が消える/Escで何も残らない/IME変換中のEnterでは確定しない/入力中のCmd+Cはアプリのコピーに奪われず、コピーボタンで確定後の画像がコピーされ入力欄の枠(白)は写らない/空のままツール切替で何も焼き込まない |
 | `e2e/text-object.spec.ts` | T33: テキストツール中に確定済みテキストをクリックで選択(入力欄は開かない)→移動→Cmd+Zで元の位置とバイト一致/ダブルクリックで元の文字入りの入力欄→IME変換中のEnterで確定しない→Enterで変更→Cmd+Z・Cmd+Shift+Zで往復/再編集のEscは編集前のまま・空にして確定で削除・Cmd+Zで戻る/ツール未選択・矢印ツール中もダブルクリックで再編集、モザイク中は開かない |
 | `e2e/v020-feedback.spec.ts` | v0.2.0後フィードバック: トーストの自動消去(`page.clock`で時計を止め、コピー成功は2.5秒+フェード200ms・エラーは5秒で消え権限バナーは残る・reduced-motionはフェードなし)/矩形の角丸(白画像で角の外側が白・辺の中央と円弧上が注釈色)/21件目のキャプチャで最古の履歴が消え20件(`tauriMock`の`captureResults`で回ごとに別id) |
-| `e2e/history-delete.spec.ts` | v0.2.2後フィードバック: サムネイルの×はホバー時だけ表示・表示中でない項目を消しても表示は変わらない・表示中を消すと隣を表示・最後の1件で空状態(コピーとすべて削除が無効、canvas 0×0)・空状態から再キャプチャできる/すべて削除は確認ダイアログ(件数表示・既定フォーカスはキャンセル)、キャンセル・Escでは消えず削除で全件消える/800×600で12件キャプチャしてもページはスクロールせず一覧だけがスクロールし、Canvasの位置・大きさは1件目と同じ |
+| `e2e/history-delete.spec.ts` | v0.2.2後フィードバック: サムネイルの×はホバー時だけ表示・表示中でない項目を消しても表示は変わらない・表示中を消すと隣を表示・最後の1件で空状態(コピーとすべて削除が無効、canvas 0×0)・空状態から再キャプチャできる/隣の読込に失敗したら空状態・未選択・トーストで選び直しを促し、選び直せば表示できる/すべて削除は確認ダイアログ(件数表示・既定フォーカスはキャンセル)、キャンセル・Escでは消えず削除で全件消える/800×600で12件キャプチャしてもページはスクロールせず一覧だけがスクロールし、Canvasの位置・大きさは1件目と同じ |
 | `e2e/object-ops.spec.ts` | T34: Delete/Backspaceで削除・Cmd+Zで戻る・入力欄のBackspaceは文字削除/選択中に色見本で色が変わり選択は外れず取り消せる・以後の描画色も変わる/テキスト選択中に文字サイズ大で大きくなり取り消せる/最前面へ・最背面へ(ボタン・⌘⇧F/⌘⇧B)で交点の色が入れ替わり選択中のみ有効・取り消せる/2枚目をキャプチャして1枚目へ戻っても矩形を選んで動かせ、Cmd+Zで移動→切り替え前の描画の順に戻る・2枚目の矩形も選べる |
 | `e2e/shape-edit.spec.ts` | T31: 編集中の図形はコピー時に確定されて写りハンドル(白)は写らない(コピーRGBA=Canvas、近白画素0)/矩形の右下ハンドルでリサイズ/矢印の胴体ドラッグで移動+Enter確定/Escで破棄/次の図形の描き始めで直前の図形が確定。T32で後ろ2件を「Escは選択解除でCmd+Zで描く前に戻る」「次の図形を描いても前の図形は残り、取り消しは新しい方から」に変更 |
 | `e2e/object-layer.spec.ts` | T32: 確定後の矢印を選び直して移動・リサイズ→Cmd+Z×2で編集前とバイト一致/51個目で最古が焼き込まれ選べなくなり、1回の取り消しで戻る/選択中(ハンドル表示中)のCmd+Cでもコピー結果にハンドルが写らない/モザイクはベースにだけ効き上の矩形は隠れず後から動かせる/テキストはベースへ焼き込まれ矩形より下(T33で「テキストもオブジェクトとして重ね順に入り、後から置けば矩形より上・Cmd+Zで消える」に変更) |

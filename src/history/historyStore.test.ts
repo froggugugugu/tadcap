@@ -6,6 +6,7 @@ import {
   addHistoryItem,
   clearHistory,
   createHistoryState,
+  deselectHistoryItem,
   enforceHistoryBudget,
   selectHistoryEvictions,
   getHistoryState,
@@ -386,6 +387,20 @@ describe("historyStoreストア(モジュール単位の薄い状態オブジェ
     expect(received).toHaveLength(1);
     unsubscribe();
     revoke.mockRestore();
+  });
+
+  it("deselectHistoryItemは項目を残したまま未選択にし、購読者に通知する", () => {
+    const id = `store-deselect-${Date.now()}`;
+    addHistoryItem(makeItem({ id }));
+    const received: unknown[] = [];
+    const unsubscribe = subscribeHistoryState((state) => received.push(state));
+
+    deselectHistoryItem();
+
+    expect(getHistoryState().selectedId).toBeNull();
+    expect(getHistoryState().items.map((it) => it.id)).toContain(id);
+    expect(received).toHaveLength(1);
+    unsubscribe();
   });
 
   it("unsubscribe後は通知されない", () => {

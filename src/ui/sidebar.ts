@@ -20,7 +20,7 @@
 //!
 //! v0.2.2後の人間フィードバック: サムネイルのホバーで右上に×ボタンを出して1件削除
 //! (`handleItemDelete`)、一覧の上の「すべて削除」から確認ダイアログを経て全削除
-//! (`handleClearAll`)できる。どちらもクリックと同じキューで直列化する。
+//! (`handleClearAll`)できる。どちらもクリック・キャプチャ完了と同じキュー(`history/historyQueue.ts`)で直列化する。
 
 import {
   clearHistory,
@@ -33,6 +33,7 @@ import {
   type HistoryItem,
   type HistoryItemImagePatch,
 } from "../history/historyStore";
+import { enqueueHistoryTask } from "../history/historyQueue";
 
 export interface SidebarCallbacks {
   /**
@@ -62,39 +63,11 @@ export type ItemDeleteCallbacks = Pick<
 export type ClearAllCallbacks = Pick<SidebarCallbacks, "onItemsRemoved" | "clearEditor">;
 
 /**
- * `handleItemClick`の直列化キュー(MUST-2、レビュー2026-09-24)。
- *
- * サムネイルボタンは素朴に `() => { void handleItemClick(item, callbacks); }` を
- * バインドするだけなので、連続クリックで複数の呼び出しが並行に走りうる。
- * `state.selectedId` を読む(`getSelectedHistoryItem()`)→ `await` を挟む →
- * 書く(`updateSelectedItemImage()`/`selectHistoryItem()`)という処理を
- * TOCTOU無しに保つため、全呼び出しを1本のPromiseチェーンに直列化し、
- * 前の呼び出しが完全に完了する(再読込まで終わる)まで次の呼び出しを開始しない。
- * 個々の呼び出しが投げても後続の直列化が止まらないよう、チェーン自体は
- * 失敗を握りつぶす(呼び出し元へは`handleItemClick`が返す個別のPromiseで
- * 成否を伝える)。
- */
-let clickQueue: Promise<void> = Promise.resolve();
-
-/**
- * サイドバー操作(クリック・削除・全削除)を`clickQueue`へ直列に積む。削除も選択中の項目を読んで
- * 再読込するため、クリックと同じ理由(MUST-2)で直列化する。
- */
-function enqueue(task: () => Promise<void>): Promise<void> {
-  const next = clickQueue.then(task);
-  clickQueue = next.catch(() => {
-    // 直列化のためのチェーンは失敗しても止めない(次の呼び出しは進める)。
-    // 呼び出し元へのエラー伝播は`next`(この関数の戻り値)自体が担う。
-  });
-  return next;
-}
-
-/**
  * 既に選択中の項目を再度クリックした場合は何もしない(切替・再読込ともに不要)。
  * それ以外は、選択中項目があれば現在のCanvas内容で上書きしてから、対象項目を
  * 選択・再読込する(Container相当)。
  *
- * 呼び出しは`clickQueue`で直列化される(MUST-2)。同一項目への連打・異なる項目への
+ * 呼び出しは`history/historyQueue.ts`のキューで直列化される(MUST-2。キャプチャ完了の取り込みも同じキュー)。同一項目への連打・異なる項目への
  * 高速な連続クリックのいずれでも、`state.selectedId`の読み取りは必ず「直前の
  * 呼び出しの完了後」に行われるため、TOCTOUによる無関係な項目への誤った上書きが
  * 起きない。エクスポートするのはテスト(`sidebar.test.ts`)からこの直列化・
@@ -104,7 +77,7 @@ export function handleItemClick(
   item: HistoryItem,
   callbacks: ItemClickCallbacks,
 ): Promise<void> {
-  return enqueue(() => processItemClick(item, callbacks));
+  return enqueueHistoryTask(() => processItemClick(item, callbacks));
 }
 
 async function processItemClick(
@@ -139,7 +112,7 @@ export function handleItemDelete(
   item: HistoryItem,
   callbacks: ItemDeleteCallbacks,
 ): Promise<void> {
-  return enqueue(async () => {
+  return enqueueHistoryTask(async () => {
     const wasSelected = getSelectedHistoryItem()?.id === item.id;
     const removed = removeHistoryItem(item.id);
     if (!removed) {
@@ -160,7 +133,7 @@ export function handleItemDelete(
 
 /** 履歴をすべて消し、エディタを空状態に戻す(確認後に呼ぶ)。履歴が空なら何もしない。 */
 export function handleClearAll(callbacks: ClearAllCallbacks): Promise<void> {
-  return enqueue(async () => {
+  return enqueueHistoryTask(async () => {
     if (getHistoryState().items.length === 0) {
       return;
     }
