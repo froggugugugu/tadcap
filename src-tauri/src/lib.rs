@@ -19,10 +19,9 @@ pub fn run() {
             // 削除失敗はログのみで起動を妨げない(`cleanup_capture_files` 内部の方針)。
             capture::cleanup_capture_files();
 
-            // Dockアイコンを非表示にする(人間決定事項、ARCH §1.1・§11)。
-            #[cfg(target_os = "macos")]
-            app.handle()
-                .set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+            // v0.3.1(人間の決定 2026-10-07): Dockにも表示する通常のアプリにする(以前のAccessory=Dock
+            // 非表示をやめた)。メニューバーのアイコンが多くて隠れても、Dockからエディタを開け、⌘Tabで
+            // 切り替え、⌘Q(既定のアプリメニュー)で終了できるように。メニューバー常駐は続ける。
             // メニューバー常駐トレイ(「キャプチャ」「エディタを開く」「終了」、FR-009、T15)。
             tray::build_tray(app)?;
             // グローバルショートカット登録(既定 Cmd+Shift+2、FR-004、T16)。
@@ -35,7 +34,8 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| match event {
-            // ウィンドウを閉じてもプロセスは継続する(終了はトレイメニューの「終了」のみ、FR-009)。
+            // ウィンドウを閉じてもプロセスは継続する(終了はトレイメニューの「終了」と⌘Q・Dockの「終了」、
+            // FR-009。閉じたエディタはDockのアイコン・トレイの「エディタを開く」で再表示する)。
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 window.hide().ok();
                 api.prevent_close();
@@ -57,14 +57,25 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(|_app_handle, event| {
+        .run(|app_handle, event| match event {
+            // Dockのアイコンを押したら、閉じて隠したエディタも含めて前面に出す(v0.3.1)。
+            // ユーザーがこのアプリを直接操作した直後なので、トレイの「エディタを開く」と同じ手順。
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => {
+                window_front::bring_main_window_to_front(
+                    app_handle,
+                    "dock_reopen",
+                    window_front::FrontTrigger::UserMenu,
+                );
+            }
             // 終了時に一時キャプチャファイルを削除する(PJM追加指示)。
             // `RunEvent::Exit`は「イベントループが終了する直前」に1回だけ発火する
             // (tauri 2.11.6 `app.rs` の doc「Event loop is exiting.」、確認済み)。
-            // トレイメニュー「終了」(`tray.rs` の `app.exit(0)`)経由の終了も、
+            // トレイメニュー「終了」(`tray.rs` の `app.exit(0)`)・⌘Q経由の終了も、
             // 最終的にここへ到達する。
-            if let tauri::RunEvent::Exit = event {
+            tauri::RunEvent::Exit => {
                 capture::cleanup_capture_files();
             }
+            _ => {}
         });
 }
