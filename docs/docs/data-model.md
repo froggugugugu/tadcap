@@ -169,3 +169,26 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 ## ユーティリティ関数
 
 <!-- データ変換・計算に使用するユーティリティ関数を記載 -->
+
+### AppSettings(`src-tauri/src/settings.rs`、KS-T1)
+
+アプリ設定ファイル。場所は `app_config_dir()/settings.json`(macOS: `~/Library/Application Support/dev.tadcap.app/settings.json`)。
+
+| フィールド | 型 | 説明 |
+| ---------- | -- | ---- |
+| `version` | number | 形式の版(現在 1)。無ければ 1 として読む |
+| `captureShortcut` | string(省略可) | キャプチャのショートカット(`global-hotkey`の文字列形式。例 `"alt+super+KeyK"`)。省略 = 既定(`shift+super+Digit2` = ⌘⇧2) |
+
+- 読込: ファイル無し・壊れたJSON → 既定値。解釈できない・使えないキー → 既定キーで起動(保存値は次の変更まで残る)
+- 書込: 一時ファイル(`settings.json.tmp`)に書いてから `rename`。既定キーに戻したら `captureShortcut` を書かない
+- 未知のフィールドは無視する(後方互換)
+
+### CaptureShortcutInfo(`src-tauri/src/shortcuts.rs` / `src/ipc/settings.ts`、KS-T3・T4)
+
+| フィールド | 型 | 説明 |
+| ---------- | -- | ---- |
+| `accelerator` | string | 現在のキー(`global-hotkey`の文字列形式。修飾キーは `shift` → `control` → `alt` → `super` の順) |
+| `isDefault` | boolean | 既定キー(⌘⇧2)と同じか |
+| `registered` | boolean | OS への登録に成功しているか |
+
+キーの規則(Rust `validate_shortcut` / TS `validateShortcut` で同じ): ⌘・⌥・⌃ のどれかを含む(⇧ だけは不可、`shortcut_invalid`)/ ⌘ と 1 キーだけは不可(`shortcut_cmd_only`)/ ⌘⇧3・4・5(⌃ 付きも)は不可(`shortcut_reserved`)。表示は ⌘ → ⌥ → ⌃ → ⇧ → キー(例 `⌘⇧2`)。

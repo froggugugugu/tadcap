@@ -85,6 +85,11 @@ export interface TauriMockConfig {
    * `captureImageBase64`(`sourcePath`が同じでも構わない)。
    */
   captureResults?: MockCaptureResult[];
+  /**
+   * キャプチャのショートカット設定のモック(KS-T8)。省略時は既定キー(⌘⇧2)・登録済み。
+   * `failRegister` に入れたキーへの変更は `shortcut_register_failed` で reject する。
+   */
+  shortcut?: { initial?: string; registered?: boolean; failRegister?: string[] };
 }
 
 /**
@@ -115,12 +120,26 @@ const injectTauriMocks: InjectedMockScript = (config) => {
       activateAppCount: number;
       /** 直近に`plugin:image|new`へ渡されたRGBA(コピー内容の検証用、T31)。 */
       lastImage?: { rgba: Uint8Array; width: number; height: number };
+      /** 設定のコマンド呼び出しの記録(`set:<accelerator>` / `reset` / `recording:<bool>`、KS-T8)。 */
+      shortcutCalls: string[];
+      /** テストから Rust 発のイベント(`settings://open` など)を送る。 */
+      emit?: (event: string, payload: unknown) => void;
     };
   };
 
   w.__TAURI_INTERNALS__ = w.__TAURI_INTERNALS__ ?? {};
   w.__TAURI_EVENT_PLUGIN_INTERNALS__ = w.__TAURI_EVENT_PLUGIN_INTERNALS__ ?? {};
-  w.__tadcapE2E = { clipboardWriteCount: 0, activateAppCount: 0 };
+  w.__tadcapE2E = { clipboardWriteCount: 0, activateAppCount: 0, shortcutCalls: [] };
+  const DEFAULT_ACCELERATOR = "shift+super+Digit2";
+  const shortcutState = {
+    accelerator: config.shortcut?.initial ?? DEFAULT_ACCELERATOR,
+    registered: config.shortcut?.registered ?? true,
+  };
+  const shortcutInfo = (): unknown => ({
+    accelerator: shortcutState.accelerator,
+    isDefault: shortcutState.accelerator === DEFAULT_ACCELERATOR,
+    registered: shortcutState.registered,
+  });
 
   // mockWindows("main") 相当。
   w.__TAURI_INTERNALS__.metadata = {
@@ -156,6 +175,8 @@ const injectTauriMocks: InjectedMockScript = (config) => {
       runCallback(handlerId, { event, id: handlerId, payload });
     }
   }
+
+  w.__tadcapE2E.emit = emitEvent;
 
   function handleEventPlugin(cmd: string, args: Record<string, unknown>): unknown {
     switch (cmd) {
@@ -273,6 +294,30 @@ const injectTauriMocks: InjectedMockScript = (config) => {
 
       case "activate_app":
         w.__tadcapE2E!.activateAppCount += 1;
+        return null;
+
+      case "get_capture_shortcut":
+        return shortcutInfo();
+
+      case "set_capture_shortcut": {
+        const accelerator = actualArgs.accelerator as string;
+        w.__tadcapE2E!.shortcutCalls.push(`set:${accelerator}`);
+        if (config.shortcut?.failRegister?.includes(accelerator)) {
+          throw "shortcut_register_failed";
+        }
+        shortcutState.accelerator = accelerator;
+        shortcutState.registered = true;
+        return shortcutInfo();
+      }
+
+      case "reset_capture_shortcut":
+        w.__tadcapE2E!.shortcutCalls.push("reset");
+        shortcutState.accelerator = DEFAULT_ACCELERATOR;
+        shortcutState.registered = true;
+        return shortcutInfo();
+
+      case "set_shortcut_recording":
+        w.__tadcapE2E!.shortcutCalls.push(`recording:${String(actualArgs.recording)}`);
         return null;
 
       default:
@@ -408,4 +453,23 @@ export async function getClipboardImageStats(
     },
     { target, tolerance },
   );
+}
+
+/** Rust 発のイベントをページへ送る(`settings://open` など、KS-T8)。 */
+export async function emitTauriEvent(page: Page, event: string, payload: unknown = null): Promise<void> {
+  await page.evaluate(
+    ([event, payload]) => {
+      const w = window as unknown as { __tadcapE2E?: { emit?: (event: string, payload: unknown) => void } };
+      w.__tadcapE2E?.emit?.(event, payload);
+    },
+    [event, payload] as const,
+  );
+}
+
+/** 設定のコマンド呼び出しの記録(`set:<accelerator>` / `reset` / `recording:<bool>`、KS-T8)。 */
+export async function getShortcutCalls(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const w = window as unknown as { __tadcapE2E?: { shortcutCalls: string[] } };
+    return w.__tadcapE2E?.shortcutCalls ?? [];
+  });
 }

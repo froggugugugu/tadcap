@@ -1,6 +1,6 @@
 //! メニューバー常駐(トレイ)を構築するモジュール(ARCH §1.1・§11、T15、FR-009)。
 //!
-//! 「キャプチャ」「エディタを開く」「終了」の3項目メニューを持つトレイアイコンを
+//! 「キャプチャ」「エディタを開く」「設定…」(KS-T6)「終了」の4項目メニューを持つトレイアイコンを
 //! 構築する。メニューIDからアクションを判定する純粋ロジック
 //! ([`tray_menu_action_from_id`])と、実際の副作用(ウィンドウ操作・キャプチャ実行)
 //! を分離し、前者のみ `cargo test` で検証する。トレイ・ウィンドウ・Dockアイコンの
@@ -22,7 +22,11 @@ use crate::window_front::{self, FrontTrigger};
 /// トレイメニュー項目のID(`MenuItem::with_id` に渡す固定文字列)。
 const MENU_ID_CAPTURE: &str = "capture";
 const MENU_ID_OPEN_EDITOR: &str = "open_editor";
+const MENU_ID_SETTINGS: &str = "settings";
 const MENU_ID_QUIT: &str = "quit";
+
+/// 「設定…」でフロントへ設定画面を開かせるイベント(`src/ipc/settings.ts::SETTINGS_OPEN_EVENT`)。
+pub(crate) const SETTINGS_OPEN_EVENT: &str = "settings://open";
 
 /// `run_capture_and_show_editor` がキャプチャ失敗時にフロントエンドへ送出する
 /// Tauri イベント名。
@@ -43,6 +47,7 @@ pub(crate) const CAPTURE_ERROR_EVENT: &str = "capture://error";
 pub(crate) enum TrayMenuAction {
     Capture,
     OpenEditor,
+    Settings,
     Quit,
 }
 
@@ -53,6 +58,7 @@ pub(crate) fn tray_menu_action_from_id(id: &str) -> Option<TrayMenuAction> {
     match id {
         MENU_ID_CAPTURE => Some(TrayMenuAction::Capture),
         MENU_ID_OPEN_EDITOR => Some(TrayMenuAction::OpenEditor),
+        MENU_ID_SETTINGS => Some(TrayMenuAction::Settings),
         MENU_ID_QUIT => Some(TrayMenuAction::Quit),
         _ => None,
     }
@@ -132,6 +138,15 @@ pub(crate) fn run_capture_and_show_editor(app: &AppHandle, origin: &'static str,
     });
 }
 
+/// 設定画面を開く(トレイ・アプリメニューの「設定…」共通、KS-T6)。エディタを前面に出してから
+/// `settings://open` を送る。フロントは既に開いていれば何もしない(二重に届いても1つだけ)。
+pub(crate) fn open_settings(app: &AppHandle, origin: &'static str) {
+    window_front::bring_main_window_to_front(app, origin, FrontTrigger::UserMenu);
+    if let Err(err) = app.emit(SETTINGS_OPEN_EVENT, ()) {
+        eprintln!("settings://open の送出に失敗しました: {err}");
+    }
+}
+
 /// トレイアイコン・メニューを構築する(ARCH §11 (b)、FR-009)。
 ///
 /// 「キャプチャ」「エディタを開く」「終了」の3項目。いずれも `commands.rs`
@@ -146,8 +161,9 @@ pub(crate) fn build_tray(app: &App) -> tauri::Result<()> {
         true,
         None::<&str>,
     )?;
+    let settings_i = MenuItem::with_id(app, MENU_ID_SETTINGS, "設定…", true, None::<&str>)?;
     let quit_i = MenuItem::with_id(app, MENU_ID_QUIT, "終了", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&capture_i, &open_editor_i, &quit_i])?;
+    let menu = Menu::with_items(app, &[&capture_i, &open_editor_i, &settings_i, &quit_i])?;
 
     // メニューバー常駐アイコン: モノクロの「四隅のファインダー記号+テーパー矢印」
     // (人間の要望。アプリアイコン案A `src-tauri/icons/app-icon.svg` と同じモチーフに揃えた。
@@ -184,6 +200,7 @@ pub(crate) fn build_tray(app: &App) -> tauri::Result<()> {
                     "tray_open",
                     FrontTrigger::UserMenu,
                 ),
+                Some(TrayMenuAction::Settings) => open_settings(app, "tray_settings"),
                 Some(TrayMenuAction::Quit) => app.exit(0),
                 None => {}
             },
@@ -232,6 +249,14 @@ mod tests {
         assert_eq!(
             tray_menu_action_from_id(MENU_ID_OPEN_EDITOR),
             Some(TrayMenuAction::OpenEditor)
+        );
+    }
+
+    #[test]
+    fn tray_menu_action_from_id_はsettingsをsettings_バリアントへ変換する() {
+        assert_eq!(
+            tray_menu_action_from_id(MENU_ID_SETTINGS),
+            Some(TrayMenuAction::Settings)
         );
     }
 

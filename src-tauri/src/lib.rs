@@ -1,7 +1,9 @@
+mod app_menu;
 mod capture;
 mod clipboard;
 mod commands;
 mod error;
+mod settings;
 mod shortcuts;
 mod tray;
 mod window_front;
@@ -24,6 +26,8 @@ pub fn run() {
             // 切り替え、⌘Q(既定のアプリメニュー)で終了できるように。メニューバー常駐は続ける。
             // メニューバー常駐トレイ(「キャプチャ」「エディタを開く」「終了」、FR-009、T15)。
             tray::build_tray(app)?;
+            // アプリメニュー(画面上部)に「設定…」(⌘,)を足す(KS-T6)。
+            app_menu::install_app_menu(app)?;
             // グローバルショートカット登録(既定 Cmd+Shift+2、FR-004、T16)。
             // ARCH §11 の順序どおりトレイの直後に登録する(トレイの「キャプチャ」と
             // 同じ内部関数を呼ぶため、先にコマンド一式が使える状態にしておく)。
@@ -33,6 +37,8 @@ pub fn run() {
             shortcuts::register_capture_shortcut(app)?;
             Ok(())
         })
+        // アプリメニューの「設定…」(KS-T6)。トレイのメニューは`tray.rs`が別のIDで処理する。
+        .on_menu_event(|app, event| app_menu::handle_menu_event(app, event.id().as_ref()))
         .on_window_event(|window, event| match event {
             // ウィンドウを閉じてもプロセスは継続する(終了はトレイメニューの「終了」と⌘Q・Dockの「終了」、
             // FR-009。閉じたエディタはDockのアイコン・トレイの「エディタを開く」で再表示する)。
@@ -53,7 +59,11 @@ pub fn run() {
             commands::open_screen_recording_settings,
             commands::write_image_fallback,
             commands::read_capture_image,
-            commands::activate_app
+            commands::activate_app,
+            commands::get_capture_shortcut,
+            commands::set_capture_shortcut,
+            commands::reset_capture_shortcut,
+            commands::set_shortcut_recording
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

@@ -31,21 +31,33 @@
 //!   本モジュールは直接キャプチャを実行せず `tray::run_capture_and_show_editor` を
 //!   呼ぶだけに留める。実際のスレッド退避(`spawn_blocking`)は `commands::run_capture`
 //!   (呼び出し先)側で行う(詳細は `commands.rs` のdocコメント参照)
+//!
+//! # キーの変更(KS-T4、2026-10-08 人間の決定)
+//!
+//! 設定画面からキャプチャのキーを変えられる。現在のキーは管理状態
+//! ([`CaptureShortcutManager`])に持ち、押下のハンドラは固定値ではなくこの現在キーと比較する。
+//! 変更は [`change_shortcut`] の手順(旧キーを外す → 新キーを登録 → 設定ファイルへ保存)で行い、
+//! 途中で失敗したら元のキーを登録し直す(キャプチャできない状態を作らない)。登録処理は
+//! [`ShortcutRegistrar`] 越しに呼ぶので、巻き戻しは偽の登録器で `cargo test` する。
+//! 起動時は設定ファイルのキーを登録し、登録できなくても保存値は変えない(設定画面で知らせる)。
 
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::Mutex;
 use std::time::Instant;
 
-use tauri::App;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use serde::Serialize;
+use tauri::{App, AppHandle, Manager};
+use tauri_plugin_global_shortcut::{
+    Code, GlobalShortcut, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+};
 
+use crate::error::AppError;
+use crate::settings::{self, AppSettings};
 use crate::tray;
 
-/// 既定のグローバルショートカット(PRD FR-004)。表示用の説明文字列。
-///
-/// キー変更UIは提供しないため(MVP外、PRD FR-004受け入れ基準)、既定値は
-/// この定数と [`default_capture_shortcut`] の1箇所にのみ定義する(T16指示)。
-const DEFAULT_SHORTCUT_DESCRIPTION: &str = "Cmd+Shift+2";
-
-/// 既定のグローバルショートカットキーを構築する純粋関数(cargo testで検証可能)。
+/// 既定のグローバルショートカットキーを構築する純粋関数(cargo testで検証可能)。設定画面の
+/// 「既定に戻す」もこのキーに戻す(KS-T4。フロントの既定値は `src/ipc/settings.ts`)。
 ///
 /// `Cmd+Shift+3`/`4`/`5` はmacOS標準のスクリーンショット機能で予約されているため
 /// 使用不可(PRD FR-004)。`Cmd+Shift+2` は Apple公式のMacキーボードショートカット
@@ -65,7 +77,295 @@ pub(crate) fn should_handle_shortcut_event(state: ShortcutState) -> bool {
     matches!(state, ShortcutState::Pressed)
 }
 
-/// グローバルショートカットプラグインを登録し、既定キーを登録する
+/// 使えないキーの理由(フロントの `shortcutFormat.ts::validateShortcut` と同じ規則)。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ShortcutRejection {
+    /// 解釈できない、修飾キーそのもの、または ⌘・⌥・⌃ のどれも含まない(⇧ だけも含む)。
+    Invalid,
+    /// ⌘ と 1 キーだけ(⌘C・⌘Q など)。
+    CmdOnly,
+    /// ⌘⇧3/4/5(macOS のスクリーンショット。⌃ を足したクリップボード版も含む)。
+    Reserved,
+}
+
+impl From<ShortcutRejection> for AppError {
+    fn from(rejection: ShortcutRejection) -> Self {
+        match rejection {
+            ShortcutRejection::Invalid => AppError::ShortcutInvalid,
+            ShortcutRejection::CmdOnly => AppError::ShortcutCmdOnly,
+            ShortcutRejection::Reserved => AppError::ShortcutReserved,
+        }
+    }
+}
+
+/// キャプチャのキーとして使えるかを検査する純粋関数。
+pub(crate) fn validate_shortcut(shortcut: &Shortcut) -> Result<(), ShortcutRejection> {
+    let mods = shortcut.mods;
+    if matches!(
+        shortcut.key,
+        Code::MetaLeft
+            | Code::MetaRight
+            | Code::AltLeft
+            | Code::AltRight
+            | Code::ControlLeft
+            | Code::ControlRight
+            | Code::ShiftLeft
+            | Code::ShiftRight
+            | Code::CapsLock
+            | Code::Fn
+            | Code::FnLock
+    ) {
+        return Err(ShortcutRejection::Invalid);
+    }
+    if !mods.intersects(Modifiers::SUPER | Modifiers::ALT | Modifiers::CONTROL) {
+        return Err(ShortcutRejection::Invalid);
+    }
+    if mods.contains(Modifiers::SUPER | Modifiers::SHIFT)
+        && matches!(shortcut.key, Code::Digit3 | Code::Digit4 | Code::Digit5)
+    {
+        return Err(ShortcutRejection::Reserved);
+    }
+    if mods == Modifiers::SUPER {
+        return Err(ShortcutRejection::CmdOnly);
+    }
+    Ok(())
+}
+
+/// `global-hotkey` の文字列(例 `"shift+super+KeyK"`)を解釈し、使えるキーか検査する。
+pub(crate) fn parse_capture_shortcut(accelerator: &str) -> Result<Shortcut, ShortcutRejection> {
+    let shortcut = Shortcut::from_str(accelerator).map_err(|_| ShortcutRejection::Invalid)?;
+    validate_shortcut(&shortcut)?;
+    Ok(shortcut)
+}
+
+/// 設定ファイルの値から起動時のキーを決める。無い・解釈できない・使えないキーなら既定キー。
+pub(crate) fn initial_capture_shortcut(saved: Option<&str>) -> Shortcut {
+    match saved.map(parse_capture_shortcut) {
+        Some(Ok(shortcut)) => shortcut,
+        Some(Err(rejection)) => {
+            eprintln!("保存されていたキャプチャのキーを使えません({rejection:?})。既定キーで起動します");
+            default_capture_shortcut()
+        }
+        None => default_capture_shortcut(),
+    }
+}
+
+/// キャプチャのショートカットの状態(管理状態の中身)。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct CaptureShortcutState {
+    /// 現在のキー。
+    pub current: Shortcut,
+    /// OS への登録に成功しているか。
+    pub registered: bool,
+    /// 設定画面でキーを記録している最中か(この間は押してもキャプチャしない)。
+    pub recording: bool,
+}
+
+/// 押されたショートカットでキャプチャを始めるかを決める純粋関数。現在のキーの押下(Pressed)で、
+/// 記録中でないときだけ始める。
+pub(crate) fn should_trigger_capture(
+    state: &CaptureShortcutState,
+    pressed: &Shortcut,
+    event_state: ShortcutState,
+) -> bool {
+    *pressed == state.current && !state.recording && should_handle_shortcut_event(event_state)
+}
+
+/// フロントへ返す現在の状態(`src/ipc/settings.ts::CaptureShortcutInfo`)。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CaptureShortcutInfo {
+    pub accelerator: String,
+    pub is_default: bool,
+    pub registered: bool,
+}
+
+impl From<&CaptureShortcutState> for CaptureShortcutInfo {
+    fn from(state: &CaptureShortcutState) -> Self {
+        Self {
+            accelerator: state.current.into_string(),
+            is_default: state.current == default_capture_shortcut(),
+            registered: state.registered,
+        }
+    }
+}
+
+/// OS へのキー登録(本番はグローバルショートカットプラグイン、テストは偽物)。
+pub(crate) trait ShortcutRegistrar {
+    fn register(&mut self, shortcut: Shortcut) -> Result<(), String>;
+    fn unregister(&mut self, shortcut: Shortcut) -> Result<(), String>;
+}
+
+/// [`change_shortcut`] の失敗。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ChangeFailure {
+    pub error: ChangeError,
+    /// 巻き戻した後、元のキーが登録されているか(再登録にも失敗したら`false`)。
+    pub current_registered: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ChangeError {
+    /// 新しいキーを登録できなかった。
+    Register,
+    /// 設定ファイルへ保存できなかった。
+    Save,
+}
+
+impl From<ChangeError> for AppError {
+    fn from(error: ChangeError) -> Self {
+        match error {
+            ChangeError::Register => AppError::ShortcutRegisterFailed,
+            ChangeError::Save => AppError::SettingsSaveFailed,
+        }
+    }
+}
+
+/// キーを `current` から `next` へ変える(決定論的な手順、巻き戻し付き)。
+///
+/// 1. `next` が現在のキーで登録済みなら何もしない
+/// 2. 登録済みなら `current` を外す → `next` を登録。失敗したら `current` を登録し直す
+/// 3. `save` で保存。失敗したら `next` を外して `current` を登録し直す
+///
+/// 成功したら呼び出し側は現在キーを `next`・登録済みにする。
+pub(crate) fn change_shortcut<R: ShortcutRegistrar>(
+    registrar: &mut R,
+    current: Shortcut,
+    registered: bool,
+    next: Shortcut,
+    save: impl FnOnce(&Shortcut) -> Result<(), String>,
+) -> Result<(), ChangeFailure> {
+    if next == current && registered {
+        return Ok(());
+    }
+    let restore = |registrar: &mut R| -> bool { registered && registrar.register(current).is_ok() };
+    if registered {
+        if let Err(err) = registrar.unregister(current) {
+            eprintln!("キャプチャの元のキーを外せませんでした: {err}");
+        }
+    }
+    if let Err(err) = registrar.register(next) {
+        eprintln!("キャプチャの新しいキーを登録できませんでした: {err}");
+        let current_registered = restore(registrar);
+        return Err(ChangeFailure {
+            error: ChangeError::Register,
+            current_registered,
+        });
+    }
+    if let Err(err) = save(&next) {
+        eprintln!("設定ファイルへ保存できませんでした: {err}");
+        if let Err(err) = registrar.unregister(next) {
+            eprintln!("保存に失敗した新しいキーを外せませんでした: {err}");
+        }
+        let current_registered = restore(registrar);
+        return Err(ChangeFailure {
+            error: ChangeError::Save,
+            current_registered,
+        });
+    }
+    Ok(())
+}
+
+/// キャプチャのショートカットの管理状態(`app.manage()`)。
+pub(crate) struct CaptureShortcutManager {
+    state: Mutex<CaptureShortcutState>,
+    /// 変更を1つずつ行うためのロック(登録処理の間は`state`をロックしない。押下のハンドラが
+    /// メインスレッドで`state`を読むため、登録待ちの間に握ると固まる)。
+    change_lock: tauri::async_runtime::Mutex<()>,
+    settings_path: Option<PathBuf>,
+}
+
+impl CaptureShortcutManager {
+    fn snapshot(&self) -> CaptureShortcutState {
+        *self.state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn update(&self, f: impl FnOnce(&mut CaptureShortcutState)) {
+        f(&mut self.state.lock().unwrap_or_else(|e| e.into_inner()));
+    }
+}
+
+/// 本番の登録器(グローバルショートカットプラグイン)。
+struct PluginRegistrar<'a>(&'a AppHandle);
+
+impl PluginRegistrar<'_> {
+    /// プラグインの初期化に失敗していると状態が無い(`global_shortcut()`は panic する)ので、
+    /// 登録の失敗として扱う(レビュー 2026-10-08)。
+    fn plugin(&self) -> Result<&GlobalShortcut<tauri::Wry>, String> {
+        self.0
+            .try_state::<GlobalShortcut<tauri::Wry>>()
+            .map(|state| state.inner())
+            .ok_or_else(|| "グローバルショートカットのプラグインが使えません".to_string())
+    }
+}
+
+impl ShortcutRegistrar for PluginRegistrar<'_> {
+    fn register(&mut self, shortcut: Shortcut) -> Result<(), String> {
+        self.plugin()?.register(shortcut).map_err(|e| e.to_string())
+    }
+
+    fn unregister(&mut self, shortcut: Shortcut) -> Result<(), String> {
+        self.plugin()?.unregister(shortcut).map_err(|e| e.to_string())
+    }
+}
+
+/// 現在のキャプチャのショートカットの状態を返す(`get_capture_shortcut`)。
+pub(crate) fn capture_shortcut_info(app: &AppHandle) -> CaptureShortcutInfo {
+    CaptureShortcutInfo::from(&app.state::<CaptureShortcutManager>().snapshot())
+}
+
+/// キーを記録している最中かを設定する(`set_shortcut_recording`)。
+pub(crate) fn set_recording(app: &AppHandle, recording: bool) {
+    app.state::<CaptureShortcutManager>()
+        .update(|state| state.recording = recording);
+}
+
+/// キャプチャのキーを `next` に変えて保存する(`set_capture_shortcut` / `reset_capture_shortcut`)。
+/// 失敗したら元のキーに戻し、エラーの固定文字列を返す。
+pub(crate) async fn apply_capture_shortcut(
+    app: &AppHandle,
+    next: Shortcut,
+) -> Result<CaptureShortcutInfo, AppError> {
+    let manager = app.state::<CaptureShortcutManager>();
+    let _guard = manager.change_lock.lock().await;
+    let before = manager.snapshot();
+    let settings_path = manager.settings_path.clone();
+    let handle = app.clone();
+    // 登録はメインスレッドでの処理を待つブロッキング呼び出しなので、専用スレッドで行う。
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let save = |shortcut: &Shortcut| -> Result<(), String> {
+            let path = settings_path.ok_or("設定の保存先がありません")?;
+            let capture_shortcut =
+                (*shortcut != default_capture_shortcut()).then(|| shortcut.into_string());
+            settings::save_settings(&path, &AppSettings { capture_shortcut }).map_err(|e| e.to_string())
+        };
+        change_shortcut(
+            &mut PluginRegistrar(&handle),
+            before.current,
+            before.registered,
+            next,
+            save,
+        )
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    match result {
+        Ok(()) => {
+            manager.update(|state| {
+                state.current = next;
+                state.registered = true;
+            });
+            Ok(CaptureShortcutInfo::from(&manager.snapshot()))
+        }
+        Err(failure) => {
+            manager.update(|state| state.registered = failure.current_registered);
+            Err(failure.error.into())
+        }
+    }
+}
+
+/// グローバルショートカットプラグインを登録し、設定ファイルのキー(無ければ既定キー)を登録する
 /// (ARCH §11 (c)、`lib.rs::run()` の `setup()` から `tray::build_tray(app)?` の
 /// 直後に呼ばれる)。
 ///
@@ -75,15 +375,26 @@ pub(crate) fn should_handle_shortcut_event(state: ShortcutState) -> bool {
 /// 同様に起動を継続する(ショートカットが使えないだけで、アプリの他機能は
 /// 問題なく使えるべきと判断したため)。
 pub(crate) fn register_capture_shortcut(app: &App) -> tauri::Result<()> {
-    let shortcut = default_capture_shortcut();
+    // KS-T4: 設定ファイルのキーで起動する。管理状態はプラグインの初期化より先に置く
+    // (初期化に失敗してもコマンドが状態を読めるように)。
+    let settings_path = settings::settings_path(app.handle());
+    let saved = settings_path.as_deref().map(settings::load_settings).unwrap_or_default();
+    let shortcut = initial_capture_shortcut(saved.capture_shortcut.as_deref());
+    app.manage(CaptureShortcutManager {
+        state: Mutex::new(CaptureShortcutState {
+            current: shortcut,
+            registered: false,
+            recording: false,
+        }),
+        change_lock: tauri::async_runtime::Mutex::new(()),
+        settings_path,
+    });
 
     let plugin_result = app.handle().plugin(
         tauri_plugin_global_shortcut::Builder::new()
             .with_handler(move |app, event_shortcut, event| {
-                if *event_shortcut != shortcut {
-                    return;
-                }
-                if !should_handle_shortcut_event(event.state()) {
+                let state = app.state::<CaptureShortcutManager>().snapshot();
+                if !should_trigger_capture(&state, event_shortcut, event.state()) {
                     return;
                 }
                 // 押下(keydown相当。プラグインがOSから配送するイベント)を受けた
@@ -100,12 +411,17 @@ pub(crate) fn register_capture_shortcut(app: &App) -> tauri::Result<()> {
         return Ok(());
     }
 
-    if let Err(err) = app.global_shortcut().register(shortcut) {
-        eprintln!(
-            "グローバルショートカット({DEFAULT_SHORTCUT_DESCRIPTION})の登録に失敗しました。\
+    // 登録できなくても保存値は変えない(設定画面に「登録できていません」と出す、2026-10-08 人間の決定)。
+    match app.global_shortcut().register(shortcut) {
+        Ok(()) => app
+            .state::<CaptureShortcutManager>()
+            .update(|state| state.registered = true),
+        Err(err) => eprintln!(
+            "グローバルショートカット({})の登録に失敗しました。\
              他アプリが既に同じキーを使用している可能性があります。ショートカットは\
-             無効のままアプリを継続します: {err}"
-        );
+             無効のままアプリを継続します: {err}",
+            shortcut.into_string()
+        ),
     }
 
     Ok(())
@@ -152,4 +468,245 @@ mod tests {
             "Releasedは無視すべき(押しっぱなし・多重発火時の多重起動防止)"
         );
     }
+
+    fn sc(accelerator: &str) -> Shortcut {
+        Shortcut::from_str(accelerator).expect("テスト用のキーを解釈できない")
+    }
+
+    #[test]
+    fn validate_shortcut_は修飾キーの規則で受け付けと拒否を分ける() {
+        assert_eq!(validate_shortcut(&sc("KeyK")), Err(ShortcutRejection::Invalid));
+        assert_eq!(validate_shortcut(&sc("shift+KeyK")), Err(ShortcutRejection::Invalid));
+        assert_eq!(validate_shortcut(&sc("super+KeyC")), Err(ShortcutRejection::CmdOnly));
+        for key in ["Digit3", "Digit4", "Digit5"] {
+            assert_eq!(validate_shortcut(&sc(&format!("shift+super+{key}"))), Err(ShortcutRejection::Reserved));
+            assert_eq!(
+                validate_shortcut(&sc(&format!("shift+control+super+{key}"))),
+                Err(ShortcutRejection::Reserved)
+            );
+        }
+        assert_eq!(validate_shortcut(&sc("alt+KeyK")), Ok(()));
+        assert_eq!(validate_shortcut(&sc("control+super+KeyP")), Ok(()));
+        assert_eq!(validate_shortcut(&default_capture_shortcut()), Ok(()));
+    }
+
+    #[test]
+    fn validate_shortcut_は修飾キーそのものをキーにできない() {
+        assert_eq!(
+            validate_shortcut(&Shortcut::new(Some(Modifiers::SUPER), Code::ShiftLeft)),
+            Err(ShortcutRejection::Invalid)
+        );
+    }
+
+    #[test]
+    fn parse_capture_shortcut_は文字列を解釈して検査する() {
+        assert_eq!(parse_capture_shortcut("shift+super+Digit2"), Ok(default_capture_shortcut()));
+        assert_eq!(parse_capture_shortcut("not a key"), Err(ShortcutRejection::Invalid));
+        assert_eq!(parse_capture_shortcut("super+KeyQ"), Err(ShortcutRejection::CmdOnly));
+    }
+
+    #[test]
+    fn 文字列表記はフロントと同じ_shift_control_alt_super_の順で往復する() {
+        let shortcut = sc("super+alt+control+shift+KeyK");
+        assert_eq!(shortcut.into_string(), "shift+control+alt+super+KeyK");
+        assert_eq!(default_capture_shortcut().into_string(), "shift+super+Digit2");
+        assert_eq!(sc(&shortcut.into_string()), shortcut);
+    }
+
+    #[test]
+    fn initial_capture_shortcut_は保存値を使い_無い_使えないときは既定キー() {
+        assert_eq!(initial_capture_shortcut(Some("alt+super+KeyK")), sc("alt+super+KeyK"));
+        assert_eq!(initial_capture_shortcut(None), default_capture_shortcut());
+        assert_eq!(initial_capture_shortcut(Some("garbage")), default_capture_shortcut());
+        assert_eq!(initial_capture_shortcut(Some("super+KeyC")), default_capture_shortcut());
+    }
+
+    #[test]
+    fn should_trigger_capture_は現在のキーの押下で_記録中でなければtrue() {
+        let state = CaptureShortcutState {
+            current: sc("alt+super+KeyK"),
+            registered: true,
+            recording: false,
+        };
+        assert!(should_trigger_capture(&state, &sc("alt+super+KeyK"), ShortcutState::Pressed));
+        assert!(!should_trigger_capture(&state, &sc("alt+super+KeyK"), ShortcutState::Released));
+        assert!(!should_trigger_capture(&state, &default_capture_shortcut(), ShortcutState::Pressed));
+        let recording = CaptureShortcutState { recording: true, ..state };
+        assert!(!should_trigger_capture(&recording, &sc("alt+super+KeyK"), ShortcutState::Pressed));
+    }
+
+    #[test]
+    fn capture_shortcut_info_は表記_既定かどうか_登録状態を返す() {
+        let info = CaptureShortcutInfo::from(&CaptureShortcutState {
+            current: default_capture_shortcut(),
+            registered: false,
+            recording: false,
+        });
+        assert_eq!(
+            info,
+            CaptureShortcutInfo {
+                accelerator: "shift+super+Digit2".to_string(),
+                is_default: true,
+                registered: false,
+            }
+        );
+        assert_eq!(
+            serde_json::to_value(&info).unwrap(),
+            serde_json::json!({ "accelerator": "shift+super+Digit2", "isDefault": true, "registered": false })
+        );
+    }
+
+    /// 偽の登録器: 呼び出しを記録し、`fail_register` に入っているキーの登録だけ失敗させる。
+    #[derive(Default)]
+    struct FakeRegistrar {
+        calls: Vec<String>,
+        fail_register: Vec<Shortcut>,
+    }
+
+    impl ShortcutRegistrar for FakeRegistrar {
+        fn register(&mut self, shortcut: Shortcut) -> Result<(), String> {
+            self.calls.push(format!("register:{}", shortcut.into_string()));
+            if self.fail_register.contains(&shortcut) {
+                Err("in use".to_string())
+            } else {
+                Ok(())
+            }
+        }
+
+        fn unregister(&mut self, shortcut: Shortcut) -> Result<(), String> {
+            self.calls.push(format!("unregister:{}", shortcut.into_string()));
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn change_shortcut_は旧キーを外して新キーを登録し保存する() {
+        let mut registrar = FakeRegistrar::default();
+        let mut saved = None;
+        let result = change_shortcut(
+            &mut registrar,
+            default_capture_shortcut(),
+            true,
+            sc("alt+super+KeyK"),
+            |s| {
+                saved = Some(s.into_string());
+                Ok(())
+            },
+        );
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(registrar.calls, ["unregister:shift+super+Digit2", "register:alt+super+KeyK"]);
+        assert_eq!(saved.as_deref(), Some("alt+super+KeyK"));
+    }
+
+    #[test]
+    fn change_shortcut_は同じキーで登録済みなら何もしない() {
+        let mut registrar = FakeRegistrar::default();
+        let result = change_shortcut(&mut registrar, default_capture_shortcut(), true, default_capture_shortcut(), |_| {
+            panic!("保存しないはず")
+        });
+
+        assert_eq!(result, Ok(()));
+        assert!(registrar.calls.is_empty());
+    }
+
+    #[test]
+    fn change_shortcut_は新キーを登録できなければ元のキーを登録し直す() {
+        let next = sc("alt+super+KeyK");
+        let mut registrar = FakeRegistrar {
+            fail_register: vec![next],
+            ..Default::default()
+        };
+        let result = change_shortcut(&mut registrar, default_capture_shortcut(), true, next, |_| {
+            panic!("保存しないはず")
+        });
+
+        assert_eq!(
+            result,
+            Err(ChangeFailure {
+                error: ChangeError::Register,
+                current_registered: true
+            })
+        );
+        assert_eq!(
+            registrar.calls,
+            ["unregister:shift+super+Digit2", "register:alt+super+KeyK", "register:shift+super+Digit2"]
+        );
+    }
+
+    #[test]
+    fn change_shortcut_は保存に失敗したら新キーを外して元のキーに戻す() {
+        let mut registrar = FakeRegistrar::default();
+        let result = change_shortcut(
+            &mut registrar,
+            default_capture_shortcut(),
+            true,
+            sc("alt+super+KeyK"),
+            |_| Err("disk full".to_string()),
+        );
+
+        assert_eq!(
+            result,
+            Err(ChangeFailure {
+                error: ChangeError::Save,
+                current_registered: true
+            })
+        );
+        assert_eq!(
+            registrar.calls,
+            [
+                "unregister:shift+super+Digit2",
+                "register:alt+super+KeyK",
+                "unregister:alt+super+KeyK",
+                "register:shift+super+Digit2"
+            ]
+        );
+    }
+
+    #[test]
+    fn change_shortcut_は元のキーが未登録なら外さず_失敗しても登録し直さない() {
+        let next = sc("alt+super+KeyK");
+        let mut registrar = FakeRegistrar {
+            fail_register: vec![next],
+            ..Default::default()
+        };
+        let result = change_shortcut(&mut registrar, default_capture_shortcut(), false, next, |_| Ok(()));
+
+        assert_eq!(
+            result,
+            Err(ChangeFailure {
+                error: ChangeError::Register,
+                current_registered: false
+            })
+        );
+        assert_eq!(registrar.calls, ["register:alt+super+KeyK"]);
+    }
+
+    #[test]
+    fn change_shortcut_は未登録の同じキーなら登録し直す() {
+        let mut registrar = FakeRegistrar::default();
+        let result = change_shortcut(&mut registrar, default_capture_shortcut(), false, default_capture_shortcut(), |_| Ok(()));
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(registrar.calls, ["register:shift+super+Digit2"]);
+    }
+
+    #[test]
+    fn change_shortcut_は元のキーの再登録にも失敗したら未登録と伝える() {
+        let next = sc("alt+super+KeyK");
+        let mut registrar = FakeRegistrar {
+            fail_register: vec![next, default_capture_shortcut()],
+            ..Default::default()
+        };
+        let result = change_shortcut(&mut registrar, default_capture_shortcut(), true, next, |_| Ok(()));
+
+        assert_eq!(
+            result,
+            Err(ChangeFailure {
+                error: ChangeError::Register,
+                current_registered: false
+            })
+        );
+    }
+
 }

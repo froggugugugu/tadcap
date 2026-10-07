@@ -61,6 +61,15 @@ import {
 } from "./ui/permissionBanner";
 import { bindSelectionKeys } from "./ui/selectionKeys";
 import { initSidebar } from "./ui/sidebar";
+import {
+  getCaptureShortcut,
+  onSettingsOpen,
+  resetCaptureShortcut,
+  setCaptureShortcut,
+  setShortcutRecording,
+} from "./ipc/settings";
+import { applyCaptureShortcutLabel } from "./ui/captureShortcutLabel";
+import { initSettingsDialog } from "./ui/settingsDialog";
 import { initToolbar } from "./ui/toolbar";
 import { initUndoButtons } from "./ui/undoButton";
 import { initArrangeButtons } from "./ui/arrangeButtons";
@@ -404,6 +413,28 @@ window.addEventListener("DOMContentLoaded", () => {
       clearEditor,
     });
   }
+
+  // 設定画面(キャプチャのショートカット、KS-T7)。トレイ・アプリメニューの「設定…」で開く。
+  // 前回の画面が記録中のまま再読込・終了した場合に備え、起動時に記録中を必ず解除する。
+  void setShortcutRecording(false).catch((error: unknown) => {
+    console.warn("記録中の状態を解除できませんでした", error);
+  });
+  void getCaptureShortcut()
+    .then((info) => applyCaptureShortcutLabel(info.accelerator))
+    .catch((error: unknown) => {
+      // 取得できなければ`index.html`の既定表記のまま。
+      console.warn("キャプチャのキーを読み込めませんでした", error);
+    });
+  const settingsDialog = initSettingsDialog(document.body, {
+    getShortcut: getCaptureShortcut,
+    setShortcut: setCaptureShortcut,
+    resetShortcut: resetCaptureShortcut,
+    setRecording: setShortcutRecording,
+    onChanged: (info) => applyCaptureShortcutLabel(info.accelerator),
+  });
+  void onSettingsOpen(() => {
+    void settingsDialog.open();
+  });
 
   // 起動直後から購読を開始する(グローバルショートカット・トレイ起点の
   // キャプチャ結果を受信するため、ARCH §11 フロントエンド初期化順序#2)。

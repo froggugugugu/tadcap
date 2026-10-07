@@ -184,6 +184,8 @@ Presentational/Container分離パターン(`docs/development-patterns.md` §1参
 | `.permission-banner { display: flex; ... }`(著者スタイルシート)がUA既定の`[hidden] { display: none }`を上書きし、`hidden`属性を付与してもバナーが常に可視状態になっていた(T13のE2Eで発見) | `!important`の無い宣言同士では、著者オリジンのルールがUAオリジンのルールより詳細度に関わらず常に優先されるため | T19で `src/styles.css` に `[hidden] { display: none !important; }` を追加して修正した。個別セレクタを`:not([hidden])`化する対症療法ではなく、`!important`で`[hidden]`を一元的に最優先にすることで同種の不具合を他要素にも作らないようにした |
 | 履歴が増えるとウィンドウ全体がスクロールし、Canvasの画像が下へずれた(v0.2.2後の人間フィードバック) | `.app`が`min-height: 100vh`で、履歴の件数分だけページが伸びていた(サイドバーの`overflow-y: auto`は高さが決まらないため効かない) | `.app`は`height: 100vh; overflow: hidden`で固定し、スクロールは`.history-sidebar__list`(`flex: 1; min-height: 0; overflow-y: auto`)とCanvas表示領域の中だけで起こす(`e2e/history-delete.spec.ts`) |
 | 0×0のcanvasを`drawImage()`の転写元にすると`InvalidStateError`になる(履歴の全削除で空状態に戻すとき) | 空状態は表示canvasを0×0にして作るが、`resetDocument()`→`documentSurface.reset()`が表示canvasをベースへ取り込んでいた | `documentSurface.reset()`は表示canvasが0×0なら取り込みを飛ばす。空状態へ戻すのは`main.ts::clearEditor()`(0×0→`resetDocument()`→`clearCanvasImage()`の順) |
+| 設定画面(モーダル)を開いている間に押した ⌘Z・Delete・⌘C が、裏のエディタで効いてしまう(KS-T5) | エディタのキー操作は`window`の`keydown`で受けており、モーダル内のキーも`window`まで伝わる | モーダルの`<dialog>`で`keydown`の`stopPropagation()`をする(`ui/settingsDialog.ts`)。外すと落ちるE2Eで守る(`e2e/shortcut-settings.spec.ts`) |
+| macOS の WebKit ではボタンをクリックしてもフォーカスが当たらず、ボタンの`keydown`が届かない(KS-T5) | macOS の慣習でボタンはクリックでフォーカスを取らない(Chromium のE2Eでは再現しない) | キー記録のボタンは`click`で明示的に`focus()`する |
 
 ---
 

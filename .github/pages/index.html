@@ -205,7 +205,7 @@
             <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
               <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="crop" class="h-5 w-5"></i></div>
               <h3 class="mt-4 text-base font-semibold">どこからでもキャプチャ</h3>
-              <p class="mt-2 text-sm leading-6 text-muted-foreground">グローバルショートカット <kbd class="kbd">⌘⇧2</kbd> で、どのアプリを使っていても範囲選択を始められます。選択には macOS 標準の範囲選択（<code class="font-mono text-[0.9em]">screencapture -i</code>）を使い、スペースキーでウィンドウ単位の選択に切り替えられます。撮り終えるとエディタが前面に開きます。</p>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground">グローバルショートカット <kbd class="kbd">⌘⇧2</kbd>（設定で変更可）で、どのアプリを使っていても範囲選択を始められます。選択には macOS 標準の範囲選択（<code class="font-mono text-[0.9em]">screencapture -i</code>）を使い、スペースキーでウィンドウ単位の選択に切り替えられます。撮り終えるとエディタが前面に開きます。</p>
             </div>
             <div class="rounded-lg border border-border bg-background p-6 shadow-sm">
               <div class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/60"><i data-lucide="shapes" class="h-5 w-5"></i></div>
@@ -373,7 +373,7 @@ open src-tauri/target/release/bundle/macos</code></pre>
                 <tr><th scope="col" class="px-4 py-2.5 font-medium">キー</th><th scope="col" class="px-4 py-2.5 font-medium">動作</th><th scope="col" class="px-4 py-2.5 font-medium">使える場面</th></tr>
               </thead>
               <tbody class="divide-y divide-border">
-                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘⇧2</kbd></td><td class="px-4 py-3">キャプチャを始める</td><td class="px-4 py-3 text-muted-foreground">どのアプリを使っていても</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘⇧2</kbd></td><td class="px-4 py-3">キャプチャを始める（「設定…」で変更可）</td><td class="px-4 py-3 text-muted-foreground">どのアプリを使っていても</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Space</kbd></td><td class="px-4 py-3">範囲選択とウィンドウ選択を切り替える</td><td class="px-4 py-3 text-muted-foreground">範囲選択中</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘C</kbd></td><td class="px-4 py-3">描き込んだ画像をクリップボードにコピー</td><td class="px-4 py-3 text-muted-foreground">エディタ</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘Z</kbd></td><td class="px-4 py-3">取り消し</td><td class="px-4 py-3 text-muted-foreground">エディタ（テキスト入力中は入力欄の取り消し）</td></tr>
@@ -404,7 +404,7 @@ open src-tauri/target/release/bundle/macos</code></pre>
             </details>
             <details class="group p-5">
               <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">⌘⇧2 を押しても何も起きません<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>
-              <p class="mt-3 text-sm leading-6 text-muted-foreground">ほかのアプリが同じショートカットを使っていると、Tadcap に届きません。そのアプリの設定でショートカットを変えるか、メニューバーのアイコンから「キャプチャ」を選んでください。いまのところ Tadcap 側でキーを変える設定はありません。</p>
+              <p class="mt-3 text-sm leading-6 text-muted-foreground">ほかのアプリが同じショートカットを使っていると、Tadcap に届きません。メニューバーのアイコンかアプリメニューの「設定…」（<kbd class="kbd">⌘,</kbd>）で別のキーに変えるか、メニューバーのアイコンから「キャプチャ」を選んでください。</p>
             </details>
             <details class="group p-5">
               <summary class="flex cursor-pointer items-center justify-between gap-4 font-medium">撮った画像はどこに保存されますか<i data-lucide="chevron-down" class="chev h-4 w-4 shrink-0 text-muted-foreground transition-transform"></i></summary>

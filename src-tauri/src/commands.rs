@@ -16,6 +16,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::capture::{self, CaptureKind, CaptureOutcome, CaptureResult, RunError, ScreenRecordingPermission};
 use crate::clipboard;
 use crate::error::AppError;
+use crate::shortcuts::{self, CaptureShortcutInfo};
 use crate::window_front::{self, ActivationOrigin};
 
 /// `capture::run()` の結果を通知する Tauri イベント名(ARCH §7.1 手順4)。
@@ -411,6 +412,37 @@ fn app_error_from_clipboard_error(err: clipboard::ClipboardFallbackError) -> App
 #[tauri::command]
 pub async fn activate_app(app: AppHandle) -> Result<(), AppError> {
     window_front::ensure_app_active(&app, ActivationOrigin::TextInput);
+    Ok(())
+}
+
+/// キャプチャのショートカットの現在の状態を返す(設定画面・表記の追従、KS-T4)。
+#[tauri::command]
+pub async fn get_capture_shortcut(app: AppHandle) -> Result<CaptureShortcutInfo, AppError> {
+    Ok(shortcuts::capture_shortcut_info(&app))
+}
+
+/// キャプチャのショートカットを変えて保存する(KS-T4)。使えないキーは何も変えずに
+/// `shortcut_invalid` / `shortcut_cmd_only` / `shortcut_reserved`、登録・保存に失敗したら元のキーに
+/// 戻して `shortcut_register_failed` / `settings_save_failed` を返す。
+#[tauri::command]
+pub async fn set_capture_shortcut(
+    app: AppHandle,
+    accelerator: String,
+) -> Result<CaptureShortcutInfo, AppError> {
+    let next = shortcuts::parse_capture_shortcut(&accelerator)?;
+    shortcuts::apply_capture_shortcut(&app, next).await
+}
+
+/// キャプチャのショートカットを既定(⌘⇧2)に戻す(KS-T4)。
+#[tauri::command]
+pub async fn reset_capture_shortcut(app: AppHandle) -> Result<CaptureShortcutInfo, AppError> {
+    shortcuts::apply_capture_shortcut(&app, shortcuts::default_capture_shortcut()).await
+}
+
+/// 設定画面でキーを記録している最中かを伝える(KS-T4)。記録中は現在のキーを押してもキャプチャしない。
+#[tauri::command]
+pub async fn set_shortcut_recording(app: AppHandle, recording: bool) -> Result<(), AppError> {
+    shortcuts::set_recording(&app, recording);
     Ok(())
 }
 

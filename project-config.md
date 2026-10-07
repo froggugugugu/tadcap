@@ -441,6 +441,9 @@ output/reports/                ← 人間向けサマリー（Git管理）
 | 配布版はアドホック署名(`bundle.macOS.signingIdentity: "-"`)で Team ID が無いため、更新するたびに画面収録の許可が外れることがある | TCC が記録する要件がビルドごとのコードハッシュに結び付く | README・紹介ページの FAQ と `install.sh` の最後の案内で、許可のオフ→オンまたは削除→追加を案内する。解消には Developer ID 署名が要る |
 | `npm run tauri icon <png>` は macOS 用以外に `icons/android/`・`icons/ios/`・`icons/64x64.png` も生成する | CLI が全プラットフォーム分を作る | macOS 専用なので生成後に削除し、コミットしない。元画像は `src-tauri/icons/app-icon.svg`(1024px PNG に書き出して `app-icon.png`) |
 | 日本語IMEの不具合は、Chromium(E2E)の擬似イベントやCDPのIME入力が緑でも実機のWKWebViewで起きうる(2026-09-26、「全角が入らない」報告) | E2EはChromiumでIMEも実物ではなく、WKWebViewではIMEの経路(NSTextInputContext→入力メソッド)がアプリのアクティブ状態などネイティブ側に左右されるため | Web層はE2E(`text-tool.spec.ts`のCDP IME入力・WebKit順のイベント列、keydownを止めないこと)で守り、実WebKitの検証は画面外のWKWebViewでNSTextInputClient(`setMarkedText`/`insertText`)を呼んで行う。IMEが効くか(かな/ローマ字・変換・確定・Esc・再編集)は実機確認に必ず含める |
+| 設定画面でグローバルショートカットに登録済みのキーを押しても、webview の `keydown` に届かない(KS-T4、2026-10-08) | グローバルショートカットは OS が先取りしてアプリのハンドラへ送るため | 記録中は Rust 側のフラグ(`set_shortcut_recording`)で押下を無視するだけにし、登録は外さない。現在のキーと同じキーは記録できない(変える必要が無い) |
+| ⌥ を押しながらのキーは `KeyboardEvent.key` が特殊文字(⌥K → `˚`)になり、キーを判別できない(KS-T2) | macOS のキーボード配列で ⌥ は別の文字を入力するため | 記録には `event.code`(`KeyK` など、配列に依存しない物理キー名)を使う。`global-hotkey` の文字列形式もこの名前を使う |
+| 既定のアプリメニュー(v0.3.1 から表示)の ⌘Q・⌘W・⌘H などは、webview の `keydown` より先にメニューが処理しうる(KS-T6) | アプリメニューのキー割り当ては AppKit が先に見るため | 設定画面では ⌘ と 1 キーだけの組み合わせを受け付けない(`shortcut_cmd_only`)。記録中に ⌘Q を押すと終了しうる点は手動確認で見る |
 
 ### フレームワーク固有パターン
 
