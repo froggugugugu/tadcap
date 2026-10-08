@@ -26,11 +26,11 @@ npm run test               # Vitest（watch）
 npm run test:run           # Vitest 一回実行
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
-npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip(アドホック署名)
+npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip(APPLE_SIGNING_IDENTITY 等があれば Developer ID 署名 + 公証、無ければアドホック署名)
 ```
 
 リリース: 3 ファイル(`package.json`・`src-tauri/tauri.conf.json`・`src-tauri/Cargo.toml`)の版を揃えてコミット → `git tag v<版>` → タグを push。`.github/workflows/release.yml` が検証して GitHub Releases に公開し、`scripts/install.sh`(紹介ページから配信)が最新版を入れる。
-Developer ID 署名 + 公証付きの配布へ移行する手順(未実装)は `docs/release-notarization.md`。
+release.yml は Environment `release` の Secrets で Developer ID 署名 + 公証し、公証されていなければ失敗する。手順と Secrets は `docs/release-notarization.md`。
 
 スモークテストコマンド(全タスク共通、ゲート3 決定):
 

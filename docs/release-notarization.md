@@ -1,10 +1,9 @@
 # macOS の公証付き配布手順(Developer ID 署名 + 公証 + DMG)
 
-> **状態**: 計画(未実装)。現行の配布はアドホック署名・未公証(`tauri.conf.json` の `signingIdentity: "-"`)。
-> 本書の §4 を実装したら、この行と `docs/docs/project.md` のリリース節を更新する。
+> **状態(2026-10-08)**: §2・§3 完了、§4 実装済み、§5・§6 は手元で検証済み(DMG・app とも `source=Notarized Developer ID`)。
+> 残りは §7(GitHub の Environment と Secrets の登録)と、最初の公証付きリリースの確認、§8 の文書更新。
 >
 > **決定(2026-10-06)**: 個人名義の Developer ID で署名・公証し、公開 Releases で配る(社内利用で公証が必須のため)。
-> Apple Developer Program は審査中。承認後に §2・§3・§7 を人間が行い、§4 を実装する。
 
 ## 0. 全体の流れ
 
@@ -145,23 +144,31 @@ Hardened Runtime を有効にすると、起動時や画面キャプチャのと
 
 ## 7. CI(GitHub Secrets)
 
-【Web】リポジトリの Settings で登録する。Environment を使う場合(下記の推奨)は https://github.com/froggugugugu/tadcap/settings/environments で `release` を作り、その中の Environment secrets に入れる。
-使わない場合は https://github.com/froggugugugu/tadcap/settings/secrets/actions に入れる。
+【Web】Environment `release` を作り、その Environment secrets に下の 6 つを入れる(`release.yml` の build ジョブは `environment: release` を前提にしている):
+
+1. https://github.com/froggugugugu/tadcap/settings/environments → **New environment** → 名前 `release`
+2. 「Deployment branches and tags」を **Selected branches and tags** にし、タグのパターン `v*` だけを許可する
+3. (任意)「Required reviewers」に自分を入れると、リリースのたびに承認してから Secrets が使われる
+4. 同じ画面の「Environment secrets」で **Add environment secret** を押し、下表を 1 つずつ登録する
+5. https://github.com/froggugugugu/tadcap/settings/rules でタグ用の ruleset を作り、`v*` タグの作成・更新・削除を自分だけに制限する(タグは任意のコミットに打てるため、Environment の制限だけでは書込権限のある人が Secrets を読めてしまう)
 
 | Secret | 中身 |
 | ------ | ---- |
-| `APPLE_CERTIFICATE` | `base64 -i cert.p12` の出力 |
+| `APPLE_CERTIFICATE` | 【ターミナル】`base64 -i <書き出した .p12>` の出力 |
 | `APPLE_CERTIFICATE_PASSWORD` | `.p12` のパスワード |
 | `APPLE_SIGNING_IDENTITY` | `Developer ID Application: … (TEAMID)` |
-| `APPLE_API_ISSUER` / `APPLE_API_KEY` | Issuer ID / Key ID |
+| `APPLE_API_ISSUER` / `APPLE_API_KEY` | Issuer ID / Key ID(`AuthKey_<KEY_ID>.p8` の `<KEY_ID>`) |
 | `APPLE_API_KEY_P8` | `.p8` の中身(ジョブ内でファイルに書き出し、`APPLE_API_KEY_PATH` に渡す) |
 
-`APPLE_CERTIFICATE` があると、Tauri が一時キーチェーンに証明書を読み込む。
+`release.yml` の流れ:
 
-**セキュリティ上の注意**: 現行の `release.yml` は「依存のコードを書込トークンの隣で動かさない」方針。署名用の Secrets を build ジョブに渡すと、npm / cargo の依存コードが Secrets と同じジョブで動く。対策は次のどちらか:
+1. **Signing keychain**: `APPLE_CERTIFICATE` を使い捨てのキーチェーンに読み込み、検索リストに加える。証明書とそのパスワードはこのステップにだけ渡し、`.p12` は読み込んだら消す。Tauri 自身の `APPLE_CERTIFICATE` 読み込みは使わない(app と DMG を同じキーチェーンで署名するため)
+2. **Package, sign and notarize**: 署名 ID と API キーだけを渡して `npm run dist:mac` を実行する
+3. 検証: DMG と中の app が `source=Notarized Developer ID` でなければ失敗する(Secrets が欠けてアドホック署名になったときも失敗する)
+4. キーチェーンを消す
 
-- **(推奨)GitHub Environment(例: `release`)を作り、Secrets をそこに置く**。タグの push だけに限定し、必要なら承認者を付ける
-- ビルドと署名を別ジョブに分ける。Tauri の自動署名が使えないので、手で codesign する必要があり手間が増える
+**残るリスク**: Tauri はビルドの途中で app に署名・公証するため、2 の間は `.p8` ファイルとロック解除済みのキーチェーンがあり、npm / cargo の依存コード(`build.rs` など)からも使える。
+これは「ビルドと署名を別ジョブに分け、手で codesign / 公証する」構成でしか避けられず、手間が大きいので採らない。代わりに上の Environment の制限・タグの ruleset・(任意で)承認者で、Secrets が使われる場面を限定する。漏えいが疑われたら、API キーは App Store Connect で取り消し、証明書は developer.apple.com で revoke する。
 
 ## 8. 付随して更新するもの
 
