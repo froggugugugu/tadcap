@@ -66,8 +66,16 @@ jobs:
           printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
           security import "$RUNNER_TEMP/cert.p12" -k "$kc" -f pkcs12 -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           rm -f "$RUNNER_TEMP/cert.p12"
+          # Without the Developer ID G2 intermediate the certificate is untrusted and codesign finds no identity.
+          g2="$RUNNER_TEMP/DeveloperIDG2CA.cer"
+          curl -fsSLo "$g2" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          echo "f16cd3c54c7f83cea4bf1a3e6a0819c8aaa8e4a1528fd144715f350643d2df3a  $g2" | shasum -a 256 -c
+          security import "$g2" -k "$kc"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pw" "$kc" > /dev/null
           security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$kc"
+          security find-identity -v -p codesigning "$kc" | grep -qE '[1-9][0-9]* valid identities found' \
+            || { echo "no valid signing identity: the .p12 must hold the Developer ID Application certificate with its private key"; exit 1; }
       # scripts/package-mac.sh runs `tauri build` with CI=true (the dmg skips the Finder layout step) and writes release/.
       # With APPLE_SIGNING_IDENTITY it signs and notarizes the app and the dmg. Tauri notarizes during the build, so the
       # API key file and the unlocked keychain are there while dependency code runs (docs/release-notarization.md §7).
@@ -81,6 +89,8 @@ jobs:
           for v in APPLE_SIGNING_IDENTITY APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_P8; do
             [ -n "${!v}" ] || { echo "secret $v is missing in the release environment"; exit 1; }
           done
+          security find-identity -v -p codesigning | grep -qF "\"$APPLE_SIGNING_IDENTITY\"" \
+            || { echo "APPLE_SIGNING_IDENTITY does not match the imported certificate (no quotes or extra spaces around it)"; exit 1; }
           export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY.p8"
           trap 'rm -f "$APPLE_API_KEY_PATH"' EXIT
           printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
