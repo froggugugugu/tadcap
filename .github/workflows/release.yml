@@ -67,10 +67,13 @@ jobs:
           security import "$RUNNER_TEMP/cert.p12" -k "$kc" -f pkcs12 -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           rm -f "$RUNNER_TEMP/cert.p12"
           # Without the Developer ID G2 intermediate the certificate is untrusted and codesign finds no identity.
-          g2="$RUNNER_TEMP/DeveloperIDG2CA.cer"
-          curl -fsSLo "$g2" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-          echo "f16cd3c54c7f83cea4bf1a3e6a0819c8aaa8e4a1528fd144715f350643d2df3a  $g2" | shasum -a 256 -c
-          security import "$g2" -k "$kc"
+          # A .p12 exported from Keychain Access usually carries it already; importing it twice fails.
+          if ! security find-certificate -c "Developer ID Certification Authority" "$kc" > /dev/null 2>&1; then
+            g2="$RUNNER_TEMP/DeveloperIDG2CA.cer"
+            curl -fsSLo "$g2" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+            echo "f16cd3c54c7f83cea4bf1a3e6a0819c8aaa8e4a1528fd144715f350643d2df3a  $g2" | shasum -a 256 -c
+            security import "$g2" -k "$kc"
+          fi
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pw" "$kc" > /dev/null
           security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
           security find-identity -v -p codesigning "$kc"
