@@ -18,33 +18,65 @@
 7. 配布文書を更新する
 ```
 
+各手順の先頭に、どこで操作するかを書く:
+
+- **【Web】**: ブラウザで開くサイト。URL を併記する(Apple ID でサインイン)
+- **【Mac アプリ】**: Mac に入っているアプリ。Spotlight(⌘ + Space)で名前を入れて開く
+- **【ターミナル】**: ターミナルで実行するコマンド
+
 ## 1. Apple Developer Program に登録
 
-- https://developer.apple.com/programs/ から登録する。年額 99 USD(日本の価格は Apple の表示に従う。改定されうる)
+- 【Web】https://developer.apple.com/programs/ から登録する。年額 99 USD(日本の価格は Apple の表示に従う。改定されうる)
 - **個人**で登録すると配布者名に本名が出る。**組織**で登録すると組織名が出るが、D-U-N-S 番号が必要
 - 審査には数時間〜数日かかる
 
 ## 2. Developer ID Application 証明書
 
-1. キーチェーンアクセスを開き、メニューの「証明書アシスタント」→「認証局に証明書を要求」で CSR をディスクに保存する
-2. developer.apple.com → Certificates → **+** → **Developer ID Application** を選び、CSR をアップロードする(Account Holder 権限でしかできない)
-3. `.cer` をダウンロードし、ダブルクリックでキーチェーンに入れる
-4. 入ったか確認する:
+1. 【Mac アプリ】「キーチェーンアクセス」を開き、メニューバーの「キーチェーンアクセス」→「証明書アシスタント」→「認証局に証明書を要求」を選ぶ。
+   メールアドレスと通称(名前)を入れ、「ディスクに保存」を選んで CSR(`CertificateSigningRequest.certSigningRequest`)を保存する。このとき秘密鍵がログインキーチェーンに作られる
+2. 【Web】https://developer.apple.com/account/resources/certificates/add を開き、**Developer ID Application** を選んで CSR をアップロードする(Account Holder 権限でしかできない)
+   - 選択肢が多数並ぶが、選ぶのは Software 欄の **Developer ID Application** だけ。**Developer ID Installer** は `.pkg` 用なので不要(配るのは DMG / zip)
+   - 次の画面で中間証明書を聞かれたら **G2 Sub-CA (Xcode 11.4.1 or later)** を選ぶ(Previous Sub-CA は古い環境向け)
+   - Developer ID の項目が押せないときは、Account Holder ではないか、Program の審査が終わっていない
+   - 作れる枚数に上限があるので、試しに何枚も作らない
+3. 【Web】同じ画面で `developerID_application.cer` をダウンロードし、Finder でダブルクリックしてキーチェーンに入れる(追加先は「ログイン」。信頼設定は変えない)
+4. 【ターミナル】入ったか確認する:
 
    ```bash
    security find-identity -v -p codesigning
    # → "Developer ID Application: <名前> (<TEAMID>)" が出れば OK
    ```
 
-5. CI 用に、キーチェーンからこの証明書を**秘密鍵ごと** `.p12` に書き出す(パスワードを付ける)。**`.p12` はリポジトリに入れない**
+   `0 valid identities found` のときは次を確認する:
+
+   - **証明書が入っていない**: ダブルクリックで出るダイアログを閉じると追加されないことがある。コマンドで入れる:
+     `security import ~/Downloads/developerID_application.cer -k ~/Library/Keychains/login.keychain-db`
+   - **中間証明書(Developer ID G2)が無い**: 証明書が「信頼されていません」になり、署名に使えない。取得して入れる(`sudo` は不要。1 行ずつ実行する):
+
+     ```bash
+     curl -fsSLo ~/DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+     security import ~/DeveloperIDG2CA.cer -k ~/Library/Keychains/login.keychain-db
+     ```
+
+   - **秘密鍵が無い**: CSR を作った Mac・ユーザーと別の環境で入れている。CSR を作った環境で入れ直す
+   - **`developerID_installer.cer` を入れている**: それは `.pkg` 用。Developer ID Application で作り直す
+
+5. 【Mac アプリ】CI 用に、キーチェーンアクセスでこの証明書を**秘密鍵ごと** `.p12` に書き出す。
+   左で「ログイン」→ 上のタブ「自分の証明書」→ **Developer ID Application: …** を右クリック →「書き出す」→ フォーマット「個人情報交換(.p12)」で保存し、パスワードを付ける。
+   **`.p12` とパスワードはリポジトリに入れない**(パスワードマネージャー等に保管)
 
 > 「Mac App Distribution」や「Apple Development」の証明書では App Store の外に配布できない。必ず **Developer ID** を選ぶ。
 
 ## 3. 公証用の認証情報(App Store Connect API キーを推奨)
 
-1. App Store Connect → ユーザとアクセス → 統合 → **App Store Connect API** → チームキーを作る(ロールは Developer)
-2. `AuthKey_<KEY_ID>.p8` をダウンロードする(**1 回しかダウンロードできない**)。**Key ID** と **Issuer ID** を控える
-3. 手元のキーチェーンに保存する:
+App Store Connect は Web サイト(https://appstoreconnect.apple.com/)。Mac / iPhone の同名アプリではない。
+
+1. 【Web】https://appstoreconnect.apple.com/access/integrations/api を開く(画面上は「ユーザとアクセス」→「統合」→「App Store Connect API」)。
+   「チームキー」タブで **+** を押し、名前(例: `tadcap-notary`)とアクセス(ロール)**Developer** を選んで生成する。
+   初回は「アクセスをリクエスト」が出るので、Account Holder が承認する
+2. 【Web】生成したキーの行から `AuthKey_<KEY_ID>.p8` をダウンロードする(**1 回しかダウンロードできない**)。
+   同じ画面の **キー ID**(行ごと)と、ページ上部の **Issuer ID** を控える
+3. 【ターミナル】手元のキーチェーンに保存する:
 
    ```bash
    xcrun notarytool store-credentials tadcap-notary \
@@ -66,19 +98,25 @@ Apple ID とアプリ用パスワードの組でも公証できる(`APPLE_ID` / 
 
 ## 5. 手元でのビルドと公証
 
+【ターミナル】リポジトリのルートで実行する:
+
 ```bash
 export APPLE_SIGNING_IDENTITY="Developer ID Application: <名前> (<TEAMID>)"
 export APPLE_API_ISSUER=<ISSUER_ID>
 export APPLE_API_KEY=<KEY_ID>
 export APPLE_API_KEY_PATH=<path>/AuthKey_<KEY_ID>.p8
 
-npm run dist:mac      # Tauri が app に署名(Hardened Runtime)→ 公証 → staple まで行う
-
-dmg=release/Tadcap-<版>-arm64.dmg
-codesign --force --sign "$APPLE_SIGNING_IDENTITY" --timestamp "$dmg"
-xcrun notarytool submit "$dmg" --keychain-profile tadcap-notary --wait   # 数分かかる
-xcrun stapler staple "$dmg"
+npm run dist:mac
 ```
+
+`scripts/package-mac.sh` が次をまとめて行う(公証は 2 回あり、それぞれ数分かかる):
+
+1. Tauri が app に署名(Hardened Runtime)→ 公証 → staple し、DMG を作る
+2. DMG に署名 → 公証 → staple
+3. `stapler validate` と `spctl` で DMG と app が受け入れられるか確認する(失敗したら止まる)
+
+`APPLE_SIGNING_IDENTITY` が無ければ、従来どおりアドホック署名・未公証で作る。署名 ID があるのに `APPLE_API_*` が欠けていると、ビルド前に止まる。
+Tauri はキーチェーンのプロファイル(`tadcap-notary`)を使えないので、公証には `.p8` のパスを渡す。
 
 公証が `Invalid` になったら、`xcrun notarytool log <submission-id> --keychain-profile tadcap-notary` で理由を確認する。よくある原因は次の 3 つ:
 
@@ -87,6 +125,8 @@ xcrun stapler staple "$dmg"
 - 署名されていないバイナリが混ざっている
 
 ## 6. 検証(完了の証拠にする)
+
+【ターミナル】
 
 ```bash
 spctl -a -vvv -t install "$dmg"          # → accepted / source=Notarized Developer ID
@@ -104,6 +144,9 @@ hdiutil detach "$mnt"
 Hardened Runtime を有効にすると、起動時や画面キャプチャのときに落ちることがある。そのときは entitlements(`bundle.macOS.entitlements`)を追加する。画面収録の権限は TCC の許可なので、通常 entitlements は要らない。
 
 ## 7. CI(GitHub Secrets)
+
+【Web】リポジトリの Settings で登録する。Environment を使う場合(下記の推奨)は https://github.com/froggugugugu/tadcap/settings/environments で `release` を作り、その中の Environment secrets に入れる。
+使わない場合は https://github.com/froggugugugu/tadcap/settings/secrets/actions に入れる。
 
 | Secret | 中身 |
 | ------ | ---- |
