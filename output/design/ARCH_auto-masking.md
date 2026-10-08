@@ -494,6 +494,17 @@ npm run latency:summary    # 既存。scan_ms の行も集計できるように�
 **決定(2026-10-09、人間)**: 7 件すべて推奨案 — #1 A(Rust から `objc2-vision`)/ #2 A(Rust)/ #3 B(手がかり語 + 辞書)/ #4 A(確認モード)/ #5 A(⌘⇧M 固定)/ #6 B(4 桁×4 組は Luhn 不一致でも候補)/ #7 A(HTML を既存の Playwright で撮影)。
 **条件(人間の指示)**: 依存の追加・同梱データは、サプライチェーンを含めたセキュリティ確認を徹底する(`objc2-vision` の公開元・版固定・`build.rs`・`cargo audit`・ライセンス、辞書の出典・ライセンス、新しい npm パッケージは足さない)。
 
+**依存 `objc2-vision` の供給経路の確認(2026-10-09、追加前)**:
+
+| 確認 | 結果 |
+| ---- | ---- |
+| 公開元 | crates.io の所有者は `madsmtm`・`simlay`。既存の `objc2` / `objc2-foundation` と同じ。ソースは `github.com/madsmtm/objc2` の `framework-crates/objc2-vision`(コミット `7b1abfd`) |
+| 版 | 0.3.2(2025-10-04 公開・最新安定版・取り下げなし)。既存の `objc2-foundation` 0.3.2 / `objc2` 0.6.4 と同じ系列 |
+| 既知の脆弱性 | OSV で `objc2-vision` / `objc2` / `objc2-foundation` とも 0 件 |
+| ビルド時に動くコード | `build.rs` なし。ソースにプロセス起動・ネットワーク・ファイル操作の呼び出しなし。リンクするのは Vision フレームワークだけ |
+| ライセンス | Zlib OR Apache-2.0 OR MIT |
+| 注意点 | 既定の機能(default features)は Vision の全 API を有効にし、使わない機能で依存が増えうる(`objc2-av-foundation`・`objc2-core-ml` など、今の `Cargo.lock` に無いもの)。**`default-features = false` で、文字の読み取りに要る機能だけを指定する**。実装時に `Cargo.lock` の差分が `objc2-vision` 1 件だけであることを確認し、証拠として残す |
+
 | # | 項目 | 選択肢 | 推奨 | 影響範囲 |
 | - | ---- | ------ | ---- | -------- |
 | 1 | 【決定済み】文字の読み取りの実装方式(PRD §7.2・ブレスト #7) | **A**: Rust から `objc2-vision` で Vision を直接呼ぶ / **B**: Swift の小さな補助プロセスを同梱し、Rust から起動して標準入出力で受け渡す / **C**: Swift のライブラリを Rust のバイナリに静的リンクする | **A**。追加のクレートは 1 つ、ビルド・署名・公証の手順が変わらない、試作で動作と速度を確認済み(§1.4)。B は「処理が落ちてもアプリが落ちない」「文字列がプロセス終了で必ず消える」利点があるが、署名・公証・CI の手順が増える。C はビルドスクリプトと Swift ランタイムのリンクが複雑 | `Cargo.toml`、`masking/ocr.rs`、(B/C の場合)`tauri.conf.json`・`package-mac.sh`・`release.yml`・`docs/release-notarization.md` |
