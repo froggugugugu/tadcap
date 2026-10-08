@@ -44,8 +44,7 @@
       "../THIRD_PARTY_NOTICES.md": "licenses/THIRD_PARTY_NOTICES.md"
     },
     "macOS": {
-      "minimumSystemVersion": "14.0",
-      "signingIdentity": "-"
+      "minimumSystemVersion": "14.0"
     }
   }
 }
