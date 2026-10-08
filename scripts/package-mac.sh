@@ -41,7 +41,7 @@ cp "$bundle/dmg/Tadcap_${version}_aarch64.dmg" "$dmg"
 if [ "$notarize" = 1 ]; then
   codesign --force --sign "$APPLE_SIGNING_IDENTITY" --timestamp "$dmg"
   # notarytool can exit 0 for a rejected submission, so read the status from its JSON output.
-  result="$(xcrun notarytool submit "$dmg" --wait --output-format json \
+  result="$(xcrun notarytool submit "$dmg" --wait --timeout 1h --output-format json \
     --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER")"
   status="$(node -p 'JSON.parse(process.argv[1]).status' "$result")"
   if [ "$status" != "Accepted" ]; then

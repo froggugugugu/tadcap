@@ -3,9 +3,10 @@
 #
 #   curl -fsSL https://froggugugugu.github.io/tadcap/install.sh | bash
 #
-# curl does not mark what it downloads with com.apple.quarantine, so the ad-hoc signed, unnotarized app opens
-# without the "is damaged" / "cannot verify the developer" alerts a browser download gets. Nothing runs until the
-# last line calls main, so a download cut off halfway does nothing.
+# Releases are Developer ID signed and notarized (.github/workflows/release.yml), so Gatekeeper accepts them; ones
+# made before that are ad-hoc signed. curl does not mark what it downloads with com.apple.quarantine, and the mark
+# is removed below anyway, so an older ad-hoc release (TADCAP_VERSION) also opens without the "is damaged" alert.
+# Nothing runs until the last line calls main, so a download cut off halfway does nothing.
 #
 # Options (environment variables, e.g. `... | TADCAP_NO_OPEN=1 bash`):
 #   TADCAP_VERSION=0.1.0  install this release instead of the latest

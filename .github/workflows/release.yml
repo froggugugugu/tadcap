@@ -3,11 +3,13 @@ on:
   push:
     tags: ["v*"]
 
-# Builds the macOS package for Apple silicon (ad-hoc signed, not notarized) and publishes it as a GitHub Release:
+# Builds the macOS package for Apple silicon (Developer ID signed and notarized) and publishes it as a GitHub Release:
 # Tadcap-<version>-arm64.dmg and Tadcap-<version>-arm64.zip (the file scripts/install.sh installs).
 # build only reads the repository: dependency code never runs next to a token that can write. publish holds
 # contents: write, runs no repository code, and attaches the files build verified to a draft before publishing it,
 # so the release is complete when it becomes visible.
+# The signing and notarization secrets live in the "release" environment (docs/release-notarization.md §7) and are
+# handed to the keychain and packaging steps only; that environment is limited to v* tags.
 # Actions are pinned to commit SHAs (version in the comment); runner images are pinned too.
 permissions:
   contents: read
@@ -15,6 +17,8 @@ permissions:
 jobs:
   build:
     runs-on: macos-26
+    environment: release
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
@@ -43,19 +47,64 @@ jobs:
           npm run test:run
           cargo test --locked --manifest-path src-tauri/Cargo.toml
           cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings
-      # scripts/package-mac.sh runs `tauri build` with CI=true (the dmg skips the Finder layout step) and writes release/.
-      - run: npm run dist:mac
-      - name: The app in the dmg must have an intact signature (a broken one makes macOS call the download damaged)
+      # The signing certificate goes into a throwaway keychain on the search list, so both Tauri (app) and
+      # package-mac.sh (dmg) find it; Tauri's own APPLE_CERTIFICATE import is not used. The .p12 and its password
+      # reach this step only, not the build below.
+      - name: Signing keychain
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD; do
+            [ -n "${!v}" ] || { echo "secret $v is missing in the release environment"; exit 1; }
+          done
+          kc="$RUNNER_TEMP/signing.keychain-db"
+          kc_pw="$(openssl rand -hex 24)"
+          security create-keychain -p "$kc_pw" "$kc"
+          security set-keychain-settings "$kc"   # no auto-lock: the build and two notarizations can take a while
+          security unlock-keychain -p "$kc_pw" "$kc"
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -f pkcs12 -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pw" "$kc" > /dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+      # scripts/package-mac.sh runs `tauri build` with CI=true (the dmg skips the Finder layout step) and writes release/.
+      # With APPLE_SIGNING_IDENTITY it signs and notarizes the app and the dmg. Tauri notarizes during the build, so the
+      # API key file and the unlocked keychain are there while dependency code runs (docs/release-notarization.md §7).
+      - name: Package, sign and notarize
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          for v in APPLE_SIGNING_IDENTITY APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_P8; do
+            [ -n "${!v}" ] || { echo "secret $v is missing in the release environment"; exit 1; }
+          done
+          export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY.p8"
+          trap 'rm -f "$APPLE_API_KEY_PATH"' EXIT
+          printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
+          unset APPLE_API_KEY_P8
+          npm run dist:mac
+      - name: Remove the signing keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+      - name: The dmg and the app in it must be notarized and intact (a broken signature makes macOS call the download damaged)
+        run: |
+          dmg="$(ls release/Tadcap-*-arm64.dmg)"
+          xcrun stapler validate "$dmg"
+          out="$(spctl -a -vv -t install "$dmg" 2>&1 || true)"; echo "$out"; grep -q 'source=Notarized Developer ID' <<< "$out"
           mnt="$(mktemp -d)"
-          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" release/Tadcap-*-arm64.dmg
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg"
           codesign --verify --deep --strict --verbose=2 "$mnt/Tadcap.app"
+          out="$(spctl -a -vv "$mnt/Tadcap.app" 2>&1 || true)"; echo "$out"; grep -q 'source=Notarized Developer ID' <<< "$out"
           hdiutil detach "$mnt"
       - name: The installer puts the built app in place with an intact signature
         run: |
           dir="$(mktemp -d)"
           TADCAP_ZIP="$(ls release/Tadcap-*-arm64.zip)" TADCAP_APP_DIR="$dir" TADCAP_NO_OPEN=1 bash scripts/install.sh
           codesign --verify --deep --strict "$dir/Tadcap.app"
+          xcrun stapler validate "$dir/Tadcap.app"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$dir/Tadcap.app/Contents/Info.plist")" = "${GITHUB_REF_NAME#v}"
       - name: The app carries the license notices
         run: |
