@@ -1,6 +1,6 @@
 [package]
 name = "tadcap"
-version = "1.0.0"
+version = "1.0.1"
 description = "Capture-first screenshot tool for macOS"
 authors = ["froggugugugu"]
 edition = "2021"
