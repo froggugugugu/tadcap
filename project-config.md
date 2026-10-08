@@ -127,6 +127,7 @@ npm run tauri              # Tauri CLI（dev/build 等）
 npm run test               # Vitest（watch、T01 で追加）
 npm run test:run           # Vitest 一回実行（T01 で追加）
 npm run latency:summary -- <ログファイル>  # NFR-001計測ログ(標準エラー)を集計（T11 で追加、依存追加なし）
+npm run licenses           # THIRD_PARTY_LICENSES.md を依存から作り直す（scripts/gen-third-party-licenses.mjs、依存追加なし）。`npm run licenses:check` で照合（release.yml で実行）
 npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip を作る（scripts/package-mac.sh。APPLE_SIGNING_IDENTITY・APPLE_API_ISSUER・APPLE_API_KEY・APPLE_API_KEY_PATH があれば Developer ID 署名 + 公証、無ければアドホック署名。リリースは v<版> タグの push で .github/workflows/release.yml が Environment `release` の Secrets を使って作る）
 cargo test --manifest-path src-tauri/Cargo.toml               # Rust ユニットテスト（T01 で確定）
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings  # Rust 静的解析（T01 で確定、警告があればビルド扱いでエラー）
@@ -441,6 +442,7 @@ output/reports/                ← 人間向けサマリー（Git管理）
 | 配布版はアドホック署名(`bundle.macOS.signingIdentity: "-"`)で Team ID が無いため、更新するたびに画面収録の許可が外れることがある | TCC が記録する要件がビルドごとのコードハッシュに結び付く | README・紹介ページの FAQ と `install.sh` の最後の案内で、許可のオフ→オンまたは削除→追加を案内する。【改訂 2026-10-09】v0.4.0 から Developer ID 署名 + 公証(`docs/release-notarization.md`)。v0.3.x 以前から更新した直後に 1 回外れうるだけになったので、FAQ・案内はその場合に限定した |
 | `npm run tauri icon <png>` は macOS 用以外に `icons/android/`・`icons/ios/`・`icons/64x64.png` も生成する | CLI が全プラットフォーム分を作る | macOS 専用なので生成後に削除し、コミットしない。元画像は `src-tauri/icons/app-icon.svg`(1024px PNG に書き出して `app-icon.png`) |
 | 日本語IMEの不具合は、Chromium(E2E)の擬似イベントやCDPのIME入力が緑でも実機のWKWebViewで起きうる(2026-09-26、「全角が入らない」報告) | E2EはChromiumでIMEも実物ではなく、WKWebViewではIMEの経路(NSTextInputContext→入力メソッド)がアプリのアクティブ状態などネイティブ側に左右されるため | Web層はE2E(`text-tool.spec.ts`のCDP IME入力・WebKit順のイベント列、keydownを止めないこと)で守り、実WebKitの検証は画面外のWKWebViewでNSTextInputClient(`setMarkedText`/`insertText`)を呼んで行う。IMEが効くか(かな/ローマ字・変換・確定・Esc・再編集)は実機確認に必ず含める |
+| 配布物に依存のライセンス全文が入っていなかった(2026-10-09、`/legal-check` で判明。v1.0.0 まで) | 「各パッケージ同梱のライセンスファイルに従う」と書くだけでは、MIT・BSD・Unicode などが求める配布物への表示を満たさない。ライセンスファイルを同梱していないクレートもある(`objc2` 系・`alloc-stdlib`・`selectors` など) | `npm run licenses` で `THIRD_PARTY_LICENSES.md` を生成してアプリに同梱し、release.yml の `licenses:check` で依存との食い違いを止める。ファイルの無いクレートは MIT を選べれば作者名で MIT 全文、選べなければ `LICENSE_FROM`(同じ上流・同じ全文の兄弟パッケージ)を理由付きで追加する |
 | 設定画面でグローバルショートカットに登録済みのキーを押しても、webview の `keydown` に届かない(KS-T4、2026-10-08) | グローバルショートカットは OS が先取りしてアプリのハンドラへ送るため | 記録中は Rust 側のフラグ(`set_shortcut_recording`)で押下を無視するだけにし、登録は外さない。現在のキーと同じキーは記録できない(変える必要が無い) |
 | ⌥ を押しながらのキーは `KeyboardEvent.key` が特殊文字(⌥K → `˚`)になり、キーを判別できない(KS-T2) | macOS のキーボード配列で ⌥ は別の文字を入力するため | 記録には `event.code`(`KeyK` など、配列に依存しない物理キー名)を使う。`global-hotkey` の文字列形式もこの名前を使う |
 | 既定のアプリメニュー(v0.3.1 から表示)の ⌘Q・⌘W・⌘H などは、webview の `keydown` より先にメニューが処理しうる(KS-T6) | アプリメニューのキー割り当ては AppKit が先に見るため | 設定画面では ⌘ と 1 キーだけの組み合わせを受け付けない(`shortcut_cmd_only`)。記録中に ⌘Q を押すと終了しうる点は手動確認で見る |

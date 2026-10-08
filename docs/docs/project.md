@@ -26,6 +26,7 @@ npm run test               # Vitest（watch）
 npm run test:run           # Vitest 一回実行
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+npm run licenses           # THIRD_PARTY_LICENSES.md(依存のライセンス全文)を作り直す。依存を変えたら実行してコミット(release.yml が licenses:check で照合)
 npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip(APPLE_SIGNING_IDENTITY 等があれば Developer ID 署名 + 公証、無ければアドホック署名)
 ```
 
