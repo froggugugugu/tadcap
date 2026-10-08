@@ -1,7 +1,6 @@
 # macOS の公証付き配布手順(Developer ID 署名 + 公証 + DMG)
 
-> **状態(2026-10-08)**: §2・§3 完了、§4 実装済み、§5・§6 は手元で検証済み(DMG・app とも `source=Notarized Developer ID`)。
-> 残りは §7(GitHub の Environment と Secrets の登録)と、最初の公証付きリリースの確認、§8 の文書更新。
+> **状態(2026-10-09)**: §2〜§8 実施済み。v0.4.0 から公証付きで配布(CI の初回は、Secret `APPLE_SIGNING_IDENTITY` の値違いと中間証明書の二重読み込みで 2 回失敗し、タグを付け直した)。
 >
 > **決定(2026-10-06)**: 個人名義の Developer ID で署名・公証し、公開 Releases で配る(社内利用で公証が必須のため)。
 
