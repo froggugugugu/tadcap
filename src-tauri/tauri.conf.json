@@ -41,7 +41,8 @@
     ],
     "resources": {
       "../LICENSE": "licenses/LICENSE.txt",
-      "../THIRD_PARTY_NOTICES.md": "licenses/THIRD_PARTY_NOTICES.md"
+      "../THIRD_PARTY_NOTICES.md": "licenses/THIRD_PARTY_NOTICES.md",
+      "../THIRD_PARTY_LICENSES.md": "licenses/THIRD_PARTY_LICENSES.md"
     },
     "macOS": {
       "minimumSystemVersion": "14.0"

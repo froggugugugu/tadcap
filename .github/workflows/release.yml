@@ -47,6 +47,8 @@ jobs:
           npm run test:run
           cargo test --locked --manifest-path src-tauri/Cargo.toml
           cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings
+      - name: THIRD_PARTY_LICENSES.md must match the dependencies (npm run licenses)
+        run: npm run licenses:check
       # The signing certificate goes into a throwaway keychain on the search list, so both Tauri (app) and
       # package-mac.sh (dmg) find it; Tauri's own APPLE_CERTIFICATE import is not used. The .p12 and its password
       # reach this step only, not the build below.
@@ -122,7 +124,7 @@ jobs:
       - name: The app carries the license notices
         run: |
           res="src-tauri/target/release/bundle/macos/Tadcap.app/Contents/Resources"
-          for f in LICENSE.txt THIRD_PARTY_NOTICES.md; do test -s "$res/licenses/$f"; done
+          for f in LICENSE.txt THIRD_PARTY_NOTICES.md THIRD_PARTY_LICENSES.md; do test -s "$res/licenses/$f"; done
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mac
