@@ -144,7 +144,7 @@ test.describe("矩形の角丸", () => {
     // 2000x1000の白一色 → 線幅8px、角の半径 min(8×2.5, 500×0.25) = 20px。
     await setUp(page, { png: createFixtureCapturePng(2000, 1000, WHITE, WHITE) });
     const canvas = await captureAndWaitReady(page);
-    await page.getByRole("button", { name: "矩形", exact: true }).click();
+    await page.getByRole("button", { name: "矩形(R)", exact: true }).click();
     await drag(page, canvas, [400, 300], [1400, 800]);
 
     // 矩形の角(角丸でなければ線が通る位置)は背景の白。

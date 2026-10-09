@@ -21,6 +21,10 @@
 //!
 //! AM-T13・AM-T25-F1: 自動マスキングの処理中・確認中(`maskSession` が `idle` 以外)は全ツールボタンを無効にする
 //! (ARCH_auto-masking §15 #4 A 案「確認モード」、FR-012)。
+//!
+//! QE-T02: ボタンの名前を `矢印(A)` の形にし、`aria-keyshortcuts` を付けた(UI_quick-edits §1.3)。
+//! 名前とキーは `toolKeys.ts` の `TOOL_KEYS` から読む。1 キー切替の可否も本モジュールの
+//! `toolButtonState()` を使う(`main.ts` が `bindToolKeys()` に渡す)。
 
 import {
   getCanvasState,
@@ -29,10 +33,10 @@ import {
   type ToolId,
 } from "../canvas/canvasState";
 import { isMaskSessionActive, subscribeMaskSession } from "../canvas/maskSession";
+import { toolLabel, toolShortcutKey } from "./toolKeys";
 
 interface ToolDefinition {
   id: ToolId;
-  label: string;
   /** インラインSVGアイコン(`viewBox="0 0 20 20"` に統一、T19)。 */
   icon: string;
 }
@@ -40,7 +44,6 @@ interface ToolDefinition {
 const TOOLS: ToolDefinition[] = [
   {
     id: "arrow",
-    label: "矢印",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<path d="M4.5 15.5 14.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
@@ -49,7 +52,6 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     id: "rectangle",
-    label: "矩形",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<rect x="3.5" y="5" width="13" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
@@ -57,7 +59,6 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     id: "ellipse",
-    label: "円",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<ellipse cx="10" cy="10" rx="6.5" ry="5" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
@@ -65,7 +66,6 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     id: "text",
-    label: "テキスト",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<path d="M4.5 5.5V4.5H15.5V5.5M10 4.5V15.5M7.5 15.5H12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -73,7 +73,6 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     id: "mosaic",
-    label: "モザイク",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<rect x="3" y="3" width="6" height="6" rx="1" fill="currentColor"/>' +
@@ -83,6 +82,22 @@ const TOOLS: ToolDefinition[] = [
       "</svg>",
   },
 ];
+
+/** ツールボタンの並び(`TOOL_KEYS` との整合をテストで確かめる、QE-T02)。 */
+export const TOOL_IDS: ReadonlyArray<ToolId> = TOOLS.map((tool) => tool.id);
+
+/**
+ * ツールボタンの名前・ツールチップ・キー(QE-T02、UI_quick-edits §1.3)。名前とキーは
+ * `toolKeys.ts` の `TOOL_KEYS` 1 か所から組み立て、ボタンとキーの表示が食い違わないようにする。
+ */
+export function toolButtonAttributes(id: ToolId): {
+  ariaLabel: string;
+  title: string;
+  ariaKeyShortcuts: string;
+} {
+  const label = toolLabel(id);
+  return { ariaLabel: label, title: label, ariaKeyShortcuts: toolShortcutKey(id) };
+}
 
 export interface ToolButtonContext {
   activeTool: ToolId | null;
@@ -124,8 +139,10 @@ export function initToolbar(mount: HTMLElement): void {
     button.className = "icon-button tool-toolbar__button";
     button.innerHTML = tool.icon;
     button.setAttribute("aria-pressed", "false");
-    button.setAttribute("aria-label", tool.label);
-    button.title = tool.label;
+    const attributes = toolButtonAttributes(tool.id);
+    button.setAttribute("aria-label", attributes.ariaLabel);
+    button.setAttribute("aria-keyshortcuts", attributes.ariaKeyShortcuts);
+    button.title = attributes.title;
     button.addEventListener("click", () => {
       toggleActiveTool(tool.id);
     });

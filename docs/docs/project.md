@@ -101,6 +101,24 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 | `documentState`(`src/canvas/documentState.ts`、T32) | 表示中画像のドキュメント(ベース・オブジェクト配列・選択中id・ドラッグ中の下書き)の保持・操作・購読通知。永続化なし。新規Capture読込・履歴項目再読込で`resetDocument()` |
 | `maskSession`(`src/canvas/maskSession.ts`、AM-T06) | 自動マスキングの処理の状態(`idle`/`scanning`/`review`)・token・対象の画像の参照・候補(矩形・種類・外したか)。永続化なし(メモリのみ)。読み取った文字列は持たない。書き換えるのは `ui/autoMask.ts`(開始・結果・一括モザイク・やめる)・`ui/maskOverlay.ts`(外す/戻す)・`main.ts`(画像を差し替える前の `discardMaskSession()`)だけ |
 
+## アプリ内のキー操作(ツールの 1 キー切替)
+
+<!-- AIがコードベースから自動生成(QE-T02) -->
+
+修飾キーなしの 1 キーでツールを切り替える(FR-013)。表は `src/ui/toolKeys.ts` の `TOOL_KEYS` 1 か所で、ツールボタンの `aria-label`・`title`(`矢印(A)` の形)・`aria-keyshortcuts` も同じ表から組み立てる。`event.code`(物理キー)で引くので日本語入力がオンでも同じキーで動く。
+
+| キー | ツール |
+| ---- | ------ |
+| `A` | 矢印 |
+| `R` | 矩形 |
+| `O` | 円 |
+| `T` | テキスト |
+| `M` | モザイク |
+
+- 選んでいるツールのキーをもう一度押すと選択が外れる(ボタンと同じ `toggleActiveTool()`)
+- 効かないとき: 修飾キー付き(⌘C・⌘Z など)・押しっぱなしの繰り返し・IME の変換中・入力欄への入力中・画像が無いとき・ツールボタンが押せないとき(描画中・自動マスキングの処理中/確認中)・設定画面を開いている間
+- スタンプ(`N`)・スポットライト(`S`)・トリミング(`C`)はツールを追加するタスクで `TOOL_KEYS` に足す(それまでは何もしない)
+
 ## 制約事項
 
 <!-- project-config.md セクション1, 5, 11, 12 から展開 -->

@@ -157,8 +157,17 @@ async function drag(
   await page.mouse.up();
 }
 
+/** ツールボタンの名前(QE-T02 で `矢印(A)` の形になった。UI_quick-edits §1.3)。 */
+const TOOL_BUTTON_NAMES: Record<string, string> = {
+  矢印: "矢印(A)",
+  矩形: "矩形(R)",
+  円: "円(O)",
+  テキスト: "テキスト(T)",
+  モザイク: "モザイク(M)",
+};
+
 async function tool(page: Page, name: string): Promise<void> {
-  await page.getByRole("button", { name, exact: true }).click();
+  await page.getByRole("button", { name: TOOL_BUTTON_NAMES[name], exact: true }).click();
 }
 
 test.beforeAll(() => {

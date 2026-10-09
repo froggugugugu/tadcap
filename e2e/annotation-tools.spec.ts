@@ -121,8 +121,17 @@ async function openTextAt(page: Page, canvas: Locator, point: [number, number]):
   return input;
 }
 
+/** ツールボタンの名前(QE-T02 で `矢印(A)` の形になった。UI_quick-edits §1.3)。 */
+const TOOL_BUTTON_NAMES: Record<string, string> = {
+  矢印: "矢印(A)",
+  矩形: "矩形(R)",
+  円: "円(O)",
+  テキスト: "テキスト(T)",
+  モザイク: "モザイク(M)",
+};
+
 async function selectTool(page: Page, label: string): Promise<void> {
-  await page.getByRole("button", { name: label, exact: true }).click();
+  await page.getByRole("button", { name: TOOL_BUTTON_NAMES[label], exact: true }).click();
 }
 
 /** 色プリセットのボタンを選ぶ。「赤」など短い名前は他要素との部分一致を避け`exact: true`で指定する。 */

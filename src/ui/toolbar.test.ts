@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { beginScan, discardMaskSession } from "../canvas/maskSession";
-import { currentToolButtonContext, toolButtonState } from "./toolbar";
+import { TOOL_IDS, currentToolButtonContext, toolButtonAttributes, toolButtonState } from "./toolbar";
 
 // ツールボタンの押下・無効の判定(DOM 結線の `initToolbar` は E2E で確認する)。
 describe("toolButtonState", () => {
@@ -64,5 +64,26 @@ describe("currentToolButtonContext(ストアから組み立てる文脈)", () =>
     expect(context.isMasking).toBe(true);
     expect(toolButtonState("arrow", context).disabled).toBe(true);
     expect(toolButtonState("mosaic", context).disabled).toBe(true);
+  });
+});
+
+// QE-T02: ツールボタンの名前・ツールチップ・キー(UI_quick-edits §1.3)。表は `toolKeys.ts` の `TOOL_KEYS`。
+describe("toolButtonAttributes", () => {
+  it.each([
+    ["arrow", "矢印(A)", "A"],
+    ["rectangle", "矩形(R)", "R"],
+    ["ellipse", "円(O)", "O"],
+    ["text", "テキスト(T)", "T"],
+    ["mosaic", "モザイク(M)", "M"],
+  ] as const)("%s は aria-label・title が %s、aria-keyshortcuts が %s", (id, label, key) => {
+    expect(toolButtonAttributes(id)).toEqual({ ariaLabel: label, title: label, ariaKeyShortcuts: key });
+  });
+
+  it("TOOLS の全ツールに名前とキーがある", () => {
+    for (const id of TOOL_IDS) {
+      const attributes = toolButtonAttributes(id);
+      expect(attributes.ariaLabel).toMatch(/\([A-Z]\)$/);
+      expect(attributes.ariaKeyShortcuts).toMatch(/^[A-Z]$/);
+    }
   });
 });

@@ -44,7 +44,7 @@ async function openWith(page: Page, png: Buffer): Promise<Locator> {
   await page.goto("/");
   await page.getByRole("button", { name: "キャプチャ" }).click();
   await page.locator("#history-sidebar li").first().waitFor();
-  await page.getByRole("button", { name: "矩形", exact: true }).click();
+  await page.getByRole("button", { name: "矩形(R)", exact: true }).click();
   return page.locator("#capture-canvas");
 }
 

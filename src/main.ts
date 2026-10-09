@@ -71,7 +71,8 @@ import {
 } from "./ipc/settings";
 import { applyCaptureShortcutLabel } from "./ui/captureShortcutLabel";
 import { initSettingsDialog } from "./ui/settingsDialog";
-import { initToolbar } from "./ui/toolbar";
+import { bindToolKeys } from "./ui/toolKeys";
+import { currentToolButtonContext, initToolbar, toolButtonState } from "./ui/toolbar";
 import { initUndoButtons } from "./ui/undoButton";
 import { initArrangeButtons } from "./ui/arrangeButtons";
 import { initAutoMask } from "./ui/autoMask";
@@ -377,6 +378,9 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     initMaskOverlay(canvasEl);
     bindSelectionKeys();
+    // QE-T02: ツールの 1 キー切替(A・R・O・T・M)。`bindSelectionKeys()` の後に登録する(ARCH_quick-edits §11)。
+    // 押せるかどうかはツールボタンと同じ `toolButtonState()` で決める。
+    bindToolKeys((id) => toolButtonState(id, currentToolButtonContext()).disabled);
     // T29: 取り消し・やり直し(ボタン + Cmd+Z/Cmd+Shift+Z)。Undo/Redoスタックのクリアは
     // 画像差し替え完了後の`resetDocument()`(`handleCaptureCompleted`/`reloadHistoryItemIntoCanvas`)。
     const undoButtonEl = document.querySelector<HTMLButtonElement>("#undo-button");
