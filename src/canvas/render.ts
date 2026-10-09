@@ -12,6 +12,10 @@
 //! ブラウザのDOM/Canvas APIに直接依存するため、Vitestの既定環境(Node、DOM無し)
 //! では自動テストできない(project-config.md §11参照)。目視確認は手動確認
 //! チェックリスト#1に回す(T07仕様)。
+//! QE-T06で `getCanvasImageData()` に縮めてコピーの倍率 `ratio` を足した(縮めた大きさは
+//! `copyScale.ts` の純粋関数で決める)。
+
+import { shrunkSize } from "./copyScale";
 
 /**
  * URLから `HTMLImageElement` を読み込む。
@@ -53,30 +57,67 @@ export function renderImageToCanvas(
  * Canvasの現在ピクセル(矢印・モザイク焼き込み済みの最終画像)をRGBA8(行優先)で
  * 取得する(クリップボードコピー用、T12、`src/ipc/clipboard.ts::ClipboardImagePayload`)。
  *
+ * `ratio`(縮めてコピーの倍率、ARCH_quick-edits §1.3 #12、`copyScale.ts::copyRatio()`)が
+ * 1 より大きく、縮めた大きさ(`copyScale.ts::shrunkSize()`)が元と違うときだけ、その大きさの
+ * 別のCanvasへ高品質の縮小(`imageSmoothingQuality = "high"`)で描いてから読む。表示用の
+ * `canvas` 自体は変えない(FR-012: 縮めるのはクリップボードへ入れる画像だけ)。
+ * `ratio` を省略・1 以下にしたときは今までと同じ経路(原寸のまま読む)。
+ *
  * `ImageData.data` は `Uint8ClampedArray` だが、値はいずれも0-255のバイトであり
  * `Uint8Array` と同じ裏付け(`ArrayBuffer`)を指すビューを作るだけでよいため、
  * コピーせずそのまま `Uint8Array` として再解釈する。
  *
  * ブラウザのDOM/Canvas APIに直接依存するため、Vitestの既定環境(Node、DOM無し)
- * では自動テスト対象外とする(上記モジュールdoc参照)。
+ * では自動テスト対象外とする(上記モジュールdoc参照。縮小はQE-T08のE2Eで確かめる)。
  */
-export function getCanvasImageData(canvas: HTMLCanvasElement): {
+export function getCanvasImageData(
+  canvas: HTMLCanvasElement,
+  ratio = 1,
+): {
   rgba: Uint8Array;
   width: number;
   height: number;
 } {
-  const ctx = canvas.getContext("2d");
+  const size = shrunkSize(canvas.width, canvas.height, ratio);
+  const source =
+    size.width === canvas.width && size.height === canvas.height
+      ? canvas
+      : createShrunkCanvas(canvas, size.width, size.height);
+
+  const ctx = source.getContext("2d");
   if (!ctx) {
     throw new Error("2D描画コンテキストの取得に失敗した");
   }
   const { data, width, height } = ctx.getImageData(
     0,
     0,
-    canvas.width,
-    canvas.height,
+    source.width,
+    source.height,
   );
   const rgba = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   return { rgba, width, height };
+}
+
+/**
+ * `source` を `width`×`height` へ高品質の縮小で描いた新しいCanvasを返す
+ * (縮めてコピー用の内部ヘルパー、QE-T06)。
+ */
+function createShrunkCanvas(
+  source: HTMLCanvasElement,
+  width: number,
+  height: number,
+): HTMLCanvasElement {
+  const shrunk = document.createElement("canvas");
+  shrunk.width = width;
+  shrunk.height = height;
+  const ctx = shrunk.getContext("2d");
+  if (!ctx) {
+    throw new Error("2D描画コンテキストの取得に失敗した");
+  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, width, height);
+  return shrunk;
 }
 
 /** `canvas`をPNG化しObjectURLを返す(内部ヘルパー、T14)。 */
