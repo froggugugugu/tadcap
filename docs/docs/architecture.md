@@ -23,6 +23,7 @@
 - `shortcuts.rs`(T16): グローバルショートカット(既定 `Cmd+Shift+2`、FR-004)を登録するモジュール。`register_capture_shortcut()` が `tauri_plugin_global_shortcut::Builder` でプラグインを登録し、`GlobalShortcutExt::global_shortcut().register()` でキーを登録する。押下時(`ShortcutState::Pressed` のみ処理、`should_handle_shortcut_event()`)は `tray::run_capture_and_show_editor()` を呼ぶだけで、キャプチャ処理自体は実装しない(重複実装回避)。他アプリが既にキーを使用している等で `register()` が失敗しても `eprintln!` でログ出力するのみでアプリの起動は継続する(PJM指摘対応)。`default_capture_shortcut()`(キー構成)・`should_handle_shortcut_event()`(Pressedのみ処理する判定)はTauriランタイムに依存しない純粋関数としてユニットテスト対象。実際のキー登録・押下・前面表示はOSネイティブ導線のため手動確認チェックリスト#3へ。KS-T4: 現在のキーを管理状態`CaptureShortcutManager`に持ち、ハンドラは`should_trigger_capture()`(現在キーの押下・記録中でない)で判定。変更は`change_shortcut()`(旧キーを外す→新キー登録→保存、失敗時は元のキーを登録し直す。`ShortcutRegistrar`越しで偽の登録器でテスト)、検証は`validate_shortcut()`(⌘⌥⌃必須・⌘と1キー不可・⌘⇧3/4/5不可)。起動時は設定ファイルのキーを登録し、失敗しても保存値は変えない
 - `clipboard/`(T12、FR-005): クリップボード書込のRustフォールバックを閉じ込めるモジュール。`mod.rs` が `validate_rgba(width, height, bytes)`(`width`/`height`が0、または`bytes.len()`が`width*height*4`と不一致なら`ClipboardFallbackError`を返す純粋関数。空バイト列・不正長を含めユニットテスト対象)・`write_image_fallback(width, height, bytes)`(検証後に`arboard::Clipboard::new()`/`set_image()`でOSクリップボードへ書込。実OS呼び出しは自動テスト対象外、手動確認チェックリスト#5)を提供する。`commands::write_image_fallback`から呼ばれる
 - `capture/`: キャプチャ機能を閉じ込めるモジュール(ARCH §3.1・§4、T03)。`mod.rs` が `CaptureProvider` trait(`capture(&self, dest: &Path) -> io::Result<CaptureOutcome>`)・`CaptureResult`・`CaptureKind` を定義し、`tempfile.rs` が OS一時ディレクトリ配下の専用サブディレクトリ(`tadcap-captures/`)に一意なファイルパスを生成する。`permission.rs`(T04)は macOS の `CoreGraphics` フレームワークへ `extern "C"` 宣言で直接 FFI し(第三者プラグイン不使用、ARCH §15 決定#1)、`preflight_screen_recording_access()` で画面収録権限を確認する安全なラッパーを提供する。`request_screen_recording_access()`(`CGRequestScreenCaptureAccess`)はT08で `mod.rs::ensure_screen_recording_access()` から実使用を開始し(未許可時のみ1回呼ぶ純粋関数 `ensure_screen_recording_access_with()` に権限確認・要求の両方を注入してテストする、`run_with()` と同じ設計方針)、`commands::check_screen_recording_permission` から呼ばれる。`unsafe` は2関数の呼び出しのみに閉じ込め、追加クレートは使わない。`screencapture.rs`(T05)が `screencapture -i <dest>` を起動する `ScreenCaptureCli`(`CaptureProvider` 実装)を提供し、プロセス終了後に `dest` の存在有無で `Completed`/`Cancelled` を判定する(Escキャンセルはエラー扱いしない)。`mod.rs::run()`(T05〜T06)が権限事前確認 → 未許可なら `RunError::PermissionDenied` を返し起動しない → 一時ファイルパス生成 → `ScreenCaptureCli::capture()` の順で結線し、`Result<(CaptureOutcome, PathBuf), RunError>` を返す(T06 で戻り値に生成済み一時ファイルパスを追加し、`commands::capture_screen` が `CaptureResult.source_path` を構築できるようにした)。権限確認・プロセス起動の両方を注入可能な非公開の `run_with()` に処理を切り出し、実際に `screencapture` を起動せず・実OS権限にも依存せずユニットテストできるようにしてある。`commands.rs` からの呼び出し(T06、T16で `spawn_blocking` 経由に変更)を結線済み
+- `masking/`(AM-T04〜T25、自動マスキング): ベース画像の PNG を受け取り、文字の読み取り → 機密らしい箇所の検出 → 矩形の確定までを端末内・メモリだけで行う。外から見えるのは `scan()`・`MaskCandidate`・`MaskKind`・`ScanError` だけ(`pub(crate)`)。呼び出し口は `commands.rs` の `scan_sensitive_text`(二重実行防止 `TEXT_SCAN_IN_PROGRESS` + `TextScanGuard`、`spawn_blocking`、経過時間だけを `[tadcap:latency] origin=mask scan_ms=<ms> size=<w>x<h>` で記録)。検出側(`detect/`・`text.rs`・`layout.rs`・`geometry.rs`)は読み取りの実装に依存せず `RecognizedPage` トレイト越しに行を受け取る。読み取った文字列は IPC・ログに出さない(`docs/development-patterns.md` §11)。`lib.rs` の `install_panic_hook()` はパニックの文言を出さず発生場所だけを出す(AM-T25-F2)。方式の判断は `output/design/ADR_001_text-recognition.md`
 
 ### フロントエンド(`src/`、T07〜)
 
@@ -55,6 +56,10 @@
 - `ui/toolbar.ts`(T09土台、T10でモザイク有効化、FR-006・FR-008共通): 矢印/モザイクのツール切替UI。`TOOLS` 配列(T10で矢印・モザイクの2件)からボタンを生成し、クリックで `canvasState.toggleActiveTool()` を呼ぶ。`canvasState` の変化を購読して `aria-pressed`・活性状態(`isDrawing`中は非アクティブなボタンを無効化)に反映する。DOM生成を伴う `initToolbar()` はVitestの既定環境では自動テスト対象外(project-config.md §11参照)
 - `ui/shortcutGuards.ts`(T22【新設 2026-09-24】): `isEditableTarget(target)`(input/textarea/contentEditableかどうかの判定。テキスト入力中はアプリのショートカットを奪わない)を提供する純粋関数モジュール。T22で`clipboardButton.ts`から抽出し、`Cmd+Z`/`Cmd+Shift+Z`(T29)・テキスト入力欄表示中の判定(T27)からも再利用する(挙動不変)
 - `ui/clipboardButton.ts`(T12、FR-005。T22【改訂 2026-09-24】): 「クリップボードにコピー」ボタン + `Cmd+C`(通常の`keydown`リスナー、グローバルショートカットではない)。`isClipboardCopyEnabled(state)`(`image !== null`の判定)・`isCopyShortcut(event)`(`metaKey`+`c`/`C`の判定)・`clipboardCopyFeedbackMessage(result)`(plugin/fallback/errorごとの短い文言)は純粋関数としてユニットテスト対象。`isEditableTarget()`はT22で`ui/shortcutGuards.ts`へ抽出し、本ファイルは再importして使う(定義本体は無い、挙動不変)。`initClipboardButton()`(DOM生成・`canvasState`購読・`ipc/clipboard.ts::copyToClipboard()`呼び出し)はDOM依存のため自動テスト対象外(`captureButton.ts`と同じ方針)
+- `canvas/maskSession.ts`(AM-T06、自動マスキング): 候補の状態ストア(`idle → scanning → review → idle`、メモリのみ)。古い token・別の画像の結果を捨て、候補の外す/戻す・残っている矩形の取り出しを持つ。`ipc/`・`ui/` を import しない
+- `ipc/textScan.ts`(AM-T08): `scan_sensitive_text` に PNG を生のバイト列で送り、応答を検証する(各要素が `x/y/width/height/kind` の 5 キーちょうど・有限の整数・既知の種類。1 件でも不正なら全体を `invalid_response`)。エラーは `TextScanError`(`busy`/`failed`/`invalid_response`)で、文言に応答の中身を含めない
+- `ui/autoMask.ts`(AM-T15、AM-T25-F1): ボタン(取り消しとコピーの間)・⌘⇧M・処理中の表示・結果バー(件数・「まとめてモザイク」・「やめる」/Esc)と処理の組み立て(`exportBase` → `scan` → `acceptScanResult`、一括モザイクは `documentState.applyBaseEdits()` + `mosaicTool.pixelateRect()`)。文言は `AUTO_MASK_MESSAGES` に集約(保証の表現なし)。表示中の画像が変わると候補を破棄する(`bindMaskSessionToCanvasImage`)。処理中・確認中は描画ツール・取り消し・重ね順・削除を止め、⌘C は効く(AM-T13)
+- `ui/maskOverlay.ts`(AM-T12): Canvas に重ねた `.mask-overlay` に候補ごとの `<button class="mask-mark">` を % 指定で置く(Canvas のピクセル・コピー・履歴には入らない)。4 種の色と 2 重の縁取り、外した印は破線・半透明(`aria-pressed`)、ラベルの左右の自動配置。文字列は `textContent` だけで入れる
 
 ## ディレクトリ構成
 
@@ -72,7 +77,8 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 ├── ipc/                      # Rustコマンド呼び出し・イベント購読の薄いラッパー(T07〜)
 │   ├── capture.ts            # startCapture()・onCaptureCompleted()(T07)。T08で onCaptureError()(capture://error購読)を追加
 │   ├── permissions.ts        # checkScreenRecordingPermission()・openScreenRecordingSettings()・isPermissionDeniedError()(T08)
-│   └── clipboard.ts          # copyToClipboard()(プラグイン優先→Rustフォールバック、T12)
+│   ├── clipboard.ts          # copyToClipboard()(プラグイン優先→Rustフォールバック、T12)
+│   └── textScan.ts           # scan_sensitive_text の呼び出しと応答の検証(AM-T08、自動マスキング)
 ├── canvas/                   # Canvas状態・描画ロジック(T07〜)
 │   ├── canvasState.ts        # 現在表示中の画像を保持する薄い状態オブジェクト(T07)。T09で選択中ツール・描画中フラグを追加。T14で`CanvasImage.capture`をnullable化(履歴からの再読込対応)
 │   ├── render.ts             # 画像読み込み・Canvas描画(T07)。T12で getCanvasImageData()(RGBA8抽出)を追加。T14で captureHistoryAssets()(履歴保存用image/thumbnailのObjectURL抽出)を追加
@@ -84,6 +90,7 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 │   ├── commands.ts           # 取り消し・やり直しのコマンド(T32)
 │   ├── documentState.ts      # ドキュメント(ベース+オブジェクト+選択+下書き)の状態と操作(T32)
 │   ├── documentSurface.ts    # ベースのオフスクリーンcanvasと合成描画(DOM、T32)
+│   ├── maskSession.ts        # 自動マスキングの候補の状態(idle/scanning/review、メモリのみ、AM-T06)
 │   └── tools/
 │       ├── shapeTools.ts     # 矢印/矩形/円の共通ポインタ結線+ハンドル用オーバーレイ(T31)
 │       ├── arrowTool.ts      # 矢印の座標計算・描画(T09。T31でポインタ結線をshapeTools.tsへ移動)
@@ -102,7 +109,9 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 │   ├── toast.ts              # 右下トーストの自動消去(`showToast()`/`clearToast()`、成功・情報2.5秒/エラー5秒、reduced-motionはフェードなし。v0.2.0後フィードバック)
 │   ├── shortcutGuards.ts     # `isEditableTarget()`(編集可能要素の判定、T22、`clipboardButton.ts`から抽出)
 │   ├── clipboardButton.ts    # 「クリップボードにコピー」ボタン + Cmd+C(T12)。T14で成功時フック`onCopySuccess`を追加。T22で`isEditableTarget()`を`shortcutGuards.ts`へ抽出。v0.2.2後: 戻り値を`ClipboardButtonController`にし、キャプチャ直後の自動コピー`copyAfterCapture`(履歴の上書きフックは呼ばない、トーストは「キャプチャを…」)を追加
-│   └── sidebar.ts            # セッション内履歴サイドバー(T14、FR-010)。項目クリックでCanvasへ再読込。v0.2.2後: サムネイルのホバーで右上に×(1件削除、表示中なら隣を表示・最後の1件なら空状態)、一覧の上の「すべて削除」(`<dialog>`で確認)。クリックと削除は同じキューで直列化。一覧だけがスクロールする
+│   ├── sidebar.ts            # セッション内履歴サイドバー(T14、FR-010)。項目クリックでCanvasへ再読込。v0.2.2後: サムネイルのホバーで右上に×(1件削除、表示中なら隣を表示・最後の1件なら空状態)、一覧の上の「すべて削除」(`<dialog>`で確認)。クリックと削除は同じキューで直列化。一覧だけがスクロールする
+│   ├── autoMask.ts           # 自動マスキングのボタン・⌘⇧M・処理中表示・結果バー・一括モザイク(AM-T15)
+│   └── maskOverlay.ts        # 自動マスキングの候補の印(Canvas に重ねた DOM のボタン、AM-T12)
 ├── assets/                   # 既存(vite/tauri/typescriptロゴ。index.htmlからは参照撤去済み、T07)
 └── test/
     ├── smoke.test.ts         # Vitest 配線確認用プレースホルダ(T01)
@@ -111,10 +120,13 @@ scripts/
 ├── latency-summary.mjs       # NFR-001中間計測ログ([tadcap:latency]行)の集計スクリプト(依存追加なし、T11)
 ├── gen-third-party-licenses.mjs # 依存のライセンス全文 THIRD_PARTY_LICENSES.md の生成・照合(`npm run licenses` / `licenses:check`、依存追加なし)
 └── mask-eval-fixtures.mjs    # 自動マスキングの評価用画像と正解 eval/masking/ の生成・自己検査(AM-T05、既存の Playwright のみ)
-eval/masking/                 # 自動マスキングの評価セット(架空データのみ)
-├── pages/                    # 架空画面の HTML(正解を <span data-mask="種類/細分"> で囲む。トークン形は実行時に組み立てる)
+eval/masking/                 # 自動マスキングの評価セット(架空データのみ。MASK_EVAL_SET で選ぶ)
+├── pages/                    # 本番(規則の調整に使う)の架空画面の HTML(正解を <span data-mask="種類/細分"> で囲む。トークン形は実行時に組み立てる)
 ├── images/                   # 7 画面 × フルHD/Retina × 明/暗 = 28 枚
-└── truth.json                # 正解の矩形・種類・細分(文字列は持たない)
+├── truth.json                # 正解の矩形・種類・細分(文字列は持たない)
+├── holdout/                  # ホールドアウト 1(サポートデスク・名刺管理、8 枚)。書式の拡張 1 周目の開発用に転用済み
+├── holdout2/                 # ホールドアウト 2(社内ポータル・SaaS 管理画面、8 枚)。書式の拡張 2 周目の開発用に転用済み
+└── holdout3/                 # ホールドアウト 3(賃貸管理・海外送金、8 枚)。最終確認用。規則の調整に使わない
 src-tauri/src/                # Rustバックエンド
 ├── main.rs                   # 既存。バイナリエントリーポイント
 ├── settings.rs               # アプリ設定ファイル(`app_config_dir()/settings.json`、`{version, captureShortcut}`)の読込・原子的書込(KS-T1)
@@ -125,6 +137,22 @@ src-tauri/src/                # Rustバックエンド
 ├── tray.rs                    # メニューバー常駐トレイの構築(T15、FR-009)。T16でrun_capture_and_show_editor()をasync_runtime::spawn化。T11でorigin/start(Instant)引数を追加(NFR-001中間計測)
 ├── window_front.rs             # エディタウィンドウの前面化処理(B2、tray.rsから分離)。run_on_main_thread + 再試行計画・診断ログ([tadcap:front])
 ├── shortcuts.rs                # グローバルショートカット登録(T16、FR-004)。既定キーCmd+Shift+2、tauri-plugin-global-shortcut使用。T11でハンドラ内にInstant::now()記録を追加(NFR-001中間計測)
+├── masking/                    # 自動マスキング(端末内・メモリのみ。AM-T04〜T25)
+│   ├── mod.rs                  # scan() の入口、MaskCandidate / MaskKind / ScanError、RecognizedPage トレイト
+│   ├── png.rs                  # PNG の署名・IHDR の検証(各辺 16384px・128MiB まで。画像は展開しない)
+│   ├── ocr.rs                  # OS の文字認識の呼び出し(objc2-vision、精度優先・ja-JP→en-US・言語補正オフ。macOS のみ)
+│   ├── text.rs                 # SensitiveText(Debug は伏せ字・Display なし)、全角→半角の 1 対 1 正規化、UTF-16 位置の対応
+│   ├── layout.rs               # ラベルの右隣(高さの 25% までの重なりを許す)・直下の行・表の列
+│   ├── geometry.rs             # 正規化座標→ピクセル、余白 max(2px, 行の高さ×0.25)、画像内への収め、重複の除去
+│   ├── eval.rs                 # #[cfg(test)] #[ignore] の評価ハーネス(MASK_EVAL_SET / MASK_EVAL_LABEL / MASK_EVAL_DATE)
+│   ├── lexicon/                # include_str! で埋め込む自作辞書(日本の姓・ローマ字の姓・名・都道府県)
+│   └── detect/                 # 検出規則(読み取りの実装に依存しない)
+│       ├── mod.rs              # 全検出器を回して Match(行・UTF-16 範囲・種類・細分)を集める
+│       ├── contact.rs          # ①連絡先: メール・電話番号・住所
+│       ├── credential.rs       # ②認証情報: 接頭辞付きトークン・長いランダム列・手がかり語の値・URL のクエリ
+│       ├── identifier.rs       # ③識別子: 手がかり語付きの番号・人名・会社名
+│       ├── financial.rs        # ④金額・口座: カード番号・口座番号(IBAN 含む)・通貨付きの金額
+│       └── lexicon.rs          # 手がかり語・接頭辞・敬称・会社の種類などの定数と辞書の読み込み
 ├── clipboard/                  # クリップボード書込のRustフォールバック(T12、FR-005)
 │   └── mod.rs                  # validate_rgba()・write_image_fallback()(arboard使用)
 └── capture/                   # キャプチャ機能(T03〜T06、T08、T11)
@@ -152,10 +180,11 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `src/canvas/undoStack.test.ts` | 【改訂 2026-09-24 T32】要素を`DocumentCommand`に変更: `withPushedCommand()`(Redoクリア・上限30件)/`withPoppedUndo()`・`withPoppedRedo()`(LIFO・`apply`の戻り値を反対側へ積む・空は`null`で`apply`を呼ばない・Redo側の上限)/`canUndoState()`/`canRedoState()`、ストア(`pushCommand`・`popUndo/popRedo`の往復・新規操作でRedoクリア・`clearUndoStack`・購読解除)(T23、FR-014) |
 | `src/canvas/objectModel.test.ts` | T32: `OBJECT_LIMIT`=50、`insertObject`(範囲外の丸め・イミュータブル)/`removeObject`/`replaceObjectShape`/`findObject`、`hitTestObjectOutline`(矩形・円は線の付近のみ・内側中央と円の外接矩形の角は当たらない・矢印は胴体。矩形の角丸の外側は当たらない)、`pickObjectAt`(最前面優先・外れは`null`) |
 | `src/canvas/commands.test.ts` | T32: add/update/remove の取り消し・やり直し、pixels・flatten の入れ替え方式(往復でピクセルとオブジェクトが戻る)、group は逆順取り消し・順やり直し |
-| `src/canvas/documentState.test.ts` | T32(偽のサーフェス): `resetDocument`、`addShapeObject`(最前面追加・選択・取り消しで選択解除・やり直し・新規操作でRedoクリア)、上限(50個まで焼き込まない/51個目で最古をベースへ焼き込み1回の取り消しで両方戻る・やり直しは再描画せずピクセルを戻す/超過し続けても50個)、`commitShapeEdit`(update・形が同じなら積まない・存在しないidは無視)、`applyBaseEdit`(ベースだけ変えpixelsで往復・空矩形は無視)、選択は取り消し対象外、下書き・購読通知、サーフェス未登録時 |
+| `src/canvas/documentState.test.ts` | T32(偽のサーフェス): `resetDocument`、`addShapeObject`(最前面追加・選択・取り消しで選択解除・やり直し・新規操作でRedoクリア)、上限(50個まで焼き込まない/51個目で最古をベースへ焼き込み1回の取り消しで両方戻る・やり直しは再描画せずピクセルを戻す/超過し続けても50個)、`commitShapeEdit`(update・形が同じなら積まない・存在しないidは無視)、`applyBaseEdit`(ベースだけ変えpixelsで往復・空矩形は無視)、選択は取り消し対象外、下書き・購読通知、サーフェス未登録時。AM-T07: `applyBaseEdits()`(複数の矩形が 1 つの `group` になり、重なっていても 1 回の取り消しで元の画素に戻る・やり直し・0 件は何も積まない・戻り値は加工した件数) |
 | `src/history/historyQueue.test.ts` | 前の処理が終わるまで次を始めない/失敗は呼び出し元へ返し後続は止めない |
 | `src/history/documentArchive.test.ts` | T34: `commandPixelBytes`(pixels・flatten・groupの中)、`trimUndoToBudget`(上限以内はそのまま/古い取り消し→遠いやり直しの順に連続して捨てる)、8MB上限、履歴idごとの保存・取得・削除と保存時の上限適用、`archivedDocumentBytes`(実測バイト数) |
 | `src/ui/arrangeButtons.test.ts` | T34: `arrangeShortcutCommand`(⇧⌘F=最前面・⇧⌘B=最背面、修飾違い・他キー・入力欄フォーカス中は対象外) |
+| `src/canvas/maskSession.test.ts` | AM-T06: `idle → scanning → review → idle` の遷移、古い token・別の画像の結果を捨てる、二重開始しない、候補の外す/戻す、`activeRects()`(外した候補を除く)、購読 |
 
 ### Canvasツールテスト
 
@@ -165,7 +194,7 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `arrowTool.test.ts` | `src/canvas/tools/` | `arrowLineWidth()`(Canvas対角線からの線幅算出・上下限クランプ、T25追補で20px/6px/48pxへ改訂、T31で1.5倍の30px/9px/72pxへ改訂)、`arrowHeadLength()`、`arrowHeadWidth()`(T25追補で新設)、`arrowShadowParams()`(T25追補で新設)、`computeArrowGeometry()`(斜め/水平ドラッグでの矢じり左右対称配置を幾何関係で検証、ドラッグ距離2px未満は`null`)、`computeTaperArrowBoundingRect()`(シャドウ込み余白の厳密値検証、T25追補で追加)(T09)。DOM/Canvas依存の`bindArrowTool()`は対象外(project-config.md §11参照)。T25で`cropSnapshotRect()`のテストは`coords.test.ts`へ移設 |
 | `shapeEdit.test.ts` | `src/canvas/` | 編集中の図形(T31): `createShapeFromDrag()`・`getShapeHandles()`・`hitTestShape()`(ハンドル優先・矩形/楕円の内側・矢印の胴体)・`resizeShape()`(対角固定・反転時の正規化・Shift正方形・最小サイズ未満は据え置き・Canvasクランプ)・`moveShape()`(はみ出さないよう移動量をクランプ)・`applyEditDrag()`・`decidePointerDown()`(T32で一般化: 選択中のハンドル・内側/未選択は線の付近で選択+移動/最前面優先/空白は作成 or 選択解除/モザイク・テキスト中は掴まない/選択idが無い場合)・`shapeUndoRect()`・`cursorForHit()` |
 | (廃止 T32)`pendingShape.test.ts` | `src/canvas/` | `documentState.test.ts` に置き換え |
-| `mosaicTool.test.ts` | `src/canvas/tools/` | `computeMosaicRect()`(`coords.ts`の`normalizeRect()`/`clipRectToCanvas()`を利用、正規化+クリップの合成、ドラッグ距離2px未満は`null`)、`mosaicBlockSize()`(典型サイズ・5K Retina相当・下限12px/上限64pxクランプ)、`pixelateImageData()`(単一ブロックのRGBA平均、ブロックサイズで割り切れない端数ブロックの平均、単色画像は不変、入力配列を変更しない、ブロックサイズが矩形より大きい場合の全体1ブロック化)(T10)。T20で`normalizeRect()`/`clipRectToCanvas()`自体のテストは`coords.test.ts`へ移設。T25で`cropSnapshotRect()`/`roundRect()`のテストも`coords.test.ts`へ移設。DOM/Canvas依存の`bindMosaicTool()`は対象外(project-config.md §11参照) |
+| `mosaicTool.test.ts` | `src/canvas/tools/` | `computeMosaicRect()`(`coords.ts`の`normalizeRect()`/`clipRectToCanvas()`を利用、正規化+クリップの合成、ドラッグ距離2px未満は`null`)、`mosaicBlockSize()`(典型サイズ・5K Retina相当・下限12px/上限64pxクランプ)、`pixelateImageData()`(単一ブロックのRGBA平均、ブロックサイズで割り切れない端数ブロックの平均、単色画像は不変、入力配列を変更しない、ブロックサイズが矩形より大きい場合の全体1ブロック化)(T10)。T20で`normalizeRect()`/`clipRectToCanvas()`自体のテストは`coords.test.ts`へ移設。T25で`cropSnapshotRect()`/`roundRect()`のテストも`coords.test.ts`へ移設。DOM/Canvas依存の`bindMosaicTool()`は対象外(project-config.md §11参照)。AM-T07: `pixelateRect()`(既存のモザイクと同じ処理・ブロックサイズ) |
 | `rectangleTool.test.ts` | `src/canvas/tools/` | `rectangleLineWidth()`(Canvas対角線からの枠線幅算出・上下限クランプ、矩形サイズ非依存)、`constrainToSquare()`(Shift押下時の正方形補正、通常/逆方向/既に正方形の各ケース)、`computeRectangleGeometry()`(正規化+クリップ、ドラッグ距離2px未満・Canvasはみ出し・Shift併用)、`computeRectangleBoundingRect()`(線幅分の余白を含む整数外接矩形、Canvas端でのクリップ)(T25)。`rectangleCornerRadius()`(線幅×2.5・短辺×0.25で頭打ち・幅0で0)。DOM/Canvas依存の`bindRectangleTool()`は対象外(project-config.md §11参照) |
 | `ellipseTool.test.ts` | `src/canvas/tools/` | `ellipseLineWidth()`(Canvas対角線からの枠線幅算出・上下限クランプ、外接矩形サイズ非依存)、`constrainToSquare()`(Shift押下時の正方形補正)、`computeEllipseCenterAndRadii()`(外接矩形→中心・X半径・Y半径)、`computeEllipseGeometry()`(正規化+クリップ、ドラッグ距離2px未満・Canvasはみ出し・Shift併用で正円)、`computeEllipseBoundingRect()`(線幅分の余白を含む整数外接矩形、Canvas端でのクリップ)(T26)。DOM/Canvas依存の`bindEllipseTool()`は対象外(project-config.md §11参照) |
 
@@ -187,6 +216,9 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `colorPicker.test.ts` | `src/ui/` | `COLOR_PRESETS`(6色・先頭が既定ピンク・形式・重複なし)、`colorAtPresetIndex()`、`presetIndexOfColor()`(大小文字無視・プリセット外は-1)、`toColorInputValue()`(T28) |
 | `fontSizePicker.test.ts` | `src/ui/` | `FONT_SIZE_OPTIONS`、`fontSizeGlyphHeight()`(大小比が`FONT_SIZE_MULTIPLIER`に一致)(T28) |
 | `undoButton.test.ts` | `src/ui/` | `undoShortcutCommand()`(Cmd+Z/Cmd+Shift+Z、修飾・入力欄・type=color)、`undoAvailability()`・`resolveUndoCommand()`(編集中図形=破棄・やり直し無効、ドラッグ中は無効)(T29) |
+| `textScan.test.ts` | `src/ipc/` | AM-T08: 生のバイト列での invoke、応答の検証(5 キーちょうど・整数・既知の種類。余分なフィールドや 1 件の不正で全体を `invalid_response`)、`text_scan_busy`/`text_scan_failed` の変換、エラー文言に応答を含めない |
+| `autoMask.test.ts` | `src/ui/` | AM-T15・AM-T25-F1: 開始条件(画像あり・idle・ドラッグ中でない)、⌘⇧M と Esc の判定(入力欄・IME 変換中は奪わない)、結果バーの表示と文言、IPC の応答 → 候補の詰め替え、一括モザイク(実際に加工した件数)、失敗時のトースト、画像の差し替えで候補を破棄 |
+| `maskOverlay.test.ts` | `src/ui/` | AM-T12: 画像のピクセル → % の矩形、種類ごとの表示・`aria-*`、外した印の `aria-pressed`、ラベルの左右の配置、Tab の順序 |
 
 `src/ui/toolbar.ts`(T09土台・T10でモザイク有効化)はDOM生成・`canvasState`購読を伴うため自動テスト対象外(`permissionBanner.ts`と同じ方針、project-config.md §11参照)。ツール切替のロジック自体は上記`canvasState.test.ts`の`toggleTool()`/`toggleActiveTool()`で検証する。
 
@@ -197,7 +229,7 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | テストファイル | 配置先 | 対象 |
 | -------------- | ------ | ---- |
 | `smoke.test.ts` | `src/test/` | Vitest 配線確認用のプレースホルダ(`1+1=2`、T01) |
-| `latencySummary.test.ts` | `src/test/` | `scripts/latency-summary.mjs`(依存追加なしのNode集計スクリプト)の `parseLatencyLine()`/`parseLatencyLog()`/`median()`/`summarize()`/`formatSummaryTable()` を検証(NFR-001中間計測、T11)。型定義のないプレーンJSモジュールのため `@ts-expect-error` でimportする |
+| `latencySummary.test.ts` | `src/test/` | `scripts/latency-summary.mjs`(依存追加なしのNode集計スクリプト)の `parseLatencyLine()`/`parseLatencyLog()`/`median()`/`summarize()`/`formatSummaryTable()` を検証(NFR-001中間計測、T11)。型定義のないプレーンJSモジュールのため `@ts-expect-error` でimportする。AM-T24: 自動マスキングの `origin=mask scan_ms=` の行の読み取りと、画像サイズ(フル HD / その他)ごとの中央値・最大値・3000ms 判定 |
 
 ### Rust ユニットテスト(`cargo test`、コロケーション `#[cfg(test)] mod tests`)
 
@@ -217,6 +249,13 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `shortcuts.rs` | `default_capture_shortcut()`(Cmd+Shift+2で構成されること、Cmd+Shift+4等の他キー組み合わせにマッチしないこと)・`should_handle_shortcut_event()`(`ShortcutState::Pressed`のみ処理しReleasedは無視する判定)の純粋関数テスト(T16)。`register_capture_shortcut()`(実際のプラグイン登録・OSキー登録)はTauriランタイム・OSネイティブ導線に依存するため自動テスト対象外。手動確認チェックリスト#3へ | KS-T4: `validate_shortcut`(修飾なし・⇧のみ・⌘と1キー・⌘⇧3/4/5・修飾キーそのもの)/`parse_capture_shortcut`/文字列の往復/`initial_capture_shortcut`(保存値・無い・壊れた値)/`should_trigger_capture`(記録中・別キー・Released)/`CaptureShortcutInfo`のJSON/偽の登録器で`change_shortcut`(成功・同じキー・登録失敗の巻き戻し・保存失敗の巻き戻し・未登録からの変更・再登録も失敗)
 | `settings.rs` | KS-T1: ファイル無し→既定/保存と読込の往復(ディレクトリ作成・一時ファイルを残さない)/版番号とcamelCase/既定値はキーを書かない/壊れたJSON→既定/未知フィールド無視・版番号なしも読める/上書き |
 | `app_menu.rs` | KS-T6: `app_menu_action_from_id`(設定のIDだけ、トレイのIDや既定メニューのIDは`None`) |
+| `masking/text.rs`・`png.rs` | AM-T04: `SensitiveText` の `Debug` が伏せ字(`Display` は `compile_fail` の doctest)、全角→半角の 1 対 1 正規化、UTF-16 位置の対応(日本語・絵文字・結合文字)、PNG の署名・IHDR・上限 |
+| `masking/geometry.rs`・`layout.rs` | AM-T09: 正規化座標→ピクセル、余白、画像内への収め、重複の除去、ラベルの右隣(わずかな重なりを許す)・直下・表の列 |
+| `masking/detect/*.rs` | AM-T11・T14・T16・T21〜T23・書式の拡張: 4 種の検出規則の境界値(区切り・全角/半角・桁数・Luhn・mod-97・誤読の許容・手がかり語・辞書)。偽物の `RecognizedPage` で行い、読み取りは使わない。AM-T25-F2 で絵文字・結合文字・ZWJ を挟んだ境界と、無作為な 3000 行でパニックしないこと |
+| `masking/mod.rs` | AM-T18: `scan_page` の組み立て(検出 → 矩形 → 重複除去)、戻り値に文字列が無いこと。実機の読み取りを通す 1 件は `#[ignore]` |
+| `masking/ocr.rs` | AM-T10: 実機の読み取り 5 件(すべて `#[ignore]`。`cargo test -- --ignored masking::ocr`) |
+| `masking/eval.rs` | AM-T19: 判定(候補の和で 100% 覆う)・集計・出力名・評価セットの選択の単体テストと、`#[ignore]` の評価ハーネス `masking_eval`(`docs/development-patterns.md` §11.3) |
+| `commands.rs`(自動マスキング分)・`lib.rs` | `text_scan` の排他(二重実行を `text_scan_busy` にし、失敗の後も下りる)、生のバイト列以外は `text_scan_failed`、エラーの固定文字列。`panic_report()` が文言を含めず発生場所だけを返す(AM-T25-F2) |
 
 ### E2Eテスト
 
@@ -238,6 +277,7 @@ Vite dev server上のページを開き `e2e/fixtures/tauriMock.ts` が `page.ad
 | `e2e/shape-edit.spec.ts` | T31: 編集中の図形はコピー時に確定されて写りハンドル(白)は写らない(コピーRGBA=Canvas、近白画素0)/矩形の右下ハンドルでリサイズ/矢印の胴体ドラッグで移動+Enter確定/Escで破棄/次の図形の描き始めで直前の図形が確定。T32で後ろ2件を「Escは選択解除でCmd+Zで描く前に戻る」「次の図形を描いても前の図形は残り、取り消しは新しい方から」に変更 |
 | `e2e/object-layer.spec.ts` | T32: 確定後の矢印を選び直して移動・リサイズ→Cmd+Z×2で編集前とバイト一致/51個目で最古が焼き込まれ選べなくなり、1回の取り消しで戻る/選択中(ハンドル表示中)のCmd+Cでもコピー結果にハンドルが写らない/モザイクはベースにだけ効き上の矩形は隠れず後から動かせる/テキストはベースへ焼き込まれ矩形より下(T33で「テキストもオブジェクトとして重ね順に入り、後から置けば矩形より上・Cmd+Zで消える」に変更) |
 | `e2e/capture-flow.spec.ts` | v0.2.2後: キャプチャするとボタンを押さずに無編集の画像がクリップボードに入り(Canvasと一致・注釈色なし)、トーストは「キャプチャを…」、後から描いても自動コピーされた画像は変わらない。`e2e/fixtures/captureReady.ts`は自動コピーの1回が済むまで待つ(各specのコピー回数はこの1回を含む)。①「キャプチャ→矢印描画→モザイク適用→クリップボードコピーで履歴に1件表示・選択される」: キャプチャボタン押下 → `capture_screen`モック(`capture://completed`をemit)→ Canvasに画像表示 → 矢印ツールへ切替・ドラッグ(既定色`#FF5C8A`付近の画素を`getImageData()`で検証)→ モザイクツールへ切替(排他確認)・ドラッグ(ブロック平均によるピクセル変化を検証)→「クリップボードにコピー」(`plugin:image|new`→`plugin:clipboard-manager|write_image`呼び出し回数で成功を検証)→ 成功フィードバック表示 → 履歴サイドバー(`#history-sidebar`)に1件・選択状態(`.history-sidebar__item--selected`)。②「画面収録権限が未許可(permission_denied)の場合、キャプチャ実行時に権限バナーが表示される」: `capture_screen`が`"permission_denied"`でrejectする場合に`.permission-banner`が表示されることを検証(T13実装時点で既知の不具合(project-config.md §11参照)により本テストはfailする) |
+| `e2e/auto-mask.spec.ts` | AM-T17・AM-T25-F1(15 件): 開始条件・処理中・印の外す/戻す・まとめてモザイク(外した領域は不変、取り消し 1 回で復元、やり直し)・二重実行・Esc・⌘C に印が写らない・確認中の操作制限・0 件・失敗 3 通り・画像の切替で候補を破棄・表示倍率の変化で印のずれ 1px 以内。`tauriMock.ts` の `scan_sensitive_text` は矩形と種類だけを返す |
 
 fixture画像は `e2e/fixtures/sampleCapturePng.ts` が `node:zlib` のみでチェッカーボードPNGを
 生成する(依存追加なし)。画像は`read_capture_image`モック(`captureImageBase64`)で渡す。

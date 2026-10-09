@@ -26,6 +26,9 @@ npm run test               # Vitest（watch）
 npm run test:run           # Vitest 一回実行
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+npm run mask:fixtures      # 自動マスキングの本番の評価セット(eval/masking/)の画像と truth.json を作り直し、自己検査する(:holdout / :holdout2 / :holdout3 で各ホールドアウト)
+MASK_EVAL_LABEL=<名前> cargo test --manifest-path src-tauri/Cargo.toml masking::eval -- --ignored --nocapture
+                           # 実機で検出率を測る(読み取りに OS の文字認識を使うため Mac で実行)。MASK_EVAL_SET=holdout3 等でホールドアウト。使い方と注意は project-config.md §3
 npm run licenses           # THIRD_PARTY_LICENSES.md(依存のライセンス全文)を作り直す。依存を変えたら実行してコミット(release.yml が licenses:check で照合)
 npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip(APPLE_SIGNING_IDENTITY 等があれば Developer ID 署名 + 公証、無ければアドホック署名)
 ```
@@ -51,6 +54,7 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 | メニューバー常駐 | Tauri コア機能 `tray-icon` feature（追加クレートなし、T15）。`src-tauri/src/tray.rs` が「キャプチャ/エディタを開く/終了」3項目メニューを構築し、Dockアイコンは v0.3.1 から表示する(以前は `ActivationPolicy::Accessory` で非表示。Dockのアイコンを押すと`RunEvent::Reopen`でエディタを前面に出す)。エディタの前面化は `objc2` 0.6 / `objc2-app-kit` 0.3(macOSのみ。tao が既に依存している版・機能の範囲)で `NSApplication::activate` + `NSWindow::orderFrontRegardless` を併用する(実機不具合①) |
 | グローバルショートカット | `tauri-plugin-global-shortcut` 2.x（Rustクレートのみ、T16）。`src-tauri/src/shortcuts.rs` が既定キー `Cmd+Shift+2` を登録し、押下（`ShortcutState::Pressed`）時に `tray::run_capture_and_show_editor()` を呼ぶ。JS側パッケージ・`capabilities/default.json` の権限追加はいずれも不要(フロントから呼ばずRustネイティブAPIのみで完結するため) |
 | クリップボード | `tauri-plugin-clipboard-manager` 2.x（JS/Rust両方、T12）+ `arboard` 3.x（Rustフォールバックのみ、T12）。`src/ipc/clipboard.ts::copyToClipboard()` がまず `@tauri-apps/api/image::Image.new(rgba, width, height)` + `writeImage()`(主経路)を試行し、失敗時のみ Rust コマンド `write_image_fallback`(`src-tauri/src/clipboard/mod.rs` が `arboard::Clipboard::set_image()` を呼ぶ)へ切り替える。Canvas の `getImageData()` 由来の生RGBA8を主経路・フォールバック共通のペイロードにしている(ARCH §5.2は`toBlob('image/png')`のPNGバイト列を想定していたが、`arboard`がPNGデコードをサポートせずデコード用クレート追加はARCH承認範囲外のため変更した。理由はproject-config.md §11参照)。フォールバックへの転送は`invoke()`の生ボディ渡し(`Uint8Array`をpayload引数に直接渡す)を使い、JSON配列化によるサイズ膨張を避ける(`width`/`height`はヘッダーで渡す)。`capabilities/default.json` は `clipboard-manager:allow-write-image` のみ追加(読み取り権限は付与しない) |
+| 自動マスキング(AM-T03〜T25) | `objc2-vision` 0.3.2(新規、`default-features = false`、文字の読み取りに要る機能だけ)で OS の文字認識を Rust から直接呼ぶ。`objc2-foundation`・`objc2-core-foundation`・`regex` を直接依存に昇格(いずれも既に `Cargo.lock` にあった)。辞書は `include_str!` で埋め込む自作のテキスト。npm の依存は増やしていない。方式の判断は `output/design/ADR_001_text-recognition.md` |
 
 ## IPC コマンド一覧
 
@@ -64,6 +68,7 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 | `activate_app`(v0.2.2、`async fn`) | なし | `()` | 発生しない(OSがアクティブ化を拒否しても成功扱い) | なし。テキスト入力欄のフォーカス時にフロント(`ipc/app.ts::requestAppActivation`、即時+150ms後に1回)が呼ぶ。非アクティブかつウィンドウ表示中のときだけ`NSApplication::activate`を要求(`window_front.rs::should_request_activation`)。`WindowEvent::Focused(true)`でも同じ処理を行う(`lib.rs`) |
 | `open_screen_recording_settings`(T08) | なし | `()` | `AppError::Internal`(`opener` プラグインの起動失敗時) | なし。固定URL `x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture` のみを開く(フロントエンドからURLは渡せない、ARCH §12) |
 | `write_image_fallback`(T12、`async fn`) | 通常のJSON引数ではなく `tauri::ipc::Request` の生ボディ(RGBA8バイト列)+ ヘッダー(`x-tadcap-image-width`/`x-tadcap-image-height`) | `()` | `AppError::Internal`(ヘッダー欠落・不正値、`width*height*4`とバイト長の不一致、`arboard`の書込失敗のいずれも`Internal`に集約。専用バリアントは追加しない、YAGNI) | なし |
+| `scan_sensitive_text`(AM-T18、`async fn`) | `tauri::ipc::Request` の生ボディ(ベースの PNG のバイト列。ヘッダーなし、幅・高さは IHDR から読む) | `MaskCandidate[]` = `{ x, y, width, height, kind }`(整数ピクセル・余白込み・画像内、`kind` は 4 分類。文字列は含まない。`docs/data-model.md`) | `"text_scan_busy"`(別の読み取りが実行中)/ `"text_scan_failed"`(生ボディでない・PNG でない・上限超過・読み取りの失敗)。原因の詳細は含めない | なし。`spawn_blocking` で実行し、経過時間だけを `[tadcap:latency] origin=mask scan_ms=<ms> size=<w>x<h>` で標準エラーへ |
 | `greet`(既存スキャフォールド) | `name: string` | `string` | 発生しない | なし |
 
 トレイメニュー(`src-tauri/src/tray.rs`、T15)・グローバルショートカット(`src-tauri/src/shortcuts.rs`、T16)は
@@ -94,6 +99,7 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 | `toolSettings`(`src/canvas/toolSettings.ts`、T21) | 矢印/矩形/円/テキスト共通の現在色(`color: string`、既定`#FF5C8A`)・テキストのフォントサイズ段階(`fontSize: "small" \| "medium" \| "large"`、既定`"medium"`)の保持・購読通知(ARCH §6.1、FR-013)。永続化なし(アプリ起動中のみ)。モザイクは参照しない |
 | `undoStack`(`src/canvas/undoStack.ts`、T23) | 焼き込み操作(矢印/矩形/円/テキスト/モザイク)ごとの差分(変更矩形+ピクセル)を保持するUndo/Redoスタックの保持・購読通知(ARCH §6.1・§6.4、FR-014)。永続化なし。件数上限`UNDO_STACK_LIMIT`(30件、Undo・Redo双方)超過時は最も古いものから破棄。`clearUndoStack()`は新規Capture読込・履歴項目再読込の完了後に呼ぶ想定(呼び出しは`main.ts`側、T24以降)。T32で要素を`DocumentCommand`に変更し、クリアは`documentState.ts::resetDocument()`経由 |
 | `documentState`(`src/canvas/documentState.ts`、T32) | 表示中画像のドキュメント(ベース・オブジェクト配列・選択中id・ドラッグ中の下書き)の保持・操作・購読通知。永続化なし。新規Capture読込・履歴項目再読込で`resetDocument()` |
+| `maskSession`(`src/canvas/maskSession.ts`、AM-T06) | 自動マスキングの処理の状態(`idle`/`scanning`/`review`)・token・対象の画像の参照・候補(矩形・種類・外したか)。永続化なし(メモリのみ)。読み取った文字列は持たない。書き換えるのは `ui/autoMask.ts`(開始・結果・一括モザイク・やめる)・`ui/maskOverlay.ts`(外す/戻す)・`main.ts`(画像を差し替える前の `discardMaskSession()`)だけ |
 
 ## 制約事項
 

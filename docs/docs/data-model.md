@@ -154,6 +154,33 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 
 派生型: なし
 
+### MaskCandidate・maskSession(自動マスキング。`src-tauri/src/masking/mod.rs` / `src/ipc/textScan.ts` / `src/canvas/maskSession.ts`、AM-T04・T06・T08・T18)
+
+永続化なし(メモリのみ。ファイル・設定・ブラウザストレージ・履歴の退避に入れない。PRD NFR-002)。**どの型も読み取った文字列を持たない**(印のラベルは種類だけ)。
+
+IPC `scan_sensitive_text` の応答(Rust `MaskCandidate` → TS `ScannedCandidate`):
+
+| フィールド | 型 | 説明 |
+| ---------- | -- | ---- |
+| `x` / `y` | 整数(`u32` / `number`) | 画像の実ピクセル、左上原点。余白 `max(2px, 行の高さ×0.25)` 込み |
+| `width` / `height` | 整数(1 以上) | `x + width <= 画像の幅`(`y` も同様)。画像内に収めてから返す |
+| `kind` | `"contact" \| "credential" \| "identifier" \| "financial"` | 4 分類(連絡先・認証情報・識別子・金額や口座)。細分(メール・トークンなど)は Rust の中と評価でだけ使い、IPC に載せない |
+
+- フロントの検証(`textScan.ts`): 配列で、各要素が**ちょうど 5 キー**・有限の整数・既知の `kind`。余分なフィールド(文字列など)や 1 件でも不正があれば全体を `TextScanError("invalid_response")` にする(部分的に印を出さない)
+- エラー: Rust は固定文字列 `"text_scan_busy"`(実行中)/ `"text_scan_failed"`(PNG でない・各辺 16384px 超・128MiB 超・読み取りの失敗)。TS では `TextScanError` の `code`(`"busy" | "failed" | "invalid_response"`)。原因の詳細は含めない
+- 受信後、`ui/autoMask.ts::toMaskCandidateInputs()` が表示中のベースの大きさで再度切り詰めて `MaskCandidateInput { rect, kind }` に詰め替える
+
+`maskSession` の状態(`MaskSessionState`):
+
+| `status` | 持つもの | 遷移 |
+| -------- | -------- | ---- |
+| `idle` | — | `beginScan(image)` → `scanning`(画像あり・idle のときだけ。戻り値は token、開始できなければ `null`) |
+| `scanning` | `token`、`image`(開始時の `CanvasImage` の参照) | `acceptScanResult(token, image, inputs)` で token と画像が一致すれば `review`、違えば捨てる / `failScan(token)`・`discardMaskSession()` → `idle` |
+| `review` | `token`、`image`、`candidates: MaskCandidate[]` | `toggleCandidate(id)` で外す/戻す / 一括モザイク・やめる・Esc・画像の変更 → `discardMaskSession()` → `idle` |
+
+`MaskCandidate`(画面側): `{ id: number(セッション内で一意), rect: Rect(整数ピクセル), kind: MaskKind, excluded: boolean(一括モザイクから外したか) }`。`activeRects()` は `excluded` でない候補の矩形を返す。失敗は状態に残さず、トーストで伝えて `idle` に戻す。
+
+
 ## フォームバリデーション
 
 <!-- フォームバリデーションスキーマの一覧 -->

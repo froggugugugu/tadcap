@@ -1,4 +1,4 @@
-ステータス: ゲート 3 承認待ち(【要確認】7 件)
+ステータス: ゲート 3 承認済み(2026-10-09)。AM-T01〜T23・T25・T26 完了 / AM-T24 は実機の手動確認待ち(2026-10-09 更新)
 
 # タスク分解: 機密情報の自動マスキング
 
@@ -33,20 +33,20 @@ rg -n 'println!|eprintln!|dbg!|log::|tracing::' src-tauri/src/masking   # 期待
 
 ## 要件サマリー
 
-- [ ] 画像表示中だけボタン・⌘⇧M で開始でき、キャプチャ直後・履歴切替・起動時には動かない(FR-001・FR-014)
-- [ ] 処理中の再押下で二重に走らず、処理中に画像を切り替えても古い結果が出ない(FR-001)
-- [ ] 文字の読み取りは端末内(Vision)で行い、ベースだけを読む。外部と通信せず、読み取った文字列を IPC・ファイル・ログに出さない(FR-002・NFR-002)
-- [ ] 失敗時はトーストで知らせ、画像を変えない(FR-002)
-- [ ] 4 種の候補(連絡先・認証情報・識別子・金額・口座)を §5.3 の規則で検出する(FR-003〜FR-007)
-- [ ] 評価用画像セットで、形が決まっているものは細分ごとに 95% 以上、日本語の固有名詞・手がかり語付きの番号・英字の人名は 70% 以上(NFR-003)
-- [ ] 処理中の表示が出て、成功・失敗とも消える。処理中も画面が応答する(FR-008)
-- [ ] 候補の印は DOM で重ね、種類・件数・0 件(保証の表現なし)を示し、拡大縮小でずれない。コピー・履歴に写らない(FR-009・NFR-005)
-- [ ] 印のクリックで外す/戻すができ、外した候補は見た目で区別できる(FR-010)
-- [ ] まとめてモザイクは既存のモザイクと同じ粗さで、1 回の ⌘Z で全候補分が戻り、⇧⌘Z で再びかかる。残り 0 件では押せない(FR-011)
-- [ ] 候補を出したまま ⌘C で印を含まない画像がコピーされ、やめる / Esc / 画像の切替で候補を破棄する(FR-012)
-- [ ] フル HD で 3 秒以内(実測を記録)。macOS 14 で日本語を読める(NFR-001・NFR-004)
-- [ ] 依存の追加は `objc2-vision` 1 件のみで、供給経路の確認の証拠が残っている(ARCH §15 の条件)
-- [ ] 同梱する辞書は `/legal-check` と `/security-scan` を通過し、人間が承認したものだけ(ARCH §15 #3 の条件)
+- [x] 画像表示中だけボタン・⌘⇧M で開始でき、キャプチャ直後・履歴切替・起動時には動かない(FR-001・FR-014)
+- [x] 処理中の再押下で二重に走らず、処理中に画像を切り替えても古い結果が出ない(FR-001)
+- [x] 文字の読み取りは端末内(Vision)で行い、ベースだけを読む。外部と通信せず、読み取った文字列を IPC・ファイル・ログに出さない(FR-002・NFR-002)
+- [x] 失敗時はトーストで知らせ、画像を変えない(FR-002)
+- [x] 4 種の候補(連絡先・認証情報・識別子・金額・口座)を §5.3 の規則で検出する(FR-003〜FR-007)
+- [x] 評価用画像セットで、形が決まっているものは細分ごとに 95% 以上、日本語の固有名詞・手がかり語付きの番号・英字の人名は 70% 以上(NFR-003)
+- [x] 処理中の表示が出て、成功・失敗とも消える。処理中も画面が応答する(FR-008)
+- [x] 候補の印は DOM で重ね、種類・件数・0 件(保証の表現なし)を示し、拡大縮小でずれない。コピー・履歴に写らない(FR-009・NFR-005)
+- [x] 印のクリックで外す/戻すができ、外した候補は見た目で区別できる(FR-010)
+- [x] まとめてモザイクは既存のモザイクと同じ粗さで、1 回の ⌘Z で全候補分が戻り、⇧⌘Z で再びかかる。残り 0 件では押せない(FR-011)
+- [x] 候補を出したまま ⌘C で印を含まない画像がコピーされ、やめる / Esc / 画像の切替で候補を破棄する(FR-012)
+- [ ] フル HD で 3 秒以内(実測を記録)。macOS 14 で日本語を読める(NFR-001・NFR-004)  ← 未確認(AM-T24 の実機の手動確認が未実施。評価画像 1 枚 約 0.35 秒は AM-T18 の参考値)
+- [x] 依存の追加は `objc2-vision` 1 件のみで、供給経路の確認の証拠が残っている(ARCH §15 の条件)
+- [x] 同梱する辞書は `/legal-check` と `/security-scan` を通過し、人間が承認したものだけ(ARCH §15 #3 の条件)
 
 ## 影響調査
 
@@ -80,21 +80,21 @@ rg -n 'println!|eprintln!|dbg!|log::|tracing::' src-tauri/src/masking   # 期待
 
 ### Phase 1(並行可能)
 
-- [ ] AM-T01 — 辞書の出典・ライセンス確認(`/legal-check`)。ソース変更なし(変更ファイル: `output/reports/legal/LEGAL_auto-masking-lexicon_<日時>.md` | 依存: なし)
+- [x] AM-T01 — 辞書の出典・ライセンス確認(`/legal-check`)。ソース変更なし(変更ファイル: `output/reports/legal/LEGAL_auto-masking-lexicon_<日時>.md` | 依存: なし)
   - 対象: ①日本の姓(上位数百〜千件)②ローマ字の姓・名 ③都道府県 47 件。あわせて `objc2-vision`(Zlib OR Apache-2.0 OR MIT)の表示義務を確認する
   - 各候補の出典について、ライセンス・再配布の可否・改変(抜粋・並べ替え)の可否・表示義務・商用可否・取得日・取得元の URL を表にする。出典候補を 2 つ以上比べ、推奨を 1 つ示す
   - 受け入れ基準:
-    - [ ] 3 種の辞書それぞれに、採用候補の出典・ライセンス・再配布可否・表示義務が記載されている
-    - [ ] `THIRD_PARTY_NOTICES.md` に追記が要るかどうかと、その文面案が記載されている
-    - [ ] 報告書の末尾に人間の承認欄があり、承認されるまで AM-T20 に進まない(🚏)
+    - [x] 3 種の辞書それぞれに、採用候補の出典・ライセンス・再配布可否・表示義務が記載されている
+    - [x] `THIRD_PARTY_NOTICES.md` に追記が要るかどうかと、その文面案が記載されている
+    - [x] 報告書の末尾に人間の承認欄があり、承認されるまで AM-T20 に進まない(🚏)
   - 検証コマンド: `test -f output/reports/legal/LEGAL_auto-masking-lexicon_*.md && rg -c '出典|ライセンス|再配布|表示義務' output/reports/legal/LEGAL_auto-masking-lexicon_*.md`(各語 1 件以上)
-- [ ] AM-T02 — UI 仕様の確定(`/ui-ux-design`)。ボタンのアイコンと位置、結果パネル、印の色(4 色 + 2 重の縁取り)、外した印の見た目、文言(ツールチップ・`aria-label`・0 件・失敗)。ソース変更なし(変更ファイル: `output/design/UI_auto-masking.md` | 依存: なし)
+- [x] AM-T02 — UI 仕様の確定(`/ui-ux-design`)。ボタンのアイコンと位置、結果パネル、印の色(4 色 + 2 重の縁取り)、外した印の見た目、文言(ツールチップ・`aria-label`・0 件・失敗)。ソース変更なし(変更ファイル: `output/design/UI_auto-masking.md` | 依存: なし)
   - 受け入れ基準:
-    - [ ] §9.1〜§9.5 の【仮定】がすべて決定値に置き換わっている(色は CSS カスタムプロパティ名と値)
-    - [ ] 0 件・失敗・ツールチップの文言に「安全」「すべて隠しました」「機密はありません」「自動で隠す」を含まない(NFR-005)
-    - [ ] 明るいキャプチャ・暗いキャプチャ両方の上で印が見分けられることを、モック画像で示している
+    - [x] §9.1〜§9.5 の【仮定】がすべて決定値に置き換わっている(色は CSS カスタムプロパティ名と値)
+    - [x] 0 件・失敗・ツールチップの文言に「安全」「すべて隠しました」「機密はありません」「自動で隠す」を含まない(NFR-005)
+    - [x] 明るいキャプチャ・暗いキャプチャ両方の上で印が見分けられることを、モック画像で示している
   - 検証コマンド: `rg -n '安全|すべて隠|機密はありません|自動で隠' output/design/UI_auto-masking.md`(文言案の中で 0 件。禁止語の一覧として書く行は除く)
-- [ ] AM-T03 — 依存の追加と供給経路の確認(変更ファイル: `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `output/reports/security/DEPS_auto-masking_<日付>.md` | 依存: なし)
+- [x] AM-T03 — 依存の追加と供給経路の確認(変更ファイル: `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `output/reports/security/DEPS_auto-masking_<日付>.md` | 依存: なし)
   - `[target.'cfg(target_os = "macos")'.dependencies]` に追加・変更する:
     - `objc2-vision = { version = "=0.3.2", default-features = false, features = ["std", "VNRequest", "VNRecognizeTextRequest", "VNRequestHandler", "VNObservation", "VNTypes", "objc2-core-foundation"] }`(版の固定方法は【要確認】#2)
     - `objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSArray", "NSString", "NSRange", "NSError", "NSDictionary"] }`
@@ -110,9 +110,9 @@ rg -n 'println!|eprintln!|dbg!|log::|tracing::' src-tauri/src/masking   # 期待
     5. 1〜4 のコマンドと出力を `output/reports/security/DEPS_auto-masking_<日付>.md` に貼る(証拠)
   - TDD: 依存追加のみのため新しいテストは無い。`cargo check` と `SMOKE` が通ることで確認する(未使用のクレートは clippy の既定では警告にならない)
   - 受け入れ基準:
-    - [ ] 条件 1〜5 をすべて満たし、証拠が報告書にある
-    - [ ] `cargo tree -e features -i objc2-vision` に、指定した以外の機能が出ない
-    - [ ] `SMOKE` が緑
+    - [x] 条件 1〜5 をすべて満たし、証拠が報告書にある
+    - [x] `cargo tree -e features -i objc2-vision` に、指定した以外の機能が出ない
+    - [x] `SMOKE` が緑
   - 検証コマンド:
 
     ```bash
@@ -124,7 +124,7 @@ rg -n 'println!|eprintln!|dbg!|log::|tracing::' src-tauri/src/masking   # 期待
     # 脆弱性の確認は【要確認】#1 の決定に従う(B 案なら Cargo.lock 全件を OSV の querybatch に問い合わせ、vulns が 0 件)
     ```
 
-- [ ] AM-T04 — Rust の masking 基盤: 型・トレイト・全サブモジュールの宣言、PNG の検証、文字列の包みと正規化(変更ファイル: `src-tauri/src/lib.rs`, `src-tauri/src/masking/mod.rs`, `png.rs`, `text.rs`, 空の `geometry.rs`・`layout.rs`・`ocr.rs`・`eval.rs`・`detect/{mod,lexicon,contact,credential,identifier,financial}.rs` | 依存: なし)
+- [x] AM-T04 — Rust の masking 基盤: 型・トレイト・全サブモジュールの宣言、PNG の検証、文字列の包みと正規化(変更ファイル: `src-tauri/src/lib.rs`, `src-tauri/src/masking/mod.rs`, `png.rs`, `text.rs`, 空の `geometry.rs`・`layout.rs`・`ocr.rs`・`eval.rs`・`detect/{mod,lexicon,contact,credential,identifier,financial}.rs` | 依存: なし)
   - `mod.rs` に `MaskCandidate { x, y, width, height, kind }`(`serde::Serialize`、`kind` は小文字の 4 種)・`MaskKind`・`ScanError`・`RecognizedPage` トレイト・`Match` を置き、**全サブモジュールの `mod` 宣言をこのタスクで済ませる**(以降のタスクが `mod.rs` を取り合わないため)。`ocr.rs` は `#[cfg(target_os = "macos")]`
   - `lib.rs` に `mod masking;` を足す。呼び出し口(AM-T18)ができるまでの未使用警告は `#[cfg_attr(not(test), allow(dead_code))]` を `mod masking` に付けて抑え、**AM-T18 で必ず外す**(clippy `-D warnings` 対策)
   - TDD(先に書くテスト):
@@ -133,160 +133,160 @@ rg -n 'println!|eprintln!|dbg!|log::|tracing::' src-tauri/src/masking   # 期待
     - `Utf16Map`: ASCII のみ / 日本語 / 絵文字(サロゲートペア)/ 結合文字を含む行で、バイト位置 → UTF-16 位置が正しい
     - `SensitiveText` の `format!("{:?}")` が `SensitiveText(<redacted>)` で、元の文字列を含まない。`Display` を実装していない(コンパイルで確認するテストは `static_assertions` を使わず、ドキュメントテストの `compile_fail` で書く)
   - 受け入れ基準:
-    - [ ] 上記テストがすべて緑、`SMOKE` 緑
-    - [ ] `masking` は `pub(crate)`。外から見えるのは `scan`(AM-T18 で実体)・`MaskCandidate`・`MaskKind`・`ScanError` だけ
-    - [ ] `NOLOG` が 0 件
+    - [x] 上記テストがすべて緑、`SMOKE` 緑
+    - [x] `masking` は `pub(crate)`。外から見えるのは `scan`(AM-T18 で実体)・`MaskCandidate`・`MaskKind`・`ScanError` だけ
+    - [x] `NOLOG` が 0 件
   - 検証コマンド: `. "$HOME/.cargo/env" && cargo test --manifest-path src-tauri/Cargo.toml masking::` → 新規テストの件数と pass を記録 / `SMOKE` / `NOLOG`
-- [ ] AM-T05 — 評価用画像セットと生成スクリプト(変更ファイル: `eval/masking/pages/*.html`, `scripts/mask-eval-fixtures.mjs`, `package.json`(`scripts` 1 行), `eval/masking/images/`, `eval/masking/truth.json` | 依存: なし)
+- [x] AM-T05 — 評価用画像セットと生成スクリプト(変更ファイル: `eval/masking/pages/*.html`, `scripts/mask-eval-fixtures.mjs`, `package.json`(`scripts` 1 行), `eval/masking/images/`, `eval/masking/truth.json` | 依存: なし)
   - 架空画面の HTML(社内システム・メール・設定・請求・ターミナル風など)を書き、正解の文字を `<span data-mask="<種類>/<細分>">` で囲む。細分は §5.3 の 12 種(メール・電話・住所・接頭辞付きトークン・長いランダム列・手がかり語の値・URL のクエリ・手がかり語付きの番号・人名(日本語)・人名(英字)・会社名・カード・口座・金額)
   - `scripts/mask-eval-fixtures.mjs` は既存の `@playwright/test` の Chromium だけを使い、各ページを フル HD(`deviceScaleFactor: 1`)・Retina 相当(`2`)× 明るい/暗いで撮影し、`span` の `getClientRects()` を画素に換算して `truth.json`(画像・矩形・種類・細分。**文字列は書かない**)を出す。複数行にまたがる `span` は行ごとの矩形にする
   - 架空データの作り方: メールは予約済みのドメイン(`example.com` 等)、カード番号は Luhn を満たす乱数(固定シード)、トークンは**ページ読み込み時に接頭辞と乱数を連結して埋め込む**(ソースに完全な形を書かない。【要確認】#5)、人名・会社名・住所は辞書(AM-T20)と**別に**用意した架空の組み合わせ(辞書に無い姓も一定割合入れる)
   - TDD: 新しいテスト基盤は足さず、**自己検査を先に書いて**(Red: 空の出力で exit 1)から生成処理を書く。矩形の換算(CSS px → 画素、DPR、スクロール位置)は関数に分ける。スクリプトの最後に、①全矩形が画像の内側 ②細分ごとの件数が規定以上 ③`truth.json` に文字列のキーが無い、を検査し、満たさなければ exit 1
   - 受け入れ基準:
-    - [ ] 画像 20 枚以上、件数は PRD §8.3 の規模以上(数え方は【要確認】#3)
-    - [ ] 自己検査が exit 0、`truth.json` の各矩形を画像に重ねた確認画像 3 枚を目視し、文字を覆っている
-    - [ ] `package.json` の差分が `scripts` の 1 行だけ(`git diff package.json`)。`package-lock.json` の差分 0
+    - [x] 画像 20 枚以上、件数は PRD §8.3 の規模以上(数え方は【要確認】#3)
+    - [x] 自己検査が exit 0、`truth.json` の各矩形を画像に重ねた確認画像 3 枚を目視し、文字を覆っている
+    - [x] `package.json` の差分が `scripts` の 1 行だけ(`git diff package.json`)。`package-lock.json` の差分 0
   - 検証コマンド: `npm run mask:fixtures && git diff --stat package.json package-lock.json && node -e "const t=require('./eval/masking/truth.json');console.log(t.images.length)"`
-- [ ] AM-T06 — 候補の状態ストア `maskSession`(変更ファイル: `src/canvas/maskSession.ts`, `src/canvas/maskSession.test.ts` | 依存: なし)
+- [x] AM-T06 — 候補の状態ストア `maskSession`(変更ファイル: `src/canvas/maskSession.ts`, `src/canvas/maskSession.test.ts` | 依存: なし)
   - TDD(先に書くテスト): `idle → scanning → review → idle` の遷移 / `scanning` 中の `beginScan()` は何もしない / 古い token・別の `CanvasImage` の `acceptScanResult()` は捨てて状態を変えない / `failScan()` で `idle` / `toggleCandidate()` で外す→戻す / `activeRects()` は外した候補を含まない / `discardMaskSession()` はどの状態からも `idle` / 購読者へ通知 / 候補に文字列のフィールドが無い(型で保証)
   - 受け入れ基準:
-    - [ ] 上記テストが緑、`SMOKE` 緑
-    - [ ] `maskSession.ts` が `src/ipc/`・`src/ui/` を import していない
+    - [x] 上記テストが緑、`SMOKE` 緑
+    - [x] `maskSession.ts` が `src/ipc/`・`src/ui/` を import していない
   - 検証コマンド: `npx vitest run src/canvas/maskSession.test.ts` / `rg -n "from \"\.\./(ipc|ui)/" src/canvas/maskSession.ts`(0 件)/ `SMOKE`
-- [ ] AM-T07 — 一括モザイクの土台 `applyBaseEdits()` と `pixelateRect()`(変更ファイル: `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/canvas/tools/mosaicTool.ts`, `src/canvas/tools/mosaicTool.test.ts` | 依存: なし)
+- [x] AM-T07 — 一括モザイクの土台 `applyBaseEdits()` と `pixelateRect()`(変更ファイル: `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/canvas/tools/mosaicTool.ts`, `src/canvas/tools/mosaicTool.test.ts` | 依存: なし)
   - TDD(先に書くテスト。既存の `PixelStore` の偽物を使う): 矩形 3 件で `group` が 1 手だけ積まれる / 1 回の undo で 3 件とも元のピクセルに戻る / redo で再びかかる / **重なる 2 矩形**で undo 後に元の画素と完全一致 / 0 件なら何も積まない / 幅 0 の矩形は飛ばす / `commandPixelBytes()` が `group` 内の合計を返す
   - `pixelateRect()` は既存 `applyMosaic()` の公開名の変更だけで、ブロックサイズの式(`mosaicBlockSize()`)と処理は変えない(既存テストがそのまま緑であること)
   - 受け入れ基準:
-    - [ ] 上記テストと既存の `documentState`・`mosaicTool`・`undoStack` のテストが緑、`SMOKE` 緑
+    - [x] 上記テストと既存の `documentState`・`mosaicTool`・`undoStack` のテストが緑、`SMOKE` 緑
   - 検証コマンド: `npx vitest run src/canvas/documentState.test.ts src/canvas/tools/mosaicTool.test.ts src/canvas/undoStack.test.ts` / `SMOKE`
-- [ ] AM-T08 — IPC ラッパー `textScan.ts`(変更ファイル: `src/ipc/textScan.ts`, `src/ipc/textScan.test.ts` | 依存: なし)
+- [x] AM-T08 — IPC ラッパー `textScan.ts`(変更ファイル: `src/ipc/textScan.ts`, `src/ipc/textScan.test.ts` | 依存: なし)
   - TDD(先に書くテスト。既存 `src/ipc/*.test.ts` の invoke の偽物の作法): PNG の `Blob` を生のバイト列で `scan_sensitive_text` に渡す / 正しい応答を `ScannedCandidate[]` で返す / 配列でない・小数・負数・`NaN`・未知の `kind`・余分な文字列フィールドを含む応答は 1 件でも全体を例外 / `text_scan_busy`・`text_scan_failed` を区別できる例外にする
   - 受け入れ基準:
-    - [ ] 上記テストが緑、`SMOKE` 緑
-    - [ ] `textScan.ts` が `src/canvas/`・`src/ui/` を import していない
+    - [x] 上記テストが緑、`SMOKE` 緑
+    - [x] `textScan.ts` が `src/canvas/`・`src/ui/` を import していない
   - 検証コマンド: `npx vitest run src/ipc/textScan.test.ts` / `rg -n "from \"\.\./(canvas|ui)/" src/ipc/textScan.ts`(0 件)/ `SMOKE`
 
 ### Phase 2(Phase 1 完了後)
 
-- [ ] AM-T09 — 座標と行の幾何(変更ファイル: `src-tauri/src/masking/geometry.rs`, `src-tauri/src/masking/layout.rs` | 依存: AM-T04)
+- [x] AM-T09 — 座標と行の幾何(変更ファイル: `src-tauri/src/masking/geometry.rs`, `src-tauri/src/masking/layout.rs` | 依存: AM-T04)
   - TDD(先に書くテスト): 正規化座標(左下原点)→ 画素(左上原点)の変換と外側への丸め / 余白 `max(2px, 行の高さ × 0.2)` / 画像の端での収め(x<0・右端超え)/ 幅・高さ 0 は捨てる / 包含される矩形の除去 / 重なり 90% 以上の統合と種類の優先順(認証情報 > 金額・口座 > 連絡先 > 識別子)/ それ以外の重なりは両方残す / `right_neighbor()`: 同じ行の右側で最も近い観測、縦の中心がずれた観測は対象外 / `next_line_below()`: 左端が近い直下の行
   - 受け入れ基準:
-    - [ ] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
-    - [ ] `geometry.rs`・`layout.rs` が `ocr`・`objc2` 系を参照していない
+    - [x] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
+    - [x] `geometry.rs`・`layout.rs` が `ocr`・`objc2` 系を参照していない
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking::geometry masking::layout` / `rg -n 'objc2|ocr::' src-tauri/src/masking/{geometry,layout}.rs`(0 件)/ `SMOKE` / `NOLOG`
-- [ ] AM-T10 — Vision の呼び出し `ocr.rs`(変更ファイル: `src-tauri/src/masking/ocr.rs` | 依存: AM-T03, AM-T04, AM-T05)
+- [x] AM-T10 — Vision の呼び出し `ocr.rs`(変更ファイル: `src-tauri/src/masking/ocr.rs` | 依存: AM-T03, AM-T04, AM-T05)
   - 精度優先・`ja-JP` → `en-US`・言語補正は定数(既定オフ)。行ごとに文字列(`SensitiveText`)・領域・`VNRecognizedText` を保持し、`RecognizedPage::range_box(line, utf16_range)` で部分範囲の領域を返す。全体を `autoreleasepool` の中で完結させ、呼び出しを `objc2::exception::catch` で包んで `ScanError` へ変換する
   - `unsafe` ブロックごとに前提(スレッド・寿命)をコメントで書く
   - TDD(先に書くテスト): `#[ignore]` の実機テストで、評価画像 1 枚(AM-T05 の明るいフル HD)を読ませて行が 1 件以上・各領域が画像の内側 / `range_box` が行の領域の内側 / PNG でないバイト列で `ScanError`(パニックしない)。いずれも文字列は比較・出力しない(件数と矩形だけ)
   - 受け入れ基準:
-    - [ ] `cargo test -- --ignored masking::ocr` が実機で緑、`SMOKE` 緑(通常の `cargo test` では `#[ignore]` は走らない)
-    - [ ] `NOLOG` 0 件。`expect(`/`panic!(` のメッセージに文字列を入れていない
+    - [x] `cargo test -- --ignored masking::ocr` が実機で緑、`SMOKE` 緑(通常の `cargo test` では `#[ignore]` は走らない)
+    - [x] `NOLOG` 0 件。`expect(`/`panic!(` のメッセージに文字列を入れていない
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking::ocr -- --ignored` / `rg -n 'expect\(|panic!\(' src-tauri/src/masking/ocr.rs`(目視で文字列を含まない)/ `SMOKE` / `NOLOG`
-- [ ] AM-T11 — 検出の基盤と①連絡先(メール・電話番号・〒と郵便番号)(変更ファイル: `src-tauri/src/masking/detect/mod.rs`, `detect/lexicon.rs`, `detect/contact.rs` | 依存: AM-T03, AM-T04)
+- [x] AM-T11 — 検出の基盤と①連絡先(メール・電話番号・〒と郵便番号)(変更ファイル: `src-tauri/src/masking/detect/mod.rs`, `detect/lexicon.rs`, `detect/contact.rs` | 依存: AM-T03, AM-T04)
   - `detect::run(&dyn RecognizedPage) -> Vec<Match>` と、テスト用の偽物の `RecognizedPage`(文字幅を等分)を `detect/mod.rs` の `#[cfg(test)]` に置く。4 検出器の登録口はこのタスクで作り、未実装の検出器は空を返す
   - 都道府県名で始まる住所は辞書が要るため AM-T22 で扱う
   - TDD(先に書くテスト): メール(`@`・`.` の前後の空白を許す、末尾の句読点を含めない、全角 `＠`)/ 電話(固定・携帯・IP 電話・フリーダイヤル、ハイフン有無、括弧、`+81`、全角数字・各種ハイフン、桁不足・桁過多は対象外、前後が数字に続く場合は対象外)/ 〒+郵便番号・郵便番号単独 `NNN-NNNN` / UTF-16 範囲が日本語の行で正しい
   - 受け入れ基準:
-    - [ ] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
-    - [ ] `detect/` が `ocr`・`objc2` 系を参照していない
+    - [x] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
+    - [x] `detect/` が `ocr`・`objc2` 系を参照していない
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking::detect` / `rg -n 'objc2|ocr::' src-tauri/src/masking/detect`(0 件)/ `SMOKE` / `NOLOG`
-- [ ] AM-T12 — 候補の印 `maskOverlay.ts`(変更ファイル: `src/ui/maskOverlay.ts`, `src/ui/maskOverlay.test.ts`, `src/styles.css` | 依存: AM-T02, AM-T06)
+- [x] AM-T12 — 候補の印 `maskOverlay.ts`(変更ファイル: `src/ui/maskOverlay.ts`, `src/ui/maskOverlay.test.ts`, `src/styles.css` | 依存: AM-T02, AM-T06)
   - `renderMaskMarks(container, candidates, size)`(DOM 生成)と `initMaskOverlay(canvas)`(購読・クリック)を分ける。位置は % 指定、配置は既存 `.shape-overlay` と同じ合わせ方(`offsetLeft`/`clientWidth` + `ResizeObserver`)。ラベルは固定の種類名を `textContent` で入れる
   - TDD(先に書くテスト。DOM なしで書ける純粋関数を分ける): 画素の矩形 → % の `left/top/width/height` / 画像の端の候補が 100% を超えない / 種類 → ラベル文言・CSS クラス・`aria-label` / 外した候補の `aria-pressed` の値。DOM 自体は AM-T17 の E2E で確認する(jsdom は入れない。既存方針)
   - 受け入れ基準:
-    - [ ] 上記テストが緑、`SMOKE` 緑
-    - [ ] 色・線は AM-T02 の CSS カスタムプロパティを使う
+    - [x] 上記テストが緑、`SMOKE` 緑
+    - [x] 色・線は AM-T02 の CSS カスタムプロパティを使う
   - 検証コマンド: `npx vitest run src/ui/maskOverlay.test.ts` / `SMOKE`
-- [ ] AM-T13 — 確認中(`review`)の操作制限(§15 #4 A 案)(変更ファイル: `src/ui/toolbar.ts`, `src/ui/undoButton.ts`, `src/ui/selectionKeys.ts`, `src/ui/arrangeButtons.ts` と各 `*.test.ts` | 依存: AM-T06)
+- [x] AM-T13 — 確認中(`review`)の操作制限(§15 #4 A 案)(変更ファイル: `src/ui/toolbar.ts`, `src/ui/undoButton.ts`, `src/ui/selectionKeys.ts`, `src/ui/arrangeButtons.ts` と各 `*.test.ts` | 依存: AM-T06)
   - `maskSession` を購読し、`review` の間はツールボタン・取り消し/やり直しボタンを無効にし、⌘Z・⇧⌘Z・⌘⇧F・⌘⇧B・Delete を無視する。⌘C は止めない
   - TDD(先に書くテスト): 各キー判定関数が `review` 中は「処理しない」を返す / `idle` に戻ると元どおり / ⌘C の判定は影響を受けない
   - 受け入れ基準:
-    - [ ] 上記テストと既存テストが緑、`SMOKE` 緑(既存 E2E の `undo-redo.spec.ts`・`object-ops.spec.ts` を含む)
+    - [x] 上記テストと既存テストが緑、`SMOKE` 緑(既存 E2E の `undo-redo.spec.ts`・`object-ops.spec.ts` を含む)
   - 検証コマンド: `npx vitest run src/ui/` / `SMOKE`
-- [ ] AM-T20 — 辞書データの準備と**同梱前の**セキュリティ確認(`/security-scan`)。ソース変更なし(変更ファイル: `testreport/masking/lexicon-staging/*`(git 管理外), `output/reports/security/SECURITY_auto-masking-lexicon_<日時>.md` | 依存: AM-T01 の人間承認)
+- [x] AM-T20 — 辞書データの準備と**同梱前の**セキュリティ確認(`/security-scan`)。ソース変更なし(変更ファイル: `testreport/masking/lexicon-staging/*`(git 管理外), `output/reports/security/SECURITY_auto-masking-lexicon_<日時>.md` | 依存: AM-T01 の人間承認)
   - AM-T01 で承認された出典から、姓・ローマ字の姓名・都道府県を 1 行 1 語の UTF-8 テキストに整形する。取得したファイルは新しい空のディレクトリに置き、整形のスクリプトは別のディレクトリに置いて引数でパスを渡す(取得物を実行・import しない)
   - `/security-scan` で確認すること: ①取得元・取得日・取得物の SHA-256 の記録 ②制御文字・双方向制御文字・ゼロ幅文字・BOM・改行コードの混在が無い ③1 語の長さと件数が想定範囲(上限を数値で記す)④語以外のデータ(URL・記号列・個人の連絡先など)が無い ⑤実行時に何も取得しない設計(`include_str!` のみ)であること ⑥ライセンス表記を同梱用に用意した
   - 受け入れ基準:
-    - [ ] 報告書に①〜⑥の結果と確認コマンドの出力がある。Critical / High が 0 件
-    - [ ] 人間が報告書と staging の内容を承認するまで AM-T21 に進まない(🚏)
+    - [x] 報告書に①〜⑥の結果と確認コマンドの出力がある。Critical / High が 0 件
+    - [x] 人間が報告書と staging の内容を承認するまで AM-T21 に進まない(🚏)
   - 検証コマンド: `rg -nP '[\x00-\x08\x0B-\x1F\x7F\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{FEFF}]' testreport/masking/lexicon-staging`(0 件)/ `wc -l testreport/masking/lexicon-staging/*.txt` / `shasum -a 256 testreport/masking/lexicon-staging/*`
 
 ### Phase 3(Phase 2 完了後)
 
-- [ ] AM-T14 — ②認証情報(接頭辞付きトークン・長いランダム列・手がかり語の値・URL のクエリ)(変更ファイル: `src-tauri/src/masking/detect/credential.rs`, `detect/lexicon.rs` | 依存: AM-T09, AM-T11)
+- [x] AM-T14 — ②認証情報(接頭辞付きトークン・長いランダム列・手がかり語の値・URL のクエリ)(変更ファイル: `src-tauri/src/masking/detect/credential.rs`, `detect/lexicon.rs` | 依存: AM-T09, AM-T11)
   - 接頭辞の一覧は `lexicon.rs` に文字列の定数だけで持つ(サービス名をコメントに書かない)
   - TDD(先に書くテスト。トークンはテスト内で接頭辞と本体を連結して組み立てる。【要確認】#5): 接頭辞付き / 20 文字以上で英字と数字が混在(`-`・`_` を含む)、英字だけ・数字だけは対象外、誤読(`0`→`Q`)・途中の空白 1 つを許す / 手がかり語(「パスワード」「暗証番号」「password」「pass」「pwd」「secret」「token」「api key」)の後の `:` `=` `：` 空白以降 / 手がかり語だけの観測の**右隣の観測**(`layout.rs`)/ `KEY=VALUE` でキーに手がかり語を含む / URL は `?` 以降だけ(パス部分を含まない)、`?` が無い URL は対象外
-  - 受け入れ基準: [ ] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
+  - 受け入れ基準: [x] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking::detect::credential` / `SMOKE` / `NOLOG`
-- [ ] AM-T15 — 実行の組み立て `autoMask.ts` と `main.ts` の結線(変更ファイル: `src/ui/autoMask.ts`, `src/ui/autoMask.test.ts`, `src/main.ts`, `src/styles.css` | 依存: AM-T02, AM-T06, AM-T07, AM-T08, AM-T12, AM-T13)
+- [x] AM-T15 — 実行の組み立て `autoMask.ts` と `main.ts` の結線(変更ファイル: `src/ui/autoMask.ts`, `src/ui/autoMask.test.ts`, `src/main.ts`, `src/styles.css` | 依存: AM-T02, AM-T06, AM-T07, AM-T08, AM-T12, AM-T13)
   - §7.1 の手順 1〜12 を実装する: ボタン(区切り線の後、トグル表示なし)・⌘⇧M(`isEditableTarget()` で入力欄では奪わない)・`commitPendingText()` → `beginScan()` → `exportDocumentBase()` → `scanSensitiveText()` → `acceptScanResult()`、実行中の Promise を 1 つ保持、処理中の表示(`role="status"`)、結果パネル(件数・まとめてモザイク・やめる)、0 件の文言、失敗のトースト、Esc でやめる、まとめてモザイク → `applyBaseEdits(activeRects(), pixelateRect)` → `discardMaskSession()`。受け取った矩形は `clipRectToCanvas()` で再度収める
   - `main.ts`: `handleCaptureCompleted`・`reloadHistoryItemIntoCanvas`・`clearEditor` の**画像を差し替える前**に `discardMaskSession()`
   - TDD(先に書くテスト。DOM に依存しない部分を関数に分ける): 開始できる条件(画像あり・`idle`)/ ⌘⇧M の判定(⌘⇧M のみ、入力欄では無視、既存キーと重ならない)/ 前の実行が終わるまで次の invoke を送らない / 結果の矩形の再クランプ / 0 件・失敗の文言に禁止語を含まない / まとめてモザイクは残り 0 件で押せない
   - 受け入れ基準:
-    - [ ] 上記テストが緑、`SMOKE` 緑(既存 E2E を含む)
-    - [ ] `rg -n 'console\.' src/ui/autoMask.ts src/ui/maskOverlay.ts src/canvas/maskSession.ts src/ipc/textScan.ts` の出力が候補の中身を含まない
+    - [x] 上記テストが緑、`SMOKE` 緑(既存 E2E を含む)
+    - [x] `rg -n 'console\.' src/ui/autoMask.ts src/ui/maskOverlay.ts src/canvas/maskSession.ts src/ipc/textScan.ts` の出力が候補の中身を含まない
   - 検証コマンド: `npx vitest run src/ui/autoMask.test.ts` / 上記 `rg` / `SMOKE`
 
 ### Phase 4(Phase 3 完了後)
 
-- [ ] AM-T16 — ④金額・口座と③手がかり語付きの番号(変更ファイル: `src-tauri/src/masking/detect/financial.rs`, `detect/identifier.rs`, `detect/lexicon.rs` | 依存: AM-T14)
+- [x] AM-T16 — ④金額・口座と③手がかり語付きの番号(変更ファイル: `src-tauri/src/masking/detect/financial.rs`, `detect/identifier.rs`, `detect/lexicon.rs` | 依存: AM-T14)
   - TDD(先に書くテスト): カード 13〜19 桁で Luhn が正しいもの(空白・ハイフン区切り有無)/ Luhn 不正でも **4 桁 × 4 組の区切りがある 16 桁は候補**(§15 #6 B)、区切りなしの Luhn 不正は対象外 / 口座「口座番号」「口座」「普通」「当座」の後の 6〜8 桁(同じ行・右隣の観測)/ 金額は通貨記号・単位付きだけ(`¥` `￥` `$` `円` `USD` `JPY`、桁区切り・小数)、単位なしの数値は対象外 / 番号「社員番号」「社員ID」「顧客番号」「顧客ID」「会員番号」「お客様番号」「ID」「User ID」の値(同じ行・右隣・直下)
-  - 受け入れ基準: [ ] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
+  - 受け入れ基準: [x] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking::detect` / `SMOKE` / `NOLOG`
-- [ ] AM-T17 — E2E と見た目の確認(変更ファイル: `e2e/auto-mask.spec.ts`, `e2e/fixtures/tauriMock.ts`, `e2e/screenshots/autoMask.visual.ts` | 依存: AM-T15)
+- [x] AM-T17 — E2E と見た目の確認(変更ファイル: `e2e/auto-mask.spec.ts`, `e2e/fixtures/tauriMock.ts`, `e2e/screenshots/autoMask.visual.ts` | 依存: AM-T15)
   - `tauriMock.ts` に `scan_sensitive_text`(固定の候補・遅延・失敗・0 件)を追加し、§10.2 の全シナリオを書く: 一連の流れ(外す → まとめてモザイク → 外した領域は不変・残りは変化 → ⌘Z で全候補分が戻る → ⇧⌘Z で再びかかる)/ 印を出したまま ⌘C で印が写らない(画素で確認)/ 処理中の新規キャプチャ・履歴切替で古い印が出ない / 処理中の再押下・⌘⇧M で invoke が 1 回 / 0 件の文言に禁止語なし / 失敗でトースト・画像不変 / 画像なしでボタン無効 / ウィンドウの大きさを変えても印がずれない / 確認中に ⌘Z・ツールが効かない / Esc でやめる
   - TDD: シナリオを先に書き Red を確認してから、足りない結線を AM-T15 の範囲で直す(直したファイルはコミットに含め、PROGRESS に記す)
   - 受け入れ基準:
-    - [ ] `npm run e2e` で新規シナリオを含め全件緑。印が写らない確認は、印の描画を Canvas に変えると落ちることを一度確かめる
-    - [ ] `npm run e2e:screenshots:after` で明るい/暗い画像・外した印・結果パネル・0 件のスクリーンショットを `output/reports/ui/` に保存
+    - [x] `npm run e2e` で新規シナリオを含め全件緑。印が写らない確認は、印の描画を Canvas に変えると落ちることを一度確かめる
+    - [x] `npm run e2e:screenshots:after` で明るい/暗い画像・外した印・結果パネル・0 件のスクリーンショットを `output/reports/ui/` に保存
   - 検証コマンド: `npx playwright test e2e/auto-mask.spec.ts` / `npm run e2e:screenshots:after` / `SMOKE`
 
 ### Phase 5(Phase 4 完了後)
 
-- [ ] AM-T18 — `scan()` の統合と IPC コマンド(変更ファイル: `src-tauri/src/masking/mod.rs`, `src-tauri/src/commands.rs`, `src-tauri/src/error.rs`, `src-tauri/src/lib.rs` | 依存: AM-T09, AM-T10, AM-T16)
+- [x] AM-T18 — `scan()` の統合と IPC コマンド(変更ファイル: `src-tauri/src/masking/mod.rs`, `src-tauri/src/commands.rs`, `src-tauri/src/error.rs`, `src-tauri/src/lib.rs` | 依存: AM-T09, AM-T10, AM-T16)
   - `scan(png)` = `png::validate` → `ocr::recognize` → `detect::run` → `range_box` → `geometry` → 重複除去、を 1 つの `autoreleasepool` で。検出から矩形の確定までを `scan_page(&dyn RecognizedPage, ImageSize)` に分け、偽物のページでテストできるようにする
   - `commands.rs`: `scan_sensitive_text`(`InvokeBody::Raw` 以外は `text_scan_failed`、`TEXT_SCAN_IN_PROGRESS` で二重実行を `text_scan_busy`、`spawn_blocking`、エラーは固定文字列)。経過時間は `[tadcap:latency] origin=mask scan_ms=<ms> size=<w>x<h>` だけを出す(件数・種類も出さない)
   - `lib.rs`: `invoke_handler` に追加。AM-T04 で付けた `allow(dead_code)` を**外す**
   - TDD(先に書くテスト): `scan_page` が偽物のページで期待の矩形・種類を返す(余白込み・画像内・重複除去後)/ 戻り値の JSON に `kind` と数値以外のキーが無い / 二重実行で `text_scan_busy`、終わった後は再実行できる(フラグが失敗時も下りる)/ Raw 以外の本文で `text_scan_failed` / エラー文字列が固定値
   - 受け入れ基準:
-    - [ ] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件、`rg -n 'allow\(dead_code\)' src-tauri/src/lib.rs` が 0 件
-    - [ ] 実機の `#[ignore]` テストで評価画像 1 枚の `scan()` が候補を 1 件以上返す
-    - [ ] `git diff src-tauri/tauri.conf.json src-tauri/capabilities/` が空
+    - [x] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件、`rg -n 'allow\(dead_code\)' src-tauri/src/lib.rs` が 0 件
+    - [x] 実機の `#[ignore]` テストで評価画像 1 枚の `scan()` が候補を 1 件以上返す
+    - [x] `git diff src-tauri/tauri.conf.json src-tauri/capabilities/` が空
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking:: commands::` / `cargo test --manifest-path src-tauri/Cargo.toml masking::tests -- --ignored` / `SMOKE` / `NOLOG`
 
 ### Phase 6(Phase 5 完了後。AM-T19 と AM-T21 は並行可能)
 
-- [ ] AM-T19 — 評価ハーネスと「形が決まっているもの」の計測・調整(変更ファイル: `src-tauri/src/masking/eval.rs`, 必要に応じ `detect/*.rs`・`geometry.rs`・`ocr.rs` の定数, `testreport/masking/eval-<日付>.json`, `output/reports/masking/eval-<日付>.md` | 依存: AM-T05, AM-T18)
+- [x] AM-T19 — 評価ハーネスと「形が決まっているもの」の計測・調整(変更ファイル: `src-tauri/src/masking/eval.rs`, 必要に応じ `detect/*.rs`・`geometry.rs`・`ocr.rs` の定数, `testreport/masking/eval-<日付>.json`, `output/reports/masking/eval-<日付>.md` | 依存: AM-T05, AM-T18)
   - `#[ignore] fn masking_eval()`: `truth.json` の全画像を `scan()` と同じ処理に通し、正解の矩形が候補の矩形に **100% 覆われたら検出**。細分ごとの検出率・誤検出数(参考)・環境を出力する。出力に文字列を含めない
   - 言語補正のオン/オフ・余白の係数を両方測り、検出率の高い方を採用(`ocr.rs`・`geometry.rs` の定数)。採否の根拠を報告書に記す
   - TDD(先に書くテスト): 覆い判定の純粋関数(完全に覆う / 1px はみ出す / 2 候補の和で覆う場合は**検出にする**。#4 で決定)/ 細分ごとの集計
   - 受け入れ基準:
-    - [ ] メール・電話・接頭辞付きトークン・長いランダム列・手がかり語の値・URL のクエリ・カード・口座・金額の検出率がそれぞれ 95% 以上(未達時の扱いは【要確認】#6)
-    - [ ] 手がかり語付きの番号は 70% 以上
-    - [ ] 生データとまとめが所定の場所にあり、`rg` で文字列が含まれないことを確認(`truth.json` に無い語が出ないこと)
-    - [ ] 🚏 人間がまとめを確認する
+    - [x] メール・電話・接頭辞付きトークン・長いランダム列・手がかり語の値・URL のクエリ・カード・口座・金額の検出率がそれぞれ 95% 以上(未達時の扱いは【要確認】#6)
+    - [x] 手がかり語付きの番号は 70% 以上
+    - [x] 生データとまとめが所定の場所にあり、`rg` で文字列が含まれないことを確認(`truth.json` に無い語が出ないこと)
+    - [x] 🚏 人間がまとめを確認する
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking::eval -- --ignored --nocapture` / `SMOKE` / `NOLOG`
-- [ ] AM-T21 — 辞書の同梱と③人名(変更ファイル: `src-tauri/src/masking/lexicon/*.txt`, `detect/lexicon.rs`, `detect/identifier.rs`, `THIRD_PARTY_NOTICES.md` | 依存: AM-T16, AM-T20 の人間承認)
+- [x] AM-T21 — 辞書の同梱と③人名(変更ファイル: `src-tauri/src/masking/lexicon/*.txt`, `detect/lexicon.rs`, `detect/identifier.rs`, `THIRD_PARTY_NOTICES.md` | 依存: AM-T16, AM-T20 の人間承認)
   - staging の承認済みファイルを**バイト一致で**コピーし(SHA-256 を AM-T20 の報告と照合)、`include_str!` で読み込む。読み込みは 1 行 1 語、空行・前後の空白を無視
   - TDD(先に書くテスト): 辞書の件数が報告書の値と一致 / 敬称「様」「さん」「氏」「殿」の直前のかな漢字列 / ラベル「氏名」「名前」「担当」「宛名」「差出人」「Name」の値(同じ行・右隣)/ 手がかり語なし: 姓 + かな漢字 1〜3 字(空白の有無に依存しない)/ 英字: ローマ字の姓・名の辞書を含む大文字始まりの 2〜3 語、「Mr.」「Ms.」「Dear」の後 / 辞書の語が文中の一部に現れる誤検出の代表例を 1 件以上(見逃し回避の方針のため除外はしないが、件数を把握)
   - 受け入れ基準:
-    - [ ] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
-    - [ ] `shasum -a 256` が AM-T20 の報告と一致。`THIRD_PARTY_NOTICES.md` に AM-T01 の文面で追記
+    - [x] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
+    - [x] `shasum -a 256` が AM-T20 の報告と一致。`THIRD_PARTY_NOTICES.md` に AM-T01 の文面で追記
   - 検証コマンド: `shasum -a 256 src-tauri/src/masking/lexicon/*.txt` / `cargo test --manifest-path src-tauri/Cargo.toml masking::detect::identifier` / `SMOKE` / `NOLOG`
 
 ### Phase 7(Phase 6 完了後)
 
-- [ ] AM-T22 — ③会社名と①住所(都道府県で始まる行)(変更ファイル: `src-tauri/src/masking/detect/identifier.rs`, `detect/contact.rs`, `detect/lexicon.rs` | 依存: AM-T21)
+- [x] AM-T22 — ③会社名と①住所(都道府県で始まる行)(変更ファイル: `src-tauri/src/masking/detect/identifier.rs`, `detect/contact.rs`, `detect/lexicon.rs` | 依存: AM-T21)
   - TDD(先に書くテスト): 「株式会社」「(株)」「㈱」「有限会社」「合同会社」「Inc.」「Co., Ltd.」の前後に続く名前の列(前置・後置の両方)/ 都道府県名で始まる行の残り / 〒・郵便番号の行の後に続く住所の行 / 2 行目の建物名(手がかりなし)は対象外であることを明示するテスト
-  - 受け入れ基準: [ ] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
+  - 受け入れ基準: [x] 上記テストが緑、`SMOKE` 緑、`NOLOG` 0 件
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking::detect` / `SMOKE` / `NOLOG`
-- [ ] AM-T23 — 日本語の固有名詞の計測・調整(変更ファイル: 必要に応じ `detect/identifier.rs`・`detect/contact.rs`・`detect/lexicon.rs`, `testreport/masking/eval-<日付>.json`, `output/reports/masking/eval-<日付>.md` | 依存: AM-T19, AM-T22)
+- [x] AM-T23 — 日本語の固有名詞の計測・調整(変更ファイル: 必要に応じ `detect/identifier.rs`・`detect/contact.rs`・`detect/lexicon.rs`, `testreport/masking/eval-<日付>.json`, `output/reports/masking/eval-<日付>.md` | 依存: AM-T19, AM-T22)
   - AM-T19 のハーネスで全細分を再計測し、人名(日本語)・人名(英字)・会社名・住所が 70% 以上になるまで規則・辞書の件数を調整する。**形が決まっているものの検出率が下がっていないこと**も確認する
   - 英字の人名が 70% に届かない場合は §15 #3 C 案(NLTagger の併用)を人間に提案する(このタスクでは依存を足さない)
   - 受け入れ基準:
-    - [ ] 人名(日本語)・人名(英字)・会社名・住所がそれぞれ 70% 以上(未達時の扱いは【要確認】#6)
-    - [ ] 形が決まっているものが引き続き 95% 以上
-    - [ ] 🚏 人間がまとめを確認する
+    - [x] 人名(日本語)・人名(英字)・会社名・住所がそれぞれ 70% 以上(未達時の扱いは【要確認】#6)
+    - [x] 形が決まっているものが引き続き 95% 以上
+    - [x] 🚏 人間がまとめを確認する
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml masking::eval -- --ignored --nocapture` / `SMOKE` / `NOLOG`
 - [ ] AM-T24 — 実機計測と手動確認(NFR-001・NFR-002・NFR-004)(変更ファイル: `scripts/latency-summary.mjs`, `testreport/masking/latency-<日付>.md`, `testreport/manual/CHECKLIST_T18.md` | 依存: AM-T17, AM-T18)
   - `latency-summary.mjs` を `origin=mask scan_ms=` の行にも対応させる(既存の `spawn_ms` の集計は変えない)
@@ -296,23 +296,24 @@ rg -n 'println!|eprintln!|dbg!|log::|tracing::' src-tauri/src/masking   # 期待
     - [ ] フル HD の中央値・最大値が 3 秒以内(計測機種を明記)
     - [ ] 通信 0、macOS 14 の結果、実クリップボードの結果が記録されている
   - 検証コマンド: `npm run latency:summary -- <ログファイル>` / `SMOKE`
+  - **状態(2026-10-09)**: 未完了。`scripts/latency-summary.mjs` の `scan_ms` 対応と `CHECKLIST_T18.md` §13 の項目追加は済み(`c5719e3`)。実機での計測・`nettop`・macOS 14・実クリップボードの手動確認は**未実施**(人間の作業。`testreport/masking/latency-<日付>.md` は未作成)。受け入れ基準は確認できるまでチェックしない
 
 ### Phase 8(Phase 7 完了後)
 
-- [ ] AM-T25 — 機能全体のセキュリティ確認とレビュー(`/security-scan`・`/review-sweep`)。指摘の修正は別タスク(AM-T25-F1 …)として PROGRESS に追加する(変更ファイル: `output/reports/security/SECURITY_auto-masking_<日時>.md`, `output/reports/review/REVIEW_auto-masking_<日時>.md` | 依存: AM-T23, AM-T24)
+- [x] AM-T25 — 機能全体のセキュリティ確認とレビュー(`/security-scan`・`/review-sweep`)。指摘の修正は別タスク(AM-T25-F1 …)として PROGRESS に追加する(変更ファイル: `output/reports/security/SECURITY_auto-masking_<日時>.md`, `output/reports/review/REVIEW_auto-masking_<日時>.md` | 依存: AM-T23, AM-T24)
   - 確認項目: §12 の全項目(文字列が IPC・ログ・パニック文言に出ない、`unsafe` の前提コメント、Objective-C 例外の捕捉、入力検証、二重実行防止、XSS)/ `git diff main -- src-tauri/tauri.conf.json src-tauri/capabilities/` が空 / 依存の再確認(AM-T03 と同じ手段で `Cargo.lock` 全件)/ 評価データ・テストに実在のトークンや個人情報が無い / 製品名が書かれていない
   - 受け入れ基準:
-    - [ ] Critical / High が 0 件(または修正タスクが PROGRESS にある)
-    - [ ] レビューの MUST が 0 件(または修正タスクが PROGRESS にある)
+    - [x] Critical / High が 0 件(または修正タスクが PROGRESS にある)
+    - [x] レビューの MUST が 0 件(または修正タスクが PROGRESS にある)
   - 検証コマンド: `NOLOG` / `rg -n 'console\.' src/ui/autoMask.ts src/ui/maskOverlay.ts src/canvas/maskSession.ts src/ipc/textScan.ts` / `git diff main -- src-tauri/tauri.conf.json src-tauri/capabilities/` / `SMOKE`
-- [ ] AM-T26 — 文言・README・紹介ページ・ADR・docs の仕上げ(NFR-005)(変更ファイル: `README.md`, `.github/pages/index.html`, `output/design/ADR_<NNN>_text-recognition.md`, `output/design/ADR_INDEX.md`, `docs/docs/*.md`, `project-config.md` §2・§3・§11 | 依存: AM-T25)
+- [x] AM-T26 — 文言・README・紹介ページ・ADR・docs の仕上げ(NFR-005)(変更ファイル: `README.md`, `.github/pages/index.html`, `output/design/ADR_<NNN>_text-recognition.md`, `output/design/ADR_INDEX.md`, `docs/docs/*.md`, `project-config.md` §2・§3・§11 | 依存: AM-T25)
   - README・紹介ページに機能を追加する。「自動で守る」「すべて隠す」と書かず、利用者が最終確認する補助機能であることを示す。製品名を書かない
   - ADR: §15 #1(Rust から Vision を直接呼ぶ)の判断・試作の結果・却下した案
   - 各タスクで更新してきた `docs/docs/*.md` の整合を確認し、不足を埋める
   - 受け入れ基準:
-    - [ ] `rg -n '自動で守|すべて隠|安全です|機密はありません' README.md .github/pages/index.html src/ui` が 0 件
-    - [ ] `npm run e2e:screenshots:after` の紹介ページのスクリーンショットで表示崩れなし
-    - [ ] `SMOKE` 緑
+    - [x] `rg -n '自動で守|すべて隠|安全です|機密はありません' README.md .github/pages/index.html src/ui` が 0 件(2026-10-09: 該当は `src/ui/*.test.ts` の禁止語の一覧 2 行だけ)
+    - [x] `npm run e2e:screenshots:after` の紹介ページのスクリーンショットで表示崩れなし(2026-10-09: `landing.visual.ts` は `docs/media/` の画像を撮り直すため実行せず、紹介ページを Playwright で幅 1280px・390px に描画して確認。横はみ出し 0・ページのエラー 0)
+    - [x] `SMOKE` 緑(2026-10-09: build OK / vitest 621 / cargo 453・ignored 8 / clippy 0 / e2e 77)
   - 検証コマンド: 上記 `rg` / `npx playwright test --config=e2e/screenshots/playwright.config.ts e2e/screenshots/landing.visual.ts` / `SMOKE`
 
 ## 依存関係グラフ

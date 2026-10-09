@@ -261,3 +261,44 @@ Presentational/Container分離パターン(`docs/development-patterns.md` §1参
 - `@tauri-apps/plugin-clipboard-manager` の `writeImage()` に `Uint8Array`/`ArrayBuffer`/`number[]` を直接渡すと「PNG/ICOの生バイト列」として解釈され(`tauri`公式パッケージの `JsImage::Bytes`)、デコードに `tauri` クレートの `image-png`/`image-ico` Cargo featureが必要になる(公式ドキュメント <https://github.com/tauri-apps/tauri/blob/dev/packages/api/src/image.ts> のdoc comment参照)。一方 `@tauri-apps/api/image` の `Image.new(rgba, width, height)` は生RGBA8ピクセル列を直接受け付け「追加Cargo feature不要」と明記されている
 - Rustフォールバック(`arboard::Clipboard::set_image`)はPNG/ICO等のデコードを行わず、生のRGBA8ピクセル列(`arboard::ImageData { width, height, bytes }`)のみを受け付ける。PNGバイト列のままフォールバックへ渡すには別途デコード用クレート(`image`/`png`等)が必要になり、これはARCH §2・§15決定#3が承認した追加依存(`arboard`のみ)の範囲外になる
 - 以上より、主経路(`Image.new()` 経由の `writeImage()`)・フォールバック(`write_image_fallback`)のいずれもCanvasの `getImageData()` 由来のRGBA8をそのまま使う設計にした(`src/canvas/render.ts::getCanvasImageData()` → `src/ipc/clipboard.ts::copyToClipboard()`)。PNGのエンコード/デコードの往復が発生せず、追加のCargoクレート・featureも不要になる(NFR-003)。ARCH §5.2の `copyToClipboard(pngBytes)` という名称・PNG想定からの変更点であり、実装時の技術的制約による意図的な逸脱として記録する(project-config.md §11参照)
+
+---
+
+## 11. 自動マスキング(`src-tauri/src/masking/`・`src/ui/autoMask.ts` ほか、AM-T04〜T25)
+
+方式の判断と評価の推移は `output/design/ADR_001_text-recognition.md`、設計と実装での決定は `output/design/ARCH_auto-masking.md`(§17)。
+
+### 11.1 読み取った文字を残さない約束(PRD NFR-002)
+
+- webview へ返すのは候補の矩形と 4 分類の種類だけ。読み取った文字列・細分・候補の件数は IPC・ログに出さない(経過時間のログは `scan_ms` と画像の大きさだけ)
+- 読み取った文字列は `SensitiveText` で包む。`Debug` は常に `SensitiveText(<redacted>)`、`Display` は実装しない(`format!("{}")`・`to_string()` で組み立てられない。`compile_fail` の doctest で確認)。中身は `as_str()` で検出規則の中だけで読む
+- `src-tauri/src/masking/` では `println!`・`eprintln!`・`dbg!`・ログ用マクロを使わない。確認コマンド(`NOLOG`): `rg -n 'println!|eprintln!|dbg!|log::|tracing::' src-tauri/src/masking`(0 件)
+- テストの失敗メッセージにも文字列を出さない。`assert!` の比較は矩形・件数・種類・範囲で行い、`assert_eq!` に `SensitiveText` を直接渡さない
+- パニックの文言に文字列を入れない。標準のパニック表示は切り出した文字列の一部を含むため、`lib.rs` の `install_panic_hook()` が文言を出さず発生場所(ファイル:行:列)だけを出す。検出規則の文字列の切り出しは `&text[a..b]` ではなく `text.get(a..b)` を使う(境界の計算違いでパニックしない。AM-T25-F2)
+- エラーは固定文字列(`text_scan_busy`・`text_scan_failed`)だけを返し、OS のエラーの説明文や入力の一部を含めない。フロントの `TextScanError` の文言も固定
+- フロントでは候補を `console.*` に出さない。印のラベルは固定の種類名を `textContent` で入れる
+
+### 11.2 検出規則を書くときの約束
+
+- 位置の単位: Rust の `String` はバイト位置、読み取り結果の範囲は UTF-16 位置。検出器はバイト範囲を `Line::to_match` に渡し、`text.rs` の `Utf16Map` で変換する(取り違えると日本語の行で領域がずれる)
+- 正規化(`text::normalize`)は 1 文字 → 1 文字で、長音「ー」も `-` になる。日本語の手がかり語は同じ `normalize` を通してから比べる(`project-config.md` §11)
+- 表のラベルと値は別の観測として返る。ラベルだけの観測は `layout.rs` の右隣(無ければ直下・表の列)から値を探す
+- 検出側(`detect/`・`text.rs`・`layout.rs`・`geometry.rs`)は `ocr`・`objc2` 系を参照しない。テストは偽物の `RecognizedPage` で書く
+- 他社のサービス名・製品名を規則・評価データ・テスト・コメントに書かない(接頭辞の文字列だけを `lexicon.rs` の定数で持つ)。トークン形・カード番号形のテストデータはソースに完全な形で書かず、実行時に連結・チェックディジットを付けて作る(シークレット検出に掛からないように)
+- 誤検出を抑えるための決定(1 字の姓・英字の 2 字の辞書の語は手がかり語なしで使わない)を崩さない。辞書(`masking/lexicon/*.txt`)の中身を変えるときは `/legal-check`・`/security-scan` と人間の承認をやり直し、SHA-256 を記録し直す
+
+### 11.3 評価の回し方(`masking::eval`、実機で実行)
+
+- 評価はラベルを付けて回す: `MASK_EVAL_LABEL=<名前> cargo test --manifest-path src-tauri/Cargo.toml masking::eval -- --ignored --nocapture`。出力は `output/reports/masking/eval-<日付>-<名前>.md` と `testreport/masking/eval-<日付>-<名前>.json`
+- **ラベル無しで本番の評価を回すと `eval-<日付>.md` が上書きされ、その下に手書きした調整の記録(AM-T19・AM-T23 の表と理由)が消える**。比べるときは必ずラベルを付け、手書きの記録は別のファイルか生成部分より下に残す(上書きされたら `git checkout` で戻す)
+- 評価セットは `MASK_EVAL_SET`(未設定 = 本番 `eval/masking/`、`holdout`・`holdout2`・`holdout3`)。ホールドアウトはラベルの既定がセット名で、本番を上書きしない。95% の判定(失敗でテストが落ちる)は本番だけ
+- 日付は `MASK_EVAL_DATE=YYYY-MM-DD` で固定できる。画像と正解は `npm run mask:fixtures[:holdout|:holdout2|:holdout3]` で作り直す(撮影は `file:` 以外への要求を止める)
+- **ホールドアウトは規則の調整に使わない**。本番の評価画像だけで調整すると合わせ込みになり、未知の画面での実力がわからなくなる(本番 28 枚で 95% 以上でも、ホールドアウトでは手がかり語付きの番号が 20% 前後まで落ちた)。一度でも見逃しを見て規則を直したセットは開発用とみなし、未知の画面の確認には、規則を見ていない担当が作った新しいセットを使う。holdout1・holdout2 は開発用に転用済み、holdout3 が最終確認用
+- 出力は矩形・種類・細分・画像名だけで、読み取った文字列を含めない。見逃しの調査も、文字の形・位置・辞書への有無(真偽値)だけで行う
+
+### 11.4 一括モザイクの順序の約束(`documentState.applyBaseEdits()`)
+
+- 矩形ごとに「その時点のピクセルを読む → `draw(ctx, rect)` で加工」を**配列順に**行い、各 `pixels` を 1 つの `group` で積む。`group` は逆順に取り消し・順にやり直すので、矩形が重なっていても 1 回の ⌘Z で元の画素に戻る
+- 各矩形の「直前のピクセル」は、前の矩形を加工した後の画素になる。この順序を前提に取り消し・やり直しが組まれているので変えない
+- 戻り値は実際に加工した件数(画像外・幅 0 の矩形は飛ばす)。トーストの件数はこれを使う
+- 確認中(`review`)・処理中(`scanning`)は描画ツール・取り消し・重ね順・削除を止め、⌘C は効かせる。表示中の画像が変わったら候補を破棄する(古い画像の矩形で加工しない)
