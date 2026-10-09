@@ -90,6 +90,37 @@ export interface TauriMockConfig {
    * `failRegister` に入れたキーへの変更は `shortcut_register_failed` で reject する。
    */
   shortcut?: { initial?: string; registered?: boolean; failRegister?: string[] };
+  /**
+   * `scan_sensitive_text`(自動マスキングの文字の読み取り、AM-T17)の応答。省略時は 0 件を返す。
+   * 実行中に {@link setTextScanBehavior} で差し替えられる。
+   */
+  textScan?: TextScanMockBehavior;
+}
+
+/**
+ * `scan_sensitive_text` の候補 1 件(Rust `masking::MaskCandidate` の JSON)。矩形(画像の実ピクセル)と
+ * 種類だけで、読み取った文字列は含めない(NFR-002。実機の応答と同じ形)。
+ */
+export interface MockScanCandidate {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  kind: "contact" | "credential" | "identifier" | "financial";
+}
+
+/** `scan_sensitive_text` のモックの挙動(AM-T17)。 */
+export interface TextScanMockBehavior {
+  /** 成功時に返す候補(既定は 0 件)。`fail` / `response` があればそちらを優先する。 */
+  candidates?: MockScanCandidate[];
+  /** Rust の固定エラー文字列で reject する(`text_scan_failed` / `text_scan_busy`)。 */
+  fail?: "text_scan_failed" | "text_scan_busy";
+  /** 形の不正な応答を返す(候補の形の検証の確認用)。`candidates` より優先する。 */
+  response?: unknown;
+  /** 応答までの遅延(ミリ秒)。 */
+  delayMs?: number;
+  /** `true` なら {@link releaseTextScans} が呼ばれるまで応答を保留する(処理中の状態の確認用)。 */
+  hold?: boolean;
 }
 
 /**
@@ -105,7 +136,7 @@ type InjectedMockScript = (config: TauriMockConfig) => void;
  * 同一のロジック(`window.__TAURI_INTERNALS__`/`window.__TAURI_EVENT_PLUGIN_INTERNALS__`
  * への注入。上記モジュールdoc参照)に加え、本アプリが実際に呼ぶコマンド
  * (`capture_screen`/`check_screen_recording_permission`/`open_screen_recording_settings`/
- * `read_capture_image`/
+ * `read_capture_image`/`scan_sensitive_text`/
  * `plugin:image|new`/`plugin:resources|close`/`plugin:clipboard-manager|write_image`)への
  * 応答を `config` から解決する。
  */
@@ -124,12 +155,30 @@ const injectTauriMocks: InjectedMockScript = (config) => {
       shortcutCalls: string[];
       /** テストから Rust 発のイベント(`settings://open` など)を送る。 */
       emit?: (event: string, payload: unknown) => void;
+      /** `scan_sensitive_text` の現在の挙動(AM-T17。テストから差し替える)。 */
+      textScan: TextScanMockBehavior;
+      /** `scan_sensitive_text` の呼び出しの記録(送られた本文のバイト数と PNG の署名の有無)。 */
+      textScanCalls: { byteLength: number; isPng: boolean }[];
+      /** 保留中の `scan_sensitive_text` をすべて応答させる。 */
+      releaseTextScans: () => void;
     };
   };
 
   w.__TAURI_INTERNALS__ = w.__TAURI_INTERNALS__ ?? {};
   w.__TAURI_EVENT_PLUGIN_INTERNALS__ = w.__TAURI_EVENT_PLUGIN_INTERNALS__ ?? {};
-  w.__tadcapE2E = { clipboardWriteCount: 0, activateAppCount: 0, shortcutCalls: [] };
+  const heldTextScans: (() => void)[] = [];
+  w.__tadcapE2E = {
+    clipboardWriteCount: 0,
+    activateAppCount: 0,
+    shortcutCalls: [],
+    textScan: config.textScan ?? {},
+    textScanCalls: [],
+    releaseTextScans: () => {
+      for (const release of heldTextScans.splice(0)) {
+        release();
+      }
+    },
+  };
   const DEFAULT_ACCELERATOR = "shift+super+Digit2";
   const shortcutState = {
     accelerator: config.shortcut?.initial ?? DEFAULT_ACCELERATOR,
@@ -320,6 +369,32 @@ const injectTauriMocks: InjectedMockScript = (config) => {
         w.__tadcapE2E!.shortcutCalls.push(`recording:${String(actualArgs.recording)}`);
         return null;
 
+      case "scan_sensitive_text": {
+        // AM-T17: 本文はベースの PNG の生バイト列(`InvokeBody::Raw`、`src/ipc/textScan.ts`)。
+        // 中身は記録せず、大きさと PNG の署名の有無だけを残す。
+        const body = args instanceof Uint8Array ? args : null;
+        const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+        w.__tadcapE2E!.textScanCalls.push({
+          byteLength: body?.byteLength ?? 0,
+          isPng: !!body && signature.every((byte, i) => body[i] === byte),
+        });
+        // 呼び出し時点の挙動で応答する(保留中に差し替えても、その呼び出しの応答は変わらない)。
+        const behavior = { ...w.__tadcapE2E!.textScan };
+        if (behavior.hold) {
+          await new Promise<void>((resolve) => heldTextScans.push(resolve));
+        }
+        if (behavior.delayMs) {
+          await new Promise((resolve) => setTimeout(resolve, behavior.delayMs));
+        }
+        if (behavior.fail) {
+          throw behavior.fail;
+        }
+        if (behavior.response !== undefined) {
+          return behavior.response;
+        }
+        return (behavior.candidates ?? []).map((c) => ({ ...c }));
+      }
+
       default:
         // eslint-disable-next-line no-console
         console.warn(`[tauriMock] unhandled IPC command: ${cmd}`);
@@ -464,6 +539,34 @@ export async function emitTauriEvent(page: Page, event: string, payload: unknown
     },
     [event, payload] as const,
   );
+}
+
+/** `scan_sensitive_text` の挙動を差し替える(次の呼び出しから効く、AM-T17)。 */
+export async function setTextScanBehavior(page: Page, behavior: TextScanMockBehavior): Promise<void> {
+  await page.evaluate((behavior) => {
+    const w = window as unknown as { __tadcapE2E?: { textScan: TextScanMockBehavior } };
+    if (w.__tadcapE2E) {
+      w.__tadcapE2E.textScan = behavior;
+    }
+  }, behavior);
+}
+
+/** 保留中(`hold: true`)の `scan_sensitive_text` をすべて応答させる(AM-T17)。 */
+export async function releaseTextScans(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __tadcapE2E?: { releaseTextScans: () => void } };
+    w.__tadcapE2E?.releaseTextScans();
+  });
+}
+
+/** `scan_sensitive_text` の呼び出しの記録(本文のバイト数と PNG の署名の有無、AM-T17)。 */
+export async function getTextScanCalls(page: Page): Promise<{ byteLength: number; isPng: boolean }[]> {
+  return page.evaluate(() => {
+    const w = window as unknown as {
+      __tadcapE2E?: { textScanCalls: { byteLength: number; isPng: boolean }[] };
+    };
+    return w.__tadcapE2E?.textScanCalls ?? [];
+  });
 }
 
 /** 設定のコマンド呼び出しの記録(`set:<accelerator>` / `reset` / `recording:<bool>`、KS-T8)。 */
