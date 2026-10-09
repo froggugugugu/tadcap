@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { computeMosaicRect, mosaicBlockSize, pixelateImageData } from "./mosaicTool";
+import { computeMosaicRect, mosaicBlockSize, pixelateImageData, pixelateRect } from "./mosaicTool";
 
 // T20【改訂 2026-09-24】: `normalizeRect`/`clipRectToCanvas` 自体のテストは
 // `../coords.test.ts` へ移設した(定義本体を `coords.ts` へ移設したため)。
@@ -127,3 +127,75 @@ describe("pixelateImageData", () => {
 // T25【改訂 2026-09-24】: `cropSnapshotRect()`/`roundRect()`のテストは`../coords.test.ts`へ
 // 移設した(定義本体を`coords.ts`へ移設したため。矩形ツールが3ファイル目の利用者になり
 // Rule of Threeで集約、PJM指示)。
+
+// AM-T07【新設 2026-10-09】: 一括モザイク用に既存の`applyMosaic()`を`pixelateRect()`として公開した
+// (処理・ブロックサイズの式は変えない)。VitestのNode環境には`ImageData`が無いので偽物を置く。
+describe("pixelateRect", () => {
+  class FakeImageData {
+    constructor(
+      public data: Uint8ClampedArray,
+      public width: number,
+      public height: number,
+    ) {}
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** 1枚のRGBA配列を持つ偽の描画コンテキスト(読み書きした矩形を記録する)。 */
+  function createFakeContext(canvasWidth: number, canvasHeight: number) {
+    const pixels = new Uint8ClampedArray(canvasWidth * canvasHeight * 4);
+    for (let i = 0; i < pixels.length; i += 1) {
+      pixels[i] = (i * 37) % 256;
+    }
+    const reads: number[][] = [];
+    const writes: number[][] = [];
+    const ctx = {
+      getImageData: (x: number, y: number, width: number, height: number) => {
+        reads.push([x, y, width, height]);
+        const data = new Uint8ClampedArray(width * height * 4);
+        for (let row = 0; row < height; row += 1) {
+          const from = ((y + row) * canvasWidth + x) * 4;
+          data.set(pixels.subarray(from, from + width * 4), row * width * 4);
+        }
+        return new FakeImageData(data, width, height);
+      },
+      putImageData: (image: FakeImageData, x: number, y: number) => {
+        writes.push([x, y, image.width, image.height]);
+        for (let row = 0; row < image.height; row += 1) {
+          const from = row * image.width * 4;
+          pixels.set(image.data.subarray(from, from + image.width * 4), ((y + row) * canvasWidth + x) * 4);
+        }
+      },
+    };
+    return { ctx: ctx as unknown as CanvasRenderingContext2D, pixels, reads, writes };
+  }
+
+  it("矩形を整数化して読み、画像全体の対角線で決まるブロックサイズでピクセル化して書き戻す", () => {
+    vi.stubGlobal("ImageData", FakeImageData);
+    const W = 64;
+    const H = 48;
+    const { ctx, pixels, reads, writes } = createFakeContext(W, H);
+    const rect = { x: 3.4, y: 5.6, width: 20.4, height: 13.5 };
+    const before = createFakeContext(W, H).ctx.getImageData(3, 6, 20, 14) as unknown as FakeImageData;
+
+    pixelateRect(ctx, rect, W, H);
+
+    expect(reads).toEqual([[3, 6, 20, 14]]);
+    expect(writes).toEqual([[3, 6, 20, 14]]);
+    const expected = pixelateImageData(before.data, 20, 14, mosaicBlockSize(W, H));
+    const after = ctx.getImageData(3, 6, 20, 14) as unknown as FakeImageData;
+    expect(Array.from(after.data)).toEqual(Array.from(expected));
+    // 矩形の外は変えない。
+    expect(pixels[0]).toBe(0);
+  });
+
+  it("整数化して幅・高さが0になる矩形は読み書きしない", () => {
+    vi.stubGlobal("ImageData", FakeImageData);
+    const { ctx, reads, writes } = createFakeContext(16, 16);
+    pixelateRect(ctx, { x: 1, y: 1, width: 0.4, height: 5 }, 16, 16);
+    expect(reads).toEqual([]);
+    expect(writes).toEqual([]);
+  });
+});

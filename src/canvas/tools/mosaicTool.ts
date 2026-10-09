@@ -191,11 +191,15 @@ function drawSelectionOutline(
 }
 
 /**
- * 選択矩形のImageDataのみを取得しピクセル化して焼き込む(DOM依存、自動テスト対象外)。
+ * 選択矩形のImageDataのみを取得しピクセル化して焼き込む(DOM依存)。
  * 処理対象を矩形に限定することで、大きな画像(5K Retina全画面等)でもCanvas全体を
  * 処理せずに済む(パフォーマンス要件)。
+ *
+ * AM-T07【改訂 2026-10-09】: 一括モザイク(`documentState.applyBaseEdits()`から呼ぶ)で同じ
+ * 見た目・粗さにするため、旧`applyMosaic()`を`pixelateRect()`として公開した(処理・ブロック
+ * サイズの式は変えない)。Vitestでは偽のコンテキストと偽の`ImageData`で検証する。
  */
-function applyMosaic(
+export function pixelateRect(
   ctx: CanvasRenderingContext2D,
   rect: Rect,
   canvasWidth: number,
@@ -296,10 +300,10 @@ export function bindMosaicTool(canvas: HTMLCanvasElement): () => void {
       const rect = computeMosaicRect(start, toCanvasPoint(event), canvas.width, canvas.height);
       if (rect) {
         // T32: ベースだけをピクセル化し、`pixels`コマンドとして積む(変更矩形は従来どおり
-        // 整数化した`roundRect(rect)`。`applyMosaic`は元の`rect`を渡し内部の丸めも挙動不変)。
+        // 整数化した`roundRect(rect)`。`pixelateRect`(旧`applyMosaic`)は元の`rect`を渡し内部の丸めも挙動不変)。
         const width = canvas.width;
         const height = canvas.height;
-        applyBaseEdit(roundRect(rect), (baseCtx) => applyMosaic(baseCtx, rect, width, height));
+        applyBaseEdit(roundRect(rect), (baseCtx) => pixelateRect(baseCtx, rect, width, height));
       } else {
         renderDocument();
       }

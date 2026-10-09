@@ -4,6 +4,7 @@ import type { Rect } from "./coords";
 import {
   addShapeObject,
   applyBaseEdit,
+  applyBaseEdits,
   arrangeSelected,
   exportDocumentBase,
   previewSelectedColor,
@@ -29,6 +30,7 @@ import {
 import { OBJECT_LIMIT, type AnnotationObject } from "./objectModel";
 import { shapeUndoRect, type BoxShape, type EditableShape, type TextShape } from "./shapeEdit";
 import { canRedo, canUndo, getUndoStackState } from "./undoStack";
+import { commandPixelBytes } from "../history/documentArchive";
 
 function last<T>(items: readonly T[]): T | undefined {
   return items[items.length - 1];
@@ -410,6 +412,134 @@ describe("applyBaseEdit(モザイク・テキストのベース加工)", () => {
     applyBaseEdit({ x: 0, y: 0, width: 0, height: 10 }, () => {
       throw new Error("呼ばれない");
     });
+    expect(canUndo()).toBe(false);
+  });
+});
+
+describe("applyBaseEdits(複数矩形のベース加工を1手に、AM-T07)", () => {
+  /** 矩形の今のピクセルに`delta`を足して書く(直前のピクセルに依存する加工の見立て)。 */
+  const addTo = (delta: number) => (_ctx: CanvasRenderingContext2D, r: Rect) => {
+    const image = surface.read(r);
+    surface.write(r, { ...image, data: image.data.map((v) => v + delta) });
+  };
+  const fillPattern = () => {
+    for (let i = 0; i < surface.base.length; i += 1) {
+      surface.base[i] = i % 97;
+    }
+  };
+  const rects: Rect[] = [
+    { x: 0, y: 0, width: 10, height: 10 },
+    { x: 50, y: 50, width: 20, height: 5 },
+    { x: 200, y: 100, width: 8, height: 30 },
+  ];
+
+  it("矩形3件で group が1手だけ積まれ、1回の取り消しで3件とも戻り、やり直しで再びかかる", () => {
+    fillPattern();
+    const original = surface.base.slice();
+    expect(applyBaseEdits(rects, addTo(10))).toBe(true);
+    const edited = surface.base.slice();
+    expect(edited).not.toEqual(original);
+
+    const undo = getUndoStackState().undo;
+    expect(undo).toHaveLength(1);
+    const step = undo[0]!;
+    expect(step.type).toBe("group");
+    expect(step.type === "group" && step.commands.map((c) => c.type)).toEqual(["pixels", "pixels", "pixels"]);
+
+    expect(undoDocument()).toBe(true);
+    expect(surface.base).toEqual(original);
+    expect(canUndo()).toBe(false);
+    expect(redoDocument()).toBe(true);
+    expect(surface.base).toEqual(edited);
+  });
+
+  it("重なる2矩形でも、取り消し後に元の画素と完全一致し、やり直しで同じ結果に戻る", () => {
+    fillPattern();
+    const original = surface.base.slice();
+    const overlapping: Rect[] = [
+      { x: 10, y: 10, width: 30, height: 30 },
+      { x: 25, y: 25, width: 30, height: 30 },
+    ];
+    applyBaseEdits(overlapping, addTo(10));
+    // 重なり部分は2回加工される(矩形ごとに直前のピクセルを読んでから加工する)。
+    expect(surface.base[30 * W + 30]).toBe(((30 * W + 30) % 97) + 20);
+    const edited = surface.base.slice();
+
+    undoDocument();
+    expect(surface.base).toEqual(original);
+    redoDocument();
+    expect(surface.base).toEqual(edited);
+    undoDocument();
+    expect(surface.base).toEqual(original);
+  });
+
+  it("0件なら何も積まず、加工も再描画もしない", () => {
+    const renders = surface.renders.length;
+    expect(applyBaseEdits([], addTo(10))).toBe(false);
+    expect(canUndo()).toBe(false);
+    expect(surface.renders).toHaveLength(renders);
+  });
+
+  it("幅・高さ0の矩形は飛ばし、残りだけを1手に積む", () => {
+    const drawn: Rect[] = [];
+    applyBaseEdits(
+      [
+        { x: 0, y: 0, width: 0, height: 10 },
+        { x: 5, y: 5, width: 10, height: 10 },
+        { x: 20, y: 20, width: 10, height: 0 },
+      ],
+      (ctx, r) => {
+        drawn.push(r);
+        addTo(1)(ctx, r);
+      },
+    );
+    expect(drawn).toEqual([{ x: 5, y: 5, width: 10, height: 10 }]);
+    const undo = getUndoStackState().undo;
+    expect(undo).toHaveLength(1);
+    expect(undo[0]!.type === "group" && undo[0]!.commands).toHaveLength(1);
+  });
+
+  it("有効な矩形が1件も無ければ何も積まない", () => {
+    expect(applyBaseEdits([{ x: 0, y: 0, width: 0, height: 0 }], addTo(1))).toBe(false);
+    expect(canUndo()).toBe(false);
+  });
+
+  it("小数の矩形は整数化し、画像の外へはみ出す分は切り詰めてから加工する", () => {
+    const drawn: Rect[] = [];
+    applyBaseEdits(
+      [
+        { x: 1.4, y: 2.6, width: 9.6, height: 4.4 },
+        { x: W - 5, y: -3, width: 20, height: 10 },
+      ],
+      (ctx, r) => {
+        drawn.push(r);
+        addTo(1)(ctx, r);
+      },
+    );
+    expect(drawn).toEqual([
+      { x: 1, y: 3, width: 10, height: 4 },
+      { x: W - 5, y: 0, width: 5, height: 7 },
+    ]);
+  });
+
+  it("取り消し後に新しい操作をするとやり直しは消える(既存の取り消しと同じ)", () => {
+    applyBaseEdits(rects, addTo(1));
+    undoDocument();
+    expect(canRedo()).toBe(true);
+    applyBaseEdits(rects.slice(0, 1), addTo(1));
+    expect(canRedo()).toBe(false);
+  });
+
+  it("commandPixelBytes() は group 内の pixels の合計を返す", () => {
+    applyBaseEdits(rects, addTo(1));
+    const step = getUndoStackState().undo[0]!;
+    // 偽のサーフェスは1画素=1バイト。
+    expect(commandPixelBytes(step)).toBe(10 * 10 + 20 * 5 + 8 * 30);
+  });
+
+  it("サーフェスが無ければ何もしない", () => {
+    setDocumentSurface(null);
+    expect(applyBaseEdits(rects, addTo(1))).toBe(false);
     expect(canUndo()).toBe(false);
   });
 });

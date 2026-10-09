@@ -15,7 +15,7 @@
 //! 本モジュールと`undoStack`に集まっている。履歴切替時にこれらを退避・復元すればよい。
 
 import { redoCommand, undoCommand, type DocumentCommand, type PixelStore } from "./commands";
-import type { Rect } from "./coords";
+import { clipRectToCanvas, roundRect, type Rect } from "./coords";
 import {
   OBJECT_LIMIT,
   findObject,
@@ -196,6 +196,42 @@ export function applyBaseEdit(rect: Rect, draw: (ctx: CanvasRenderingContext2D) 
   surface.editBase(draw);
   pushCommand({ type: "pixels", rect, image: before });
   commit();
+}
+
+/**
+ * 複数の矩形のベース加工を1手にまとめる(一括モザイク、AM-T07・PRD FR-011・ARCH 自動マスキング §7.1 手順9)。
+ *
+ * 順序の約束: 矩形ごとに「その時点のピクセルを読む → `draw(ctx, rect)`で加工」を**配列順に**行い、
+ * 各`pixels`コマンドを1つの`group`で積む。`group`は逆順に取り消し・順にやり直すため、矩形が
+ * 重なっていても1回の取り消しで元の画素に戻る。矩形は整数化して画像内に切り詰め、幅・高さが0の
+ * ものは飛ばす(`draw`には切り詰め後の矩形を渡す)。有効な矩形が無い・サーフェスが無ければ
+ * 何も積まず`false`。
+ */
+export function applyBaseEdits(
+  rects: readonly Rect[],
+  draw: (ctx: CanvasRenderingContext2D, rect: Rect) => void,
+): boolean {
+  if (!surface) {
+    return false;
+  }
+  const target = surface;
+  const { width, height } = target.size();
+  const commands: DocumentCommand[] = [];
+  for (const raw of rects) {
+    const rect = clipRectToCanvas(roundRect(raw), width, height);
+    if (rect.width <= 0 || rect.height <= 0) {
+      continue;
+    }
+    const before = target.read(rect);
+    target.editBase((ctx) => draw(ctx, rect));
+    commands.push({ type: "pixels", rect, image: before });
+  }
+  if (commands.length === 0) {
+    return false;
+  }
+  pushCommand({ type: "group", commands });
+  commit();
+  return true;
 }
 
 /** 最新の操作を取り消す。取り消せなければ`false`。 */
