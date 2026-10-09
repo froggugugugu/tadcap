@@ -52,20 +52,8 @@ impl Line {
 type Detector = fn(&dyn RecognizedPage, &[Line]) -> Vec<Match>;
 
 /// 登録済みの検出器(①連絡先 → ②認証情報 → ③識別子 → ④金額・口座)。
-/// 未実装の検出器は `not_yet_implemented` を置き、実装するタスクで差し替える。
-const DETECTORS: [Detector; 4] = [
-    contact::detect,
-    credential::detect,
-    // ③識別子: AM-T16・AM-T21・AM-T22 で `identifier::detect` に差し替える
-    not_yet_implemented,
-    // ④金額・口座: AM-T16 で `financial::detect` に差し替える
-    not_yet_implemented,
-];
-
-/// 未実装の検出器の代わり。常に空を返す。
-fn not_yet_implemented(_page: &dyn RecognizedPage, _lines: &[Line]) -> Vec<Match> {
-    Vec::new()
-}
+/// ③識別子は手がかり語付きの番号だけ(人名は AM-T21、会社名は AM-T22 で `identifier::detect` に足す)。
+const DETECTORS: [Detector; 4] = [contact::detect, credential::detect, identifier::detect, financial::detect];
 
 /// ページ全体に全検出器を当て、行の番号・範囲の順に並べた結果を返す(完全に同じ結果は 1 つにする)。
 pub(super) fn run(page: &dyn RecognizedPage) -> Vec<Match> {
@@ -250,11 +238,26 @@ mod tests {
     }
 
     #[test]
-    fn 未実装の検出器は空を返す() {
-        let page = FakePage::new(&["password: abc123"]);
-        let lines = [Line::new(0, page.line_text(0))];
-        for detector in &DETECTORS[2..] {
-            assert!(detector(&page, &lines).is_empty());
-        }
+    fn 識別子の検出器を登録している() {
+        let line = "社員番号 E-204871";
+        let page = FakePage::new(&[line]);
+        let matches = run(&page);
+        assert_eq!(matches, vec![Match::new(0, span(line, "E-204871"), MatchDetail::LabeledNumber)]);
+        assert!(matches.iter().all(|m| m.kind == MaskKind::Identifier));
+    }
+
+    #[test]
+    fn 金額と口座の検出器を登録している() {
+        let line = "普通 1234567 / 手数料 440円";
+        let page = FakePage::new(&[line]);
+        let matches = run(&page);
+        assert_eq!(
+            matches,
+            vec![
+                Match::new(0, span(line, "1234567"), MatchDetail::AccountNumber),
+                Match::new(0, span(line, "440円"), MatchDetail::Amount),
+            ]
+        );
+        assert!(matches.iter().all(|m| m.kind == MaskKind::Financial));
     }
 }
