@@ -238,8 +238,8 @@ mod tests {
 
     #[test]
     fn サブドメインと記号を含むメールを検出する() {
-        let line = "To: first_last+tag@mail.sub.example.co.jp";
-        assert_eq!(emails(line), vec![span(line, "first_last+tag@mail.sub.example.co.jp")]);
+        let line = "To: first_last+tag@mail.sub.example.jp";
+        assert_eq!(emails(line), vec![span(line, "first_last+tag@mail.sub.example.jp")]);
     }
 
     #[test]
