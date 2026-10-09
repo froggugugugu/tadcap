@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { beginScan, discardMaskSession } from "../canvas/maskSession";
-import { TOOL_IDS, currentToolButtonContext, toolButtonAttributes, toolButtonState } from "./toolbar";
+import {
+  TOOL_GROUP_ORDER,
+  TOOL_IDS,
+  currentToolButtonContext,
+  toolButtonAttributes,
+  toolButtonState,
+  toolGroupOf,
+  toolbarItems,
+} from "./toolbar";
 
 // ツールボタンの押下・無効の判定(DOM 結線の `initToolbar` は E2E で確認する)。
 describe("toolButtonState", () => {
@@ -85,5 +93,40 @@ describe("toolButtonAttributes", () => {
       expect(attributes.ariaLabel).toMatch(/\([A-Z]\)$/);
       expect(attributes.ariaKeyShortcuts).toMatch(/^[A-Z]$/);
     }
+  });
+});
+
+// QE-T03: ツールの 2 組(描く注釈 ┆ 画像を変える)と区切り(UI_quick-edits §1.1)。
+describe("toolbarItems(ツールの並びと組の区切り)", () => {
+  it("描く注釈の組 → 区切り → 画像を変える組の順に並ぶ", () => {
+    expect(toolbarItems()).toEqual(["arrow", "rectangle", "ellipse", "text", "divider", "mosaic"]);
+  });
+
+  it("区切りは組の間に 1 本だけ(先頭・末尾・連続には入らない)", () => {
+    const items = toolbarItems();
+    expect(items.filter((item) => item === "divider")).toHaveLength(1);
+    expect(items[0]).not.toBe("divider");
+    expect(items[items.length - 1]).not.toBe("divider");
+  });
+
+  it("モザイクは画像を変える組の先頭(キーは M のまま)", () => {
+    const items = toolbarItems();
+    expect(items[items.indexOf("divider") + 1]).toBe("mosaic");
+    expect(toolButtonAttributes("mosaic").ariaKeyShortcuts).toBe("M");
+  });
+
+  it("各ツールの組: 描く注釈は annotate、画像を変えるものは image", () => {
+    expect(TOOL_GROUP_ORDER).toEqual(["annotate", "image"]);
+    expect(TOOL_IDS.map((id) => [id, toolGroupOf(id)])).toEqual([
+      ["arrow", "annotate"],
+      ["rectangle", "annotate"],
+      ["ellipse", "annotate"],
+      ["text", "annotate"],
+      ["mosaic", "image"],
+    ]);
+  });
+
+  it("区切りを除いた並びは TOOL_IDS と同じ", () => {
+    expect(toolbarItems().filter((item) => item !== "divider")).toEqual([...TOOL_IDS]);
   });
 });

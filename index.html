@@ -73,72 +73,73 @@
           </button>
         </div>
 
-        <div class="toolbar__spacer"></div>
+        <!-- 右のまとまり(取り消し・やり直し〜コピー)。窓を狭めて 2 段に折り返しても右端にそろえる(QE-T03) -->
+        <div class="toolbar__end">
+          <div class="tool-toolbar" role="group" aria-label="取り消し・やり直し">
+            <button
+              id="undo-button"
+              type="button"
+              class="icon-button"
+              disabled
+              data-preserve-selection
+              aria-label="取り消し(⌘Z)"
+              title="取り消し(⌘Z)"
+            >
+              <svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path
+                  d="M7.5 5 4 8.5 7.5 12M4.5 8.5h7.25a4 4 0 0 1 0 8H9"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <button
+              id="redo-button"
+              type="button"
+              class="icon-button"
+              disabled
+              data-preserve-selection
+              aria-label="やり直し(⌘⇧Z)"
+              title="やり直し(⌘⇧Z)"
+            >
+              <svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path
+                  d="M12.5 5 16 8.5 12.5 12M15.5 8.5H8.25a4 4 0 0 0 0 8H11"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
 
-        <div class="tool-toolbar" role="group" aria-label="取り消し・やり直し">
+          <div class="toolbar__divider" aria-hidden="true"></div>
+
           <button
-            id="undo-button"
+            id="clipboard-copy-button"
             type="button"
             class="icon-button"
             disabled
-            data-preserve-selection
-            aria-label="取り消し(⌘Z)"
-            title="取り消し(⌘Z)"
+            aria-label="クリップボードにコピー(⌘C)"
+            title="クリップボードにコピー(⌘C)"
           >
             <svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <rect x="6.5" y="3" width="7" height="3" rx="1" fill="none" stroke="currentColor" stroke-width="1.4" />
               <path
-                d="M7.5 5 4 8.5 7.5 12M4.5 8.5h7.25a4 4 0 0 1 0 8H9"
+                d="M6.5 4.8H5.4A1.9 1.9 0 0 0 3.5 6.7v8.8a1.9 1.9 0 0 0 1.9 1.9h9.2a1.9 1.9 0 0 0 1.9-1.9V6.7a1.9 1.9 0 0 0-1.9-1.9h-1.1"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="1.6"
+                stroke-width="1.4"
                 stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-          <button
-            id="redo-button"
-            type="button"
-            class="icon-button"
-            disabled
-            data-preserve-selection
-            aria-label="やり直し(⌘⇧Z)"
-            title="やり直し(⌘⇧Z)"
-          >
-            <svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-              <path
-                d="M12.5 5 16 8.5 12.5 12M15.5 8.5H8.25a4 4 0 0 0 0 8H11"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
               />
             </svg>
           </button>
         </div>
-
-        <div class="toolbar__divider" aria-hidden="true"></div>
-
-        <button
-          id="clipboard-copy-button"
-          type="button"
-          class="icon-button"
-          disabled
-          aria-label="クリップボードにコピー(⌘C)"
-          title="クリップボードにコピー(⌘C)"
-        >
-          <svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-            <rect x="6.5" y="3" width="7" height="3" rx="1" fill="none" stroke="currentColor" stroke-width="1.4" />
-            <path
-              d="M6.5 4.8H5.4A1.9 1.9 0 0 0 3.5 6.7v8.8a1.9 1.9 0 0 0 1.9 1.9h9.2a1.9 1.9 0 0 0 1.9-1.9V6.7a1.9 1.9 0 0 0-1.9-1.9h-1.1"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.4"
-              stroke-linecap="round"
-            />
-          </svg>
-        </button>
       </header>
 
       <div class="main-area">

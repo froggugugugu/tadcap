@@ -25,6 +25,10 @@
 //! QE-T02: ボタンの名前を `矢印(A)` の形にし、`aria-keyshortcuts` を付けた(UI_quick-edits §1.3)。
 //! 名前とキーは `toolKeys.ts` の `TOOL_KEYS` から読む。1 キー切替の可否も本モジュールの
 //! `toolButtonState()` を使う(`main.ts` が `bindToolKeys()` に渡す)。
+//!
+//! QE-T03: ツールを「描く注釈」(色を使う)と「画像を変える」(色を持たない)の 2 組に分け、
+//! `initToolbar()` が組の間に細い区切り(`.tool-toolbar__divider`)を 1 本入れる(UI_quick-edits §1.1)。
+//! 区切りは見た目だけで、グループの `role="group"` は 1 つのまま。
 
 import {
   getCanvasState,
@@ -35,8 +39,18 @@ import {
 import { isMaskSessionActive, subscribeMaskSession } from "../canvas/maskSession";
 import { toolLabel, toolShortcutKey } from "./toolKeys";
 
+/**
+ * ツールの組(QE-T03、UI_quick-edits §1.1)。`annotate` = 描く注釈(選択中の色を使う)、
+ * `image` = 画像そのものを変える(色を持たない)。
+ */
+export type ToolGroup = "annotate" | "image";
+
+/** 組の並び(左から)。 */
+export const TOOL_GROUP_ORDER: ReadonlyArray<ToolGroup> = ["annotate", "image"];
+
 interface ToolDefinition {
   id: ToolId;
+  group: ToolGroup;
   /** インラインSVGアイコン(`viewBox="0 0 20 20"` に統一、T19)。 */
   icon: string;
 }
@@ -44,6 +58,7 @@ interface ToolDefinition {
 const TOOLS: ToolDefinition[] = [
   {
     id: "arrow",
+    group: "annotate",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<path d="M4.5 15.5 14.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
@@ -52,6 +67,7 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     id: "rectangle",
+    group: "annotate",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<rect x="3.5" y="5" width="13" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
@@ -59,6 +75,7 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     id: "ellipse",
+    group: "annotate",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<ellipse cx="10" cy="10" rx="6.5" ry="5" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
@@ -66,6 +83,7 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     id: "text",
+    group: "annotate",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<path d="M4.5 5.5V4.5H15.5V5.5M10 4.5V15.5M7.5 15.5H12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -73,6 +91,7 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     id: "mosaic",
+    group: "image",
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<rect x="3" y="3" width="6" height="6" rx="1" fill="currentColor"/>' +
@@ -85,6 +104,37 @@ const TOOLS: ToolDefinition[] = [
 
 /** ツールボタンの並び(`TOOL_KEYS` との整合をテストで確かめる、QE-T02)。 */
 export const TOOL_IDS: ReadonlyArray<ToolId> = TOOLS.map((tool) => tool.id);
+
+/** ツールの組。 */
+export function toolGroupOf(id: ToolId): ToolGroup {
+  const tool = TOOLS.find((candidate) => candidate.id === id);
+  if (!tool) {
+    throw new Error(`TOOLS has no entry for tool: ${id}`);
+  }
+  return tool.group;
+}
+
+/** ツールバーに並べる項目(ツールか、組の区切り)。 */
+export type ToolbarItem = ToolId | "divider";
+
+/**
+ * ツールの並びに組の区切りを入れた列(QE-T03)。組は `TOOL_GROUP_ORDER` の順に並べ、
+ * ツールのある組の間にだけ区切りを 1 本入れる(先頭・末尾・空の組には入れない)。
+ */
+export function toolbarItems(): ToolbarItem[] {
+  const items: ToolbarItem[] = [];
+  for (const group of TOOL_GROUP_ORDER) {
+    const ids = TOOLS.filter((tool) => tool.group === group).map((tool) => tool.id);
+    if (ids.length === 0) {
+      continue;
+    }
+    if (items.length > 0) {
+      items.push("divider");
+    }
+    items.push(...ids);
+  }
+  return items;
+}
 
 /**
  * ツールボタンの名前・ツールチップ・キー(QE-T02、UI_quick-edits §1.3)。名前とキーは
@@ -133,7 +183,18 @@ export function toolButtonState(
 export function initToolbar(mount: HTMLElement): void {
   const buttons = new Map<ToolId, HTMLButtonElement>();
 
-  for (const tool of TOOLS) {
+  for (const item of toolbarItems()) {
+    if (item === "divider") {
+      const divider = document.createElement("div");
+      divider.className = "tool-toolbar__divider";
+      divider.setAttribute("aria-hidden", "true");
+      mount.appendChild(divider);
+      continue;
+    }
+    const tool = TOOLS.find((candidate) => candidate.id === item);
+    if (!tool) {
+      continue;
+    }
     const button = document.createElement("button");
     button.type = "button";
     button.className = "icon-button tool-toolbar__button";

@@ -80,12 +80,18 @@ body {
 /* --- ツールバー(T19: キャプチャ/編集ツール/コピーを1本の薄いバーに統合。
    アイコン中心・説明文なし。ツールチップ/aria-labelで意味を保つ) --- */
 
+/* QE-T03(UI_quick-edits §1.4): 窓を狭めたら 2 段に折り返す(何も隠さず、横スクロールもしない)。
+   1 段のときの高さは今と同じ 40px、2 段で 74px。 */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  height: 40px;
-  padding: 0 8px;
+  row-gap: 4px;
+  height: auto;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--surface-color);
   flex: none;
@@ -99,14 +105,27 @@ body {
   flex: none;
 }
 
-.toolbar__spacer {
-  flex: 1;
+/* 右のまとまり(取り消し・やり直し〜コピー)。折り返しても右端にそろえる(QE-T03)。 */
+.toolbar__end {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .tool-toolbar {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+/* 編集ツールの組の区切り(描く注釈 ┆ 画像を変える、QE-T03・UI_quick-edits §1.1)。見た目だけ。 */
+.tool-toolbar__divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 3px;
+  background-color: var(--border-color);
+  flex: none;
 }
 
 /* --- 注釈色の選択(T28、FR-013)。丸いスウォッチを並べ、選択中は同じ色の輪で示す。
