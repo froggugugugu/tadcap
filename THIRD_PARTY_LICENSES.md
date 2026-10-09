@@ -15618,7 +15618,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## objc2-app-kit 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-core-foundation 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-core-graphics 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-foundation 0.3.2(MIT) / objc2-io-surface 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-quartz-core 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-web-kit 0.3.2(Zlib OR Apache-2.0 OR MIT)
+## objc2-app-kit 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-core-foundation 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-core-graphics 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-foundation 0.3.2(MIT) / objc2-io-surface 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-quartz-core 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-vision 0.3.2(Zlib OR Apache-2.0 OR MIT) / objc2-web-kit 0.3.2(Zlib OR Apache-2.0 OR MIT)
 
 (ライセンスファイル無し。MIT を選択):
 
