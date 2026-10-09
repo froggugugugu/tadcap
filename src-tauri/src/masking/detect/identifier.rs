@@ -40,38 +40,51 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::super::layout::{next_line_below, right_neighbor};
+use super::super::layout::{near_right_neighbor, next_line_below, right_neighbor};
 use super::super::text::{normalize, SensitiveText};
 use super::super::{Match, MatchDetail, NormalizedRect, RecognizedPage};
 use super::lexicon::{
     COMPANY_LABELS_ASCII, COMPANY_LABELS_JA, COMPANY_NAME_PARTICLES, COMPANY_SUFFIXES_ASCII, COMPANY_TYPES_JA,
-    CUED_NUMBER_CUES_ASCII, CUED_NUMBER_CUES_JA, ENGLISH_NAME_GREETINGS, ENGLISH_NAME_TITLES, GIVEN_NAMES_ROMAJI, HONORIFICS,
+    CUED_NUMBER_CUES_ASCII, CUED_NUMBER_KINDS_ASCII, CUED_NUMBER_KINDS_JA, CUED_NUMBER_SUBJECTS_ASCII,
+    CUED_NUMBER_SUBJECTS_JA, CUE_PARTICLES, ENGLISH_NAME_GREETINGS, ENGLISH_NAME_TITLES, GIVEN_NAMES_ROMAJI, HONORIFICS,
     HONORIFIC_NON_NAMES, PERSON_COLUMN_LABELS_JA, PERSON_LABELS_ASCII, PERSON_LABELS_JA, SURNAMES_JA, SURNAMES_ROMAJI,
 };
-use super::{is_hiragana, is_kana_kanji, is_kanji, is_katakana, is_katakana_mark, Line};
+use super::{column_cells, is_hiragana, is_kana_kanji, is_kanji, is_katakana, is_katakana_mark, Line};
 
 /// 手がかり語だけの観測(ラベル)とみなす文字数の上限。長い文は値を探さない。
 const MAX_LABEL_CHARS: usize = 20;
 
-/// 日本語の手がかり語を行と同じ規則で正規化し、長いものを先にした正規表現の選択肢(長音 `ー` は `-` になる)。
+/// 日本語の手がかり語(対象 + 空白 0〜1 個 + 番号の語)の正規表現の断片。語は行と同じ規則で正規化する
+/// (長音 `ー` は `-` になる)。
 fn ja_cue_pattern() -> String {
-    let mut cues: Vec<String> = CUED_NUMBER_CUES_JA
-        .iter()
-        .map(|cue| normalize(&SensitiveText::new((*cue).to_string())).as_str().to_string())
-        .collect();
-    cues.sort_by_key(|cue| std::cmp::Reverse(cue.len()));
-    cues.iter().map(|cue| regex::escape(cue)).collect::<Vec<_>>().join("|")
+    format!(
+        r"(?:{})\x20?(?:{})",
+        normalized_alternatives(&CUED_NUMBER_SUBJECTS_JA),
+        normalized_alternatives(&CUED_NUMBER_KINDS_JA)
+    )
+}
+
+/// 英字の手がかり語(対象 + 番号の語、または「User ID」「ID」)の正規表現の断片。
+fn en_cue_pattern() -> String {
+    format!(r"(?:{}){CUED_NUMBER_KINDS_ASCII}|{}", CUED_NUMBER_SUBJECTS_ASCII.join("|"), CUED_NUMBER_CUES_ASCII.join("|"))
+}
+
+/// 手がかり語と値の間に入る助詞の正規表現の断片。
+fn particle_pattern() -> String {
+    CUE_PARTICLES.join("|")
 }
 
 /// 番号の値(英数字で始まり、英数字・`_`・`-` が続く)。
 const VALUE_PATTERN: &str = r"[a-z0-9][a-z0-9_\-]*";
 
 /// 手がかり語 + 区切り + 値。英字の手がかり語は前が英数字でないこと。
+/// 区切りは `:`・`=`・`#`、助詞(「会員番号は 12345」。後に `:` が続いてもよい)、または空白だけ。
 static CUED: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"(?i)(?:(?P<ja>{ja})|(?:^|[^a-z0-9_])(?P<en>{en}))(?P<sep>\x20*[:=#]\x20*|\x20*)(?P<value>{VALUE_PATTERN})",
+        r"(?i)(?:(?P<ja>{ja})|(?:^|[^a-z0-9_])(?P<en>{en}))(?P<sep>\x20*[:=#]\x20*|\x20*(?:{particles})\x20*:?\x20*|\x20*)(?P<value>{VALUE_PATTERN})",
         ja = ja_cue_pattern(),
-        en = CUED_NUMBER_CUES_ASCII.join("|"),
+        en = en_cue_pattern(),
+        particles = particle_pattern(),
     ))
     .expect("固定の正規表現が不正")
 });
@@ -81,7 +94,7 @@ static LABEL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
         r"(?i){ja}|(?:^|[^a-z0-9_])(?:{en})(?:$|[^a-z0-9_])",
         ja = ja_cue_pattern(),
-        en = CUED_NUMBER_CUES_ASCII.join("|"),
+        en = en_cue_pattern(),
     ))
     .expect("固定の正規表現が不正")
 });
@@ -101,8 +114,14 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
         matches.extend(found.into_iter().filter_map(|r| line.to_match(r, MatchDetail::LabeledNumber)));
     }
 
-    for line in lines.iter().filter(|line| is_label_only(line.as_str())) {
-        let Some(neighbor) = right_neighbor(page, line.index).or_else(|| next_line_below(page, line.index))
+    for (pos, line) in lines.iter().enumerate().filter(|(_, line)| is_label_only(line.as_str())) {
+        // 表の見出しなら列の下に並ぶ値を番号とし、右隣(別の列の見出し)は値にしない
+        let column = column_numbers(lines, &column_cells(page, lines, pos), &has_own_value);
+        if !column.is_empty() {
+            matches.extend(column);
+            continue;
+        }
+        let Some(neighbor) = near_right_neighbor(page, line.index).or_else(|| next_line_below(page, line.index))
         else {
             continue;
         };
@@ -120,6 +139,42 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
     matches.extend(detect_person_names(page, lines));
     matches.extend(detect_company_names(page, lines));
     matches
+}
+
+/// 表の列の値とみなす、英字の大文字・小文字の切り替わりの最小回数(数字を含まない値のとき)。
+/// 読み取りで `0` が `O` になった ID を拾い、「admin」「Tokyo」のような普通の語を除く。
+const MIN_COLUMN_CASE_CHANGES: usize = 2;
+
+/// 表の列の値の形: ASCII で、数字を含むか大文字・小文字の切り替わりが 2 回以上ある。
+fn is_column_identifier(value: &str) -> bool {
+    let case_changes = value
+        .as_bytes()
+        .windows(2)
+        .filter(|w| w[0].is_ascii_alphabetic() && w[1].is_ascii_alphabetic())
+        .filter(|w| w[0].is_ascii_uppercase() != w[1].is_ascii_uppercase())
+        .count();
+    !value.is_empty()
+        && value.is_ascii()
+        && (value.bytes().any(|b| b.is_ascii_digit()) || case_changes >= MIN_COLUMN_CASE_CHANGES)
+}
+
+/// 表の列の観測(`cells` は `lines` の位置)を上から順に番号とする。観測全体(前後の空白を除く)が
+/// 番号の形(`is_column_identifier`)の間だけ続ける(読み取りで入った途中の空白を許すため、先頭の値ではなく観測全体を採る)。
+fn column_numbers(lines: &[Line], cells: &[usize], has_own_value: &[bool]) -> Vec<Match> {
+    let mut found = Vec::new();
+    for &pos in cells {
+        let text = lines[pos].as_str();
+        let start = text.len() - text.trim_start().len();
+        let value = text.trim();
+        let is_number = is_column_identifier(value) && !has_own_value[pos] && !is_label_only(value);
+        if !is_number {
+            break;
+        }
+        if let Some(m) = lines[pos].to_match(start..start + value.len(), MatchDetail::LabeledNumber) {
+            found.push(m);
+        }
+    }
+    found
 }
 
 /// ③会社名の検出(会社の種類・英字の会社の種類・ラベル)。同じ範囲は 1 つにする。
@@ -182,7 +237,7 @@ fn japanese_companies(text: &str) -> Vec<Range<usize>> {
         }
         // 種類と名前の間の空白 1 つまで(読み取りで入った空白)
         let name_start = company_type.end() + usize::from(text[company_type.end()..].starts_with(' '));
-        let name_end = company_name_after(text, name_start);
+        let name_end = extend_english_words(text, name_start, company_name_after(text, name_start));
         if name_end > name_start {
             found.push(company_type.start()..name_end);
         }
@@ -205,15 +260,21 @@ static MISREAD_KABU: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:^|\x20)(?P<kabu>\(?株\)?)[\p{Hiragana}\p{Katakana}]").expect("固定の正規表現が不正")
 });
 
+/// 名前の前半のひらがなの列とみなす文字数の下限(「やまびこ醸造」の「やまびこ」)。1 字は助詞とみなす。
+const MIN_LEADING_HIRAGANA: usize = 2;
+
 /// `end` の直前から後ろ向きに集めた名前の列の始まり(バイト位置)。数字は含めず、
 /// 漢字・カタカナ・英字より前のひらがなは助詞とみなす。名前が無ければ `end`。
+/// ただし、その前のひらがなの列(2 字以上・漢字側の端が助詞でない)が語の区切り(行頭・空白・記号)から
+/// 始まるなら、名前の前半(「やまびこ醸造合資会社」)として含める。
 fn company_name_before(text: &str, end: usize) -> usize {
     let chars: Vec<(usize, char)> = text[..end].char_indices().collect();
     let mut start = end;
     let mut has_non_hiragana = false;
-    for k in (0..chars.len()).rev().take(MAX_COMPANY_NAME_CHARS) {
-        let (i, c) = chars[k];
-        let left = k.checked_sub(1).map(|j| chars[j].1);
+    let mut k = chars.len();
+    while k > 0 && chars.len() - k < MAX_COMPANY_NAME_CHARS {
+        let (i, c) = chars[k - 1];
+        let left = (k >= 2).then(|| chars[k - 2].1);
         let accepted = if is_hiragana(c) {
             !has_non_hiragana
         } else if is_kanji(c) || is_katakana(c) || c.is_ascii_alphabetic() {
@@ -226,9 +287,34 @@ fn company_name_before(text: &str, end: usize) -> usize {
             break;
         }
         start = i;
+        k -= 1;
+    }
+    if !has_non_hiragana || k == 0 || !is_hiragana(chars[k - 1].1) || COMPANY_NAME_PARTICLES.contains(&chars[k - 1].1) {
+        return start;
+    }
+    let mut j = k;
+    while j > 0 && is_hiragana(chars[j - 1].1) && chars.len() - j < MAX_COMPANY_NAME_CHARS {
+        j -= 1;
+    }
+    let at_boundary = j == 0 || !(is_kana_kanji(chars[j - 1].1) || chars[j - 1].1.is_ascii_alphanumeric());
+    if at_boundary && k - j >= MIN_LEADING_HIRAGANA {
+        start = chars[j].0;
     }
     start
 }
+
+/// 前置の会社の種類の後の名前が英字だけなら、空白 1 つで続く大文字・数字始まりの語を 3 語まで含める
+/// (「株式会社 Kumoyuki Systems」)。続かなければ `end` のまま。
+fn extend_english_words(text: &str, start: usize, end: usize) -> usize {
+    if end == start || !text[start..end].bytes().all(|b| b.is_ascii_alphanumeric()) {
+        return end;
+    }
+    ENGLISH_NAME_WORDS.find(&text[end..]).map_or(end, |m| end + m.end())
+}
+
+/// 前置の会社の種類の後に続く英字の語(空白 1 つ + 大文字・数字始まり。3 語まで)。
+static ENGLISH_NAME_WORDS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:\x20[A-Z0-9][A-Za-z0-9&'\-]*){1,3}").expect("固定の正規表現が不正"));
 
 /// `start` から前向きに集めた名前の列の終わり(バイト位置)。空白・記号の手前で終わる。助詞で始まるなら `start`。
 fn company_name_after(text: &str, start: usize) -> usize {
@@ -873,8 +959,10 @@ fn find_cued_numbers(text: &str) -> Vec<Range<usize>> {
     CUED.captures_iter(text)
         .filter_map(|caps| {
             let (sep, value) = (caps.name("sep")?, caps.name("value")?);
-            // 英字の手がかり語は値との間に区切りが要る(`IDE`・`idx1` などを除く)
-            if caps.name("en").is_some() && sep.as_str().is_empty() {
+            // 英字の手がかり語は値との間に区切りが要る(`IDE`・`idx1` などを除く)。`#`・`.` で終わる手がかり語
+            // (「Invoice #」「Order No.」)はそれ自体が区切り
+            let en_needs_separator = caps.name("en").is_some_and(|en| !en.as_str().ends_with(['#', '.']));
+            if en_needs_separator && sep.as_str().is_empty() {
                 return None;
             }
             number_range(text, value.range())
@@ -1018,12 +1106,136 @@ mod tests {
     }
 
     #[test]
+    fn 業務画面で一般的な番号の手がかり語を検出する() {
+        // 対象 + 番号/No./ID/コード/# の組み合わせ(カテゴリ単位で足した語彙)
+        let cases = [
+            ("注文番号 PO-30018", "PO-30018"),
+            ("受注番号: 77120", "77120"),
+            ("発注No. HN-4410", "HN-4410"),
+            ("契約番号 KY-20931", "KY-20931"),
+            ("請求書番号 INV-2210", "INV-2210"),
+            ("お問い合わせ番号 Q-1020-33", "Q-1020-33"),
+            ("問合せNo 5512", "5512"),
+            ("予約番号 R7710042", "R7710042"),
+            ("会員No. AB-1029", "AB-1029"),
+            ("登録番号 T1234567890123", "T1234567890123"),
+            ("取引先コード TR-0042", "TR-0042"),
+            ("患者ID P-88213", "P-88213"),
+            ("職員番号 4471", "4471"),
+            ("従業員 ID 99012", "99012"),
+            ("受付番号 #20931", "20931"),
+            ("顧客コード C7781", "C7781"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(cued(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn 英字の番号の手がかり語を検出する() {
+        let cases = [
+            ("Order No. 58821-A", "58821-A"),
+            ("Invoice #INV-7731", "INV-7731"),
+            ("Account Number: 00412", "00412"),
+            ("Customer ID CU-1182", "CU-1182"),
+            ("Member ID: M88213", "M88213"),
+            ("Employee No 4410", "4410"),
+            ("Ticket # 4821", "4821"),
+            ("Case Number 0091-22", "0091-22"),
+            ("contract_id=CT-2031", "CT-2031"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(cued(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn 手がかり語と番号の間の助詞を許す() {
+        let cases = [
+            ("会員番号は HX-71020 です。", "HX-71020"),
+            ("注文番号が58201の件", "58201"),
+            ("予約番号も R-2201 になります", "R-2201"),
+            ("お客様番号は: 7730", "7730"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(cued(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn 一般化した手がかり語でも番号でないものは対象外() {
+        let cases = [
+            "注文番号は下記のとおりです", // 英数字の値が無い
+            "Invoice question",           // 手がかり語の対象だけ(番号の語が無い)
+            "Order history 2024",         // 番号の語が無い
+            "問い合わせ番号を入力",       // 値が無い
+            "Account settings",           // 番号の語が無い
+            "Ticketing 2026",             // 語の一部
+        ];
+        for line in cases {
+            assert!(cued(line).is_empty(), "case {}", line.len());
+        }
+    }
+
+    /// 表の見出しの行(3 列)と、`header` の列の下に並ぶ値。
+    fn header_table(headers: [&str; 3], values: &[&str]) -> GridPage {
+        let mut cells: Vec<(&str, Cell)> = headers
+            .iter()
+            .enumerate()
+            .map(|(i, h)| (*h, (0.1 + 0.3 * i as f64, 0.8, 0.12, 0.03)))
+            .collect();
+        for (row, value) in values.iter().enumerate() {
+            // 見出し(中央寄せ)より左から始まり、見出しより幅が広い値
+            cells.push((value, (0.37, 0.75 - 0.05 * row as f64, 0.2, 0.03)));
+        }
+        GridPage::new(&cells)
+    }
+
+    #[test]
+    fn 表の見出しにだけ手がかり語がある列の値を番号とする() {
+        let values = ["Xk29Lq7Pz04Rm1Tb8", "a81c0f22e9b4d7", "NK-0093"];
+        let page = header_table(["連携先", "接続 ID", "備考"], &values);
+        let expected: Vec<Match> = values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| Match::new(3 + i, 0..v.len(), MatchDetail::LabeledNumber))
+            .collect();
+        assert_eq!(detect_page(&page), expected);
+    }
+
+    #[test]
+    fn 表の列の値は数字が読み取りで落ちても英字の大小が混ざれば番号とする() {
+        // `0` が `O` と読まれて数字を含まなくなった ID(大文字・小文字の切り替わりが多い)
+        let values = ["QOnmFpmkM-mZxKBCqb-G", "b8c0f9e2"];
+        let page = header_table(["連携先", "接続 ID", "備考"], &values);
+        assert_eq!(detect_page(&page).len(), 2);
+        // 英字だけの普通の語は番号にしない
+        let page = header_table(["連携先", "接続 ID", "備考"], &["admin", "b8c0f9e2"]);
+        assert!(detect_page(&page).is_empty());
+    }
+
+    #[test]
+    fn 表の見出しの列は番号でない値か離れた観測で終わる() {
+        let page = header_table(["連携先", "契約番号", "備考"], &["CB-240117", "未契約", "CB-240118"]);
+        assert_eq!(detect_page(&page), vec![Match::new(3, 0..9, MatchDetail::LabeledNumber)]);
+        // 見出しの行でない(右隣に値がある)ラベルは従来どおり右隣を値とする
+        let page = GridPage::new(&[("契約番号", LEFT_CELL), ("CB-240117", RIGHT_CELL)]);
+        assert_eq!(detect_page(&page), vec![Match::new(1, 0..9, MatchDetail::LabeledNumber)]);
+    }
+
+    #[test]
     fn 手がかり語だけの観測の右隣の観測を値とする() {
         for (label, value) in [("会員番号", "M-55-01928"), ("ID", "A7731"), ("社員番号", "E-551902"), ("顧客ID:", "CU88301")]
         {
             let page = GridPage::new(&[(label, LEFT_CELL), (value, RIGHT_CELL)]);
             assert_eq!(detect_page(&page), vec![Match::new(1, 0..value.len(), MatchDetail::LabeledNumber)]);
         }
+    }
+
+    #[test]
+    fn 画面の端まで離れた右隣は番号の値にしない() {
+        let page = GridPage::new(&[("会員番号", (0.01, 0.5, 0.03, 0.013)), ("M-55-01928", (0.84, 0.5, 0.05, 0.013))]);
+        assert!(detect_page(&page).is_empty());
     }
 
     #[test]
@@ -1490,6 +1702,76 @@ mod tests {
         }
         for line in ["株価の推移", "株主総会", "株を買う", "優待株アサギリ"] {
             assert!(companies(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn 法人の種類の前後に続く名前を会社名とする() {
+        let cases = [
+            ("一般社団法人こもれび地域連携会", "一般社団法人こもれび地域連携会"),
+            ("一般財団法人ミナト文化振興会", "一般財団法人ミナト文化振興会"),
+            ("公益社団法人アオバ学習支援協会", "公益社団法人アオバ学習支援協会"),
+            ("公益財団法人しずく記念基金", "公益財団法人しずく記念基金"),
+            ("医療法人社団ひまわり会", "医療法人社団ひまわり会"),
+            ("社会福祉法人やまゆり福祉会", "社会福祉法人やまゆり福祉会"),
+            ("学校法人キタカゼ学園", "学校法人キタカゼ学園"),
+            ("NPO法人ほたる自然塾", "NPO法人ほたる自然塾"),
+            ("特定非営利活動法人つばめ子ども食堂", "特定非営利活動法人つばめ子ども食堂"),
+            ("独立行政法人ハヤテ研究機構", "独立行政法人ハヤテ研究機構"),
+            ("アサツキ会計税理士法人", "アサツキ会計税理士法人"),
+            ("(一社)こもれび地域連携会", "(一社)こもれび地域連携会"),
+            ("(公財)しずく記念基金", "(公財)しずく記念基金"),
+        ];
+        for (line, expected) in cases {
+            let found = companies(line);
+            assert!(found.contains(&span(line, expected)), "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn ひらがなで始まる後置の社名は語の区切りからを会社名とする() {
+        let cases = [
+            ("やまびこ醸造合資会社", "やまびこ醸造合資会社"),
+            ("見積先: ささなみ建設工業株式会社", "ささなみ建設工業株式会社"),
+            ("取引先 みどり商会(株)", "みどり商会(株)"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(companies(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+        // 文中で漢字の後に続くひらがなは助詞を含みうるので含めない(従来どおり)
+        let line = "弊社はコハク工房有限会社です";
+        assert_eq!(companies(line), vec![span(line, "コハク工房有限会社")]);
+    }
+
+    #[test]
+    fn 前置の会社の種類の後の英字の名前を複数語まで会社名とする() {
+        let cases = [
+            ("株式会社 Kirinoha Systems", "株式会社 Kirinoha Systems"),
+            ("株式会社Hollow Pine Labs 御中", "株式会社Hollow Pine Labs"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(companies(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn 海外の会社の種類の前の大文字始まりの語を会社名とする() {
+        let cases = [
+            ("Lindenhof Maschinenbau GmbH", "Lindenhof Maschinenbau GmbH"),
+            ("Sol Poniente S.A.", "Sol Poniente S.A."),
+            ("Vlietwater Logistics B.V.", "Vlietwater Logistics B.V."),
+            ("Merlion Harbour Pte. Ltd.", "Merlion Harbour Pte. Ltd."),
+            ("Thornbury Holdings PLC", "Thornbury Holdings PLC"),
+            ("Ashgrove Partners LLP", "Ashgrove Partners LLP"),
+            ("Kestrel Dynamics Corporation", "Kestrel Dynamics Corporation"),
+            ("Bramblewood Limited", "Bramblewood Limited"),
+            ("Nordlys Energi AG", "Nordlys Energi AG"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(companies(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+        for line in ["GmbH", "Pte. Ltd.", "SOLD AS IS", "We are a PLC", "AG"] {
+            assert!(companies(line).is_empty(), "case {}", line.len());
         }
     }
 

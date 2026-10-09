@@ -9,6 +9,12 @@
 //! - 都道府県名(辞書)+ かな漢字で始まる部分から行の終わりまで
 //! - 郵便番号だけの観測(「郵便番号」のラベル付きを含む)の後に続く観測(同じ行の近い右隣、無ければ直下の行)。
 //!   かな漢字を含むものだけ。都道府県で始まる行の次の行(建物名など)は手がかりが無いので拾わない
+//! - 英語の住所(2026-10-09 の一般化): 番地 + 大文字始まりの 1〜4 語 + 通りの種類(`STREET_SUFFIXES`)と、
+//!   続く `,` 区切りの部分(大文字・数字・`#` で始まる 1〜4 語。Suite・市・州・郵便番号)を 4 つまで。
+//!   「市, 州の略称 5 桁の郵便番号」だけの行(住所の 2 行目)も住所とする
+//!
+//! 電話番号(2026-10-09 の一般化)。日本の番号に加え、`+` と国番号で始まる海外の番号(E.164: 国番号を含めて
+//! 8〜15 桁)と、北米の国内表記(`(NXX) NXX-XXXX`・`NXX-NXX-XXXX`。N は 2〜9)を拾う。`+81` は日本の桁数で判定する
 
 use std::ops::Range;
 use std::sync::LazyLock;
@@ -17,7 +23,9 @@ use regex::Regex;
 
 use super::super::layout::{next_line_below, right_neighbor};
 use super::super::{Match, MatchDetail, RecognizedPage};
-use super::lexicon::{ELEVEN_DIGIT_PHONE_PREFIXES, JP_COUNTRY_CODE, POSTAL_LABELS, POSTAL_MARK, PREFECTURES};
+use super::lexicon::{
+    ELEVEN_DIGIT_PHONE_PREFIXES, JP_COUNTRY_CODE, POSTAL_LABELS, POSTAL_MARK, PREFECTURES, STREET_SUFFIXES, US_STATE_CODES,
+};
 use super::{is_kana_kanji, Line};
 
 /// メール。`@` と `.` の前後に読み取りで入った空白(1 つ)を許す。
@@ -63,7 +71,8 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
             .map(|r| (r, MatchDetail::Email))
             .chain(find_phones(text).into_iter().map(|r| (r, MatchDetail::Phone)))
             .chain(find_postal_codes(text).map(|r| (r, MatchDetail::Address)))
-            .chain(prefecture_address(text).map(|r| (r, MatchDetail::Address)));
+            .chain(prefecture_address(text).map(|r| (r, MatchDetail::Address)))
+            .chain(english_addresses(text).into_iter().map(|r| (r, MatchDetail::Address)));
         matches.extend(found.filter_map(|(range, detail)| line.to_match(range, detail)));
     }
 
@@ -128,6 +137,42 @@ fn address_after_postal(text: &str) -> Option<Range<usize>> {
     is_address.then_some(start..end)
 }
 
+/// 英語の住所の番地から始まる部分(`addr`)。番地は 1〜6 桁(末尾の英字 1 つを許す)、通りの名前は大文字始まりの語か
+/// 序数(`5th`)。通りの種類の後に `,` 区切りの部分(大文字・数字・`#` 始まりの 1〜4 語)を 4 つまで続ける。
+static STREET_ADDRESS: LazyLock<Regex> = LazyLock::new(|| {
+    let mut suffixes: Vec<&str> = STREET_SUFFIXES.to_vec();
+    suffixes.sort_by_key(|s| std::cmp::Reverse(s.len()));
+    let segment = r"[A-Z0-9#][A-Za-z0-9#.'\-]*(?:\x20[A-Z0-9#][A-Za-z0-9#.'\-]*){0,3}";
+    Regex::new(&format!(
+        r"(?:^|[^A-Za-z0-9])(?P<addr>[0-9]{{1,6}}[A-Za-z]?\x20(?:(?:[A-Z][A-Za-z'\-]*|[0-9]+(?:st|nd|rd|th))\x20){{1,4}}(?:{})\b\.?(?:,\x20?{segment}){{0,4}})",
+        suffixes.join("|")
+    ))
+    .expect("固定の正規表現が不正")
+});
+
+/// 英語の住所の 2 行目(「市, 州の略称 5 桁の郵便番号」。市は大文字始まりの 1〜3 語)。
+static CITY_STATE_ZIP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"(?:^|[^A-Za-z0-9])(?P<addr>[A-Z][A-Za-z.'\-]*(?:\x20[A-Z][A-Za-z.'\-]*){{0,2}},\x20?(?:{})\x20[0-9]{{5}}(?:-[0-9]{{4}})?)(?:$|[^A-Za-z0-9])",
+        US_STATE_CODES.join("|")
+    ))
+    .expect("固定の正規表現が不正")
+});
+
+/// 英語の住所(バイト範囲)。番地から始まる住所に重なる 2 行目の形は重ねて返さない。
+fn english_addresses(text: &str) -> Vec<Range<usize>> {
+    let mut found: Vec<Range<usize>> =
+        STREET_ADDRESS.captures_iter(text).filter_map(|caps| caps.name("addr").map(|m| m.range())).collect();
+    let streets = found.clone();
+    found.extend(
+        CITY_STATE_ZIP
+            .captures_iter(text)
+            .filter_map(|caps| caps.name("addr").map(|m| m.range()))
+            .filter(|r| !streets.iter().any(|s| r.start < s.end && s.start < r.end)),
+    );
+    found
+}
+
 fn find_emails(text: &str) -> impl Iterator<Item = Range<usize>> + '_ {
     EMAIL.find_iter(text).map(|m| m.range())
 }
@@ -160,11 +205,16 @@ fn continues_number_after(text: &str, end: usize) -> bool {
     }
 }
 
-/// 電話番号の数字の組の上限(`+81 (0) 3 1234 5678` の 5 組)。国内表記は 3 組まで。
-const MAX_GROUPS_WITH_COUNTRY_CODE: usize = 5;
+/// 電話番号の数字の組の上限(`+33 1 23 45 67 89` の 6 組)。国内表記は 3 組まで。
+const MAX_GROUPS_WITH_COUNTRY_CODE: usize = 6;
 const MAX_GROUPS_DOMESTIC: usize = 3;
-/// 数字の総数の上限。これを超えたら読むのをやめる(`+81` + `0` + 11 桁 = 14)。
-const MAX_PHONE_DIGITS: usize = 14;
+/// 数字の総数の上限。これを超えたら読むのをやめる(E.164 の上限 15 桁。`+81` + `0` + 11 桁 = 14 も収まる)。
+const MAX_PHONE_DIGITS: usize = 15;
+/// 海外の番号(国番号を含む)の桁数の下限。E.164 の番号は国番号を含めて 8 桁未満がほぼ無く、
+/// これより短い `+` 付きの数(`+1 2024` など)は番号でないことが多い。
+const MIN_INTERNATIONAL_DIGITS: usize = 8;
+/// 区切りがあるときの国番号(最初の組)の桁数の上限(E.164 の国番号は 1〜3 桁)。
+const MAX_COUNTRY_CODE_LEN: usize = 3;
 /// 組の間の区切り(`-`・空白・括弧)の長さの上限(` - ` や `) ` を許す)。
 const MAX_SEPARATOR_LEN: usize = 3;
 
@@ -174,7 +224,10 @@ fn find_phones(text: &str) -> Vec<Range<usize>> {
     let mut found = Vec::new();
     let mut start = 0;
     while start < bytes.len() {
-        let is_start = matches!(bytes[start], b'+' | b'(' | b'0') && !continues_number_before(text, start);
+        // `+` は英数字に続かないこと(`x+1` のような式・識別子の一部を除く)
+        let after_word = bytes[start] == b'+' && start > 0 && bytes[start - 1].is_ascii_alphanumeric();
+        let is_start =
+            matches!(bytes[start], b'+' | b'(' | b'0') && !continues_number_before(text, start) && !after_word;
         if is_start {
             if let Some(end) = phone_at(text, start) {
                 found.push(start..end);
@@ -184,8 +237,23 @@ fn find_phones(text: &str) -> Vec<Range<usize>> {
         }
         start += 1;
     }
+    for m in NANP_PHONE.captures_iter(text).filter_map(|caps| caps.name("phone")) {
+        let overlaps = found.iter().any(|r| m.start() < r.end && r.start < m.end());
+        if !overlaps && !continues_number_after(text, m.end()) {
+            found.push(m.range());
+        }
+    }
+    found.sort_by_key(|r| r.start);
     found
 }
+
+/// 北米の国内表記(`(NXX) NXX-XXXX`・`NXX-NXX-XXXX`・`NXX.NXX.XXXX`。N は 2〜9)。前が英数字・`-`・`.` でないこと。
+static NANP_PHONE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?:^|[^A-Za-z0-9\-.])(?P<phone>\([2-9][0-9]{2}\)\x20?[2-9][0-9]{2}-[0-9]{4}|[2-9][0-9]{2}-[2-9][0-9]{2}-[0-9]{4}|[2-9][0-9]{2}\.[2-9][0-9]{2}\.[0-9]{4})",
+    )
+    .expect("固定の正規表現が不正")
+});
 
 /// 数字の組を 1 つ読み終えた時点の状態。
 struct GroupEnd {
@@ -261,7 +329,7 @@ fn is_valid_phone(group: &GroupEnd, with_country_code: bool) -> bool {
     let national = if with_country_code {
         // `+81` の後ろの `(0)` や `0` は国内の頭の `0` として扱う
         let Some(rest) = group.digits.strip_prefix(JP_COUNTRY_CODE) else {
-            return false;
+            return is_valid_international(group);
         };
         format!("0{}", rest.strip_prefix('0').unwrap_or(rest))
     } else {
@@ -272,6 +340,12 @@ fn is_valid_phone(group: &GroupEnd, with_country_code: bool) -> bool {
         group.digits.clone()
     };
     is_valid_national_number(&national)
+}
+
+/// 日本以外の国番号付きの番号の形か(国番号を含めて 8〜15 桁、区切りがあれば国番号は 1〜3 桁)。
+fn is_valid_international(group: &GroupEnd) -> bool {
+    (MIN_INTERNATIONAL_DIGITS..=MAX_PHONE_DIGITS).contains(&group.digits.len())
+        && (group.groups == 1 || group.first_group_len <= MAX_COUNTRY_CODE_LEN)
 }
 
 /// 国内表記の番号(数字だけ)が、固定・携帯・IP 電話・フリーダイヤル等の桁数に合うか。
@@ -483,12 +557,45 @@ mod tests {
         let cases = [
             "1234567890",          // 0 で始まらない
             "00-1234-5678",        // 00 で始まる
-            "+1-202-555-0123",     // 日本以外の国番号
+            "+1 2024",             // 国番号付きでも桁が少なすぎる
+            "+81-3-1234-56789",    // 日本の国番号は国内の桁数で判定する
+            "x+1 555-0142",        // 英数字に続く + は式・識別子の一部
+            "123-456-7890",        // 北米の形でも局番が 0・1 で始まる
             "2024-03-15",          // 日付
             "0120-12-34-56-78-90", // 区切りが多すぎる数字の並び
         ];
         for line in cases {
             assert!(phones(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn 国番号付きの海外の電話を検出する() {
+        // E.164: + と国番号の後に、国番号を含めて 8〜15 桁
+        for line in [
+            "+1-202-555-0123",
+            "+1 555-0142",
+            "+44 20 7946 0958",
+            "+49 30 901820",
+            "+65 6123 4567",
+            "+33 1 23 45 67 89",
+            "+86 10 1234 5678",
+            "+12025550123",
+        ] {
+            assert_whole_phone(line);
+        }
+        let line = "Mobile +1 555-0142 / office";
+        assert_eq!(phones(line), vec![span(line, "+1 555-0142")]);
+    }
+
+    #[test]
+    fn 北米の国内表記の電話を検出する() {
+        for line in ["(202) 555-0123", "202-555-0123", "202.555.0123"] {
+            assert_whole_phone(line);
+        }
+        // 区切りが揃わない・長い数字の並びの途中は対象外
+        for line in ["202-555.0123", "1202-555-0123", "202-555-01234", "ORD-202-555-0123"] {
+            assert!(phones(line).is_empty(), "case {}", line.len());
         }
     }
 
@@ -657,6 +764,37 @@ mod tests {
         assert_eq!(detect_page_addresses(&page), vec![Match::new(0, 0..9, MatchDetail::Address)]);
         let page = FakePage::new(&["〒460-0000", "TEL 052-000-0000"]);
         assert_eq!(detect_page_addresses(&page), vec![Match::new(0, 0..9, MatchDetail::Address)]);
+    }
+
+    #[test]
+    fn 英語の住所を番地と通りの名前から検出する() {
+        let cases = [
+            ("1200 Example Ave, Suite 400, Springfield", "1200 Example Ave, Suite 400, Springfield"),
+            ("Ship to: 350 Fifth Avenue, New York, NY 10118", "350 Fifth Avenue, New York, NY 10118"),
+            ("10 Harbour View Rd.", "10 Harbour View Rd."),
+            ("742 Evergreen Terrace", "742 Evergreen Terrace"),
+            ("221B Baker Street, London NW1 6XE", "221B Baker Street, London NW1 6XE"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(addresses(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn 英語の住所の市_州_郵便番号の行を検出する() {
+        for (line, expected) in [
+            ("Springfield, IL 62704", "Springfield, IL 62704"),
+            ("San Mateo, CA 94401-1234", "San Mateo, CA 94401-1234"),
+        ] {
+            assert_eq!(addresses(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn 英語の住所の形でないものは対象外() {
+        for line in ["Updated 3 Days ago", "Suite 400", "Room 12", "Released 2024 Road Map", "ID 12, CA 9"] {
+            assert!(addresses(line).is_empty(), "case {}", line.len());
+        }
     }
 
     #[test]

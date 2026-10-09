@@ -13,6 +13,7 @@ mod lexicon;
 
 use std::ops::Range;
 
+use super::layout::{column_below, same_row};
 use super::text::{normalize, SensitiveText, Utf16Map};
 use super::{Match, MatchDetail, RecognizedPage};
 
@@ -70,6 +71,38 @@ fn is_kana_kanji(c: char) -> bool {
 /// カタカナの後に続く長音(正規化後の `-`)・中黒。
 fn is_katakana_mark(c: char) -> bool {
     matches!(c, '-' | '・')
+}
+
+// ---- 表の見出しと列(手がかり語付きの番号・認証情報の規則で共有する) ----
+
+/// 表の見出しの行とみなす観測の数の下限(ラベルと値の 2 列だけのフォームを除く)。
+const MIN_HEADER_ROW_CELLS: usize = 3;
+
+/// 表の見出しとみなす観測の文字数の上限(手がかり語だけの観測の上限と同じ)。
+const MAX_HEADER_CELL_CHARS: usize = 20;
+
+/// `lines[pos]` が表の見出しの行にあるか。同じ行に 3 つ以上の観測があり、そのすべてが短く(20 字以下)
+/// 数字を含まないとき(値が同じ行に並ぶフォームは、値が数字を含むので除かれる)。
+fn in_header_row(page: &dyn RecognizedPage, lines: &[Line], pos: usize) -> bool {
+    let row = same_row(page, lines[pos].index);
+    row.len() >= MIN_HEADER_ROW_CELLS
+        && row.iter().all(|&index| {
+            lines.iter().find(|l| l.index == index).is_some_and(|l| {
+                let text = l.as_str().trim();
+                !text.is_empty() && text.chars().count() <= MAX_HEADER_CELL_CHARS && !text.bytes().any(|b| b.is_ascii_digit())
+            })
+        })
+}
+
+/// 表の見出し `lines[pos]` の列の下に並ぶ観測(`lines` の位置。上から順)。見出しの行でなければ空。
+fn column_cells(page: &dyn RecognizedPage, lines: &[Line], pos: usize) -> Vec<usize> {
+    if !in_header_row(page, lines, pos) {
+        return Vec::new();
+    }
+    column_below(page, lines[pos].index)
+        .into_iter()
+        .filter_map(|index| lines.iter().position(|l| l.index == index))
+        .collect()
 }
 
 /// 検出器。ページ(行の位置。右隣・直下の観測を探す規則が使う)と正規化済みの全行を受け取る。

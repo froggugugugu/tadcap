@@ -21,16 +21,26 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::super::layout::{next_line_below, right_neighbor};
+use super::super::layout::{near_right_neighbor, next_line_below};
 use super::super::text::{normalize, SensitiveText};
 use super::super::{Match, MatchDetail, RecognizedPage};
-use super::lexicon::{API_KEY_CUE_PATTERN, CREDENTIAL_CUES_ASCII, CREDENTIAL_CUES_JA, TOKEN_PREFIXES};
-use super::Line;
+use super::lexicon::{
+    API_KEY_CUE_PATTERN, CREDENTIAL_CUES_ASCII, CREDENTIAL_CUES_JA, CREDENTIAL_WORD_CUES_ASCII, CUE_PARTICLES, TOKEN_PREFIXES,
+};
+use super::{column_cells, Line};
 
 /// 接頭辞付きトークンの本体(接頭辞を除く・空白を除く)の最小の長さ。
 const MIN_PREFIXED_BODY_LEN: usize = 16;
 /// 長いランダム列の最小の長さ(空白を除く)。
 const MIN_RANDOM_LEN: usize = 20;
+/// 数字と英字を `MIN_SHORT_RANDOM_EACH` 個以上ずつ含むときの、ランダム列の最小の長さ(空白を除く)。
+///
+/// 16〜19 文字の ID(64 bit の 16 進など)を拾うため。リポジトリの文書・コード約 15 万語で数えると、
+/// 長さだけ 16 に下げると大文字始まりの語に数字 1 つを挟んだ識別子が 43 件増えたが、
+/// 数字と英字を 3 つ以上ずつ求めると 1 件(テスト用の架空の列)だけだった(2026-10-09 の一般化)。
+const MIN_SHORT_RANDOM_LEN: usize = 16;
+/// 短いランダム列(16〜19 文字)に求める数字・英字それぞれの最小の個数。
+const MIN_SHORT_RANDOM_EACH: usize = 3;
 /// 長いランダム列とみなす、文字の種類の切り替わりの最小回数(`-`・`_` をまたぐ切り替わりは数えない)。
 const MIN_CLASS_CHANGES: usize = 3;
 /// 手がかり語だけの観測(ラベル)とみなす文字数の上限。長い文は値を探さない。
@@ -77,25 +87,35 @@ fn ja_cue_pattern() -> String {
     JA_CUES.iter().map(|cue| regex::escape(cue)).collect::<Vec<_>>().join("|")
 }
 
-/// 英字の手がかり語を含むキー(`DB_PASSWORD`・`api key` など)の正規表現の断片。
+/// 英字の手がかり語を含むキー(`DB_PASSWORD`・`api key` など)、または語として独立した手がかり語(`PIN` など)の
+/// 正規表現の断片。独立した語の前後は、使う側の正規表現の区切り(語頭・`:`・空白など)で区切られる。
 fn ascii_key_pattern() -> String {
-    format!(r"[a-z0-9_.\-]*(?:{}|{API_KEY_CUE_PATTERN})[a-z0-9_.\-]*", CREDENTIAL_CUES_ASCII.join("|"))
+    format!(
+        r"(?:[a-z0-9_.\-]*(?:{}|{API_KEY_CUE_PATTERN})[a-z0-9_.\-]*|{})",
+        CREDENTIAL_CUES_ASCII.join("|"),
+        CREDENTIAL_WORD_CUES_ASCII.join("|")
+    )
 }
 
-/// 手がかり語(キー)+ 区切り + 値。区切りは `:`・`=`(前後の空白を許す)または空白だけ。
+/// 手がかり語(キー)+ 区切り + 値。区切りは `:`・`=`(前後の空白を許す)、助詞(「暗証番号は …」)、または空白だけ。
 static LABELED: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"(?i)(?:^|[^a-z0-9_.\-])(?P<key>{}|{})(?P<sep>\x20?[:=]\x20*|\x20+)(?P<value>[\x21-\x7e]+)",
+        r"(?i)(?:^|[^a-z0-9_.\-])(?P<key>{}|{})(?P<sep>\x20?[:=]\x20*|\x20*(?:{})\x20*[:=]?\x20*|\x20+)(?P<value>[\x21-\x7e]+)",
         ascii_key_pattern(),
-        ja_cue_pattern()
+        ja_cue_pattern(),
+        CUE_PARTICLES.join("|")
     ))
     .expect("固定の正規表現が不正")
 });
 
 /// 英字の手がかり語そのもの(キーの一部ではない)。空白だけの区切りを許すかの判定に使う。
 static EXACT_ASCII_CUE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"(?i)^(?:{}|{API_KEY_CUE_PATTERN})$", CREDENTIAL_CUES_ASCII.join("|")))
-        .expect("固定の正規表現が不正")
+    Regex::new(&format!(
+        r"(?i)^(?:{}|{API_KEY_CUE_PATTERN}|{})$",
+        CREDENTIAL_CUES_ASCII.join("|"),
+        CREDENTIAL_WORD_CUES_ASCII.join("|")
+    ))
+    .expect("固定の正規表現が不正")
 });
 
 /// 手がかり語で終わる観測(ラベル)。末尾の `:`・`=` を許す。前後の空白を除いた文字列に当てる。
@@ -132,8 +152,14 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
         matches.extend(found.filter_map(|(range, detail)| line.to_match(range, detail)));
     }
 
-    for line in lines.iter().filter(|line| is_label_only(line.as_str())) {
-        let Some(neighbor) = right_neighbor(page, line.index).or_else(|| next_line_below(page, line.index))
+    for (pos, line) in lines.iter().enumerate().filter(|(_, line)| is_label_only(line.as_str())) {
+        // 表の見出しなら列の下に並ぶ値を手がかり語の値とし、右隣(別の列の見出し)は値にしない
+        let column = column_secrets(lines, &column_cells(page, lines, pos), &has_own_value);
+        if !column.is_empty() {
+            matches.extend(column);
+            continue;
+        }
+        let Some(neighbor) = near_right_neighbor(page, line.index).or_else(|| next_line_below(page, line.index))
         else {
             continue;
         };
@@ -144,11 +170,45 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
         if has_own_value[position] || is_label_only(value.as_str()) {
             continue;
         }
-        if let Some(found) = value.to_match(trimmed_range(value.as_str()), MatchDetail::LabeledSecret) {
+        let range = trimmed_range(value.as_str());
+        if !is_secret_like(&value.as_str()[range.clone()]) {
+            continue;
+        }
+        if let Some(found) = value.to_match(range, MatchDetail::LabeledSecret) {
             matches.push(found);
         }
     }
     matches
+}
+
+/// ラベルとは別の観測を値とするときの長さの下限(空白を除く)。「-」「N/A」などの空欄の表記を除く。
+const MIN_SEPARATE_SECRET_LEN: usize = 4;
+
+/// ラベルとは別の観測(右隣・直下・表の列)を値とするときの形: ASCII だけで 4 文字以上、かつ数字か記号を含むか
+/// 大文字・小文字の切り替わりが 2 回以上ある。画面の見出し・メニューの項目名(「Webhook」「名前」)を除く。
+fn is_secret_like(value: &str) -> bool {
+    value.is_ascii()
+        && non_space_len(value) >= MIN_SEPARATE_SECRET_LEN
+        && (value.bytes().any(|b| b.is_ascii_digit() || b.is_ascii_punctuation())
+            || class_changes(value) >= MIN_CONTINUATION_CHANGES)
+}
+
+/// 表の列の観測(`cells` は `lines` の位置)を上から順に手がかり語の値とする。観測全体(前後の空白を除く)が
+/// 秘密の値の形(`is_secret_like`)の間だけ続ける(日本語の「未設定」や見出しで終わる)。
+fn column_secrets(lines: &[Line], cells: &[usize], has_own_value: &[bool]) -> Vec<Match> {
+    let mut found = Vec::new();
+    for &pos in cells {
+        let text = lines[pos].as_str();
+        let range = trimmed_range(text);
+        let value = &text[range.clone()];
+        if !is_secret_like(value) || has_own_value[pos] || is_label_only(value) {
+            break;
+        }
+        if let Some(m) = lines[pos].to_match(range, MatchDetail::LabeledSecret) {
+            found.push(m);
+        }
+    }
+    found
 }
 
 /// URL とそのクエリ(バイト範囲)。スキーム付きの URL と、スキームの無いパスだけの URL を左から順に返す。
@@ -337,8 +397,14 @@ fn is_token_like(text: &str) -> bool {
 }
 
 /// 長いランダム列の条件(空白を除いて 20 文字以上・英字と数字が混在・種類の切り替わり 3 回以上)。
+/// 16〜19 文字は、数字と英字を 3 つ以上ずつ含むときだけ。
 fn is_random(text: &str) -> bool {
-    non_space_len(text) >= MIN_RANDOM_LEN && is_token_like(text) && class_changes(text) >= MIN_CLASS_CHANGES
+    let len = non_space_len(text);
+    let digits = text.bytes().filter(u8::is_ascii_digit).count();
+    let letters = text.bytes().filter(u8::is_ascii_alphabetic).count();
+    let long_enough = len >= MIN_RANDOM_LEN
+        || (len >= MIN_SHORT_RANDOM_LEN && digits >= MIN_SHORT_RANDOM_EACH && letters >= MIN_SHORT_RANDOM_EACH);
+    long_enough && is_token_like(text) && class_changes(text) >= MIN_CLASS_CHANGES
 }
 
 /// 隣り合う英数字の種類(小文字・大文字・数字)が切り替わる回数。`-`・`_`・空白で区切られた所は数えない
@@ -545,8 +611,18 @@ mod tests {
     }
 
     #[test]
-    fn 十九文字以下は対象外() {
-        assert!(random(&mixed(3, 19)).is_empty());
+    fn 十五文字以下と数字の少ない十九文字以下は対象外() {
+        assert!(random(&mixed(3, 15)).is_empty());
+        // 数字が 1〜2 個の大文字始まりの語の連なり(プログラムの識別子など)
+        assert!(random("ConfigLoader2Value").is_empty());
+        assert!(random("Html5Parser2Options").is_empty());
+    }
+
+    #[test]
+    fn 十六から十九文字は数字と英字を3つ以上ずつ含めば検出する() {
+        for text in [mixed(3, 19), hex(16), mixed(5, 17)] {
+            assert_eq!(random(&text), vec![whole(&text)], "case {}", text.len());
+        }
     }
 
     #[test]
@@ -652,6 +728,134 @@ mod tests {
         for line in cases {
             assert!(labeled(line).is_empty());
         }
+    }
+
+    #[test]
+    fn 認証系の一般的な手がかり語の後の値を検出する() {
+        let value = secret_value();
+        let cases = [
+            format!("PIN: {value}"),
+            format!("PIN {value}"),
+            format!("passcode={value}"),
+            format!("passphrase: {value}"),
+            format!("OTP {value}"),
+            format!("Bearer {value}"),
+            format!("private key: {value}"),
+            format!("access_key={value}"),
+            format!("API キー {value}"),
+            format!("credentials: {value}"),
+            format!("暗証番号 {value}"),
+            format!("パスコード：{value}"),
+            format!("ワンタイムパスワード {value}"),
+            format!("認証コード {value}"),
+            format!("確認コード: {value}"),
+            format!("セキュリティコード {value}"),
+            format!("シークレット: {value}"),
+            format!("秘密鍵 {value}"),
+            format!("アクセスキー {value}"),
+            format!("APIキー: {value}"),
+            format!("トークン {value}"),
+        ];
+        for line in &cases {
+            assert_eq!(labeled(line), vec![span(line, &value)], "case {}", line.len());
+        }
+    }
+
+    #[test]
+    fn 手がかり語と値の間の助詞を許す() {
+        let value = secret_value();
+        for line in [format!("暗証番号は {value} です"), format!("パスワードは{value}"), format!("認証コードが {value}")] {
+            assert_eq!(labeled(&line), vec![span(&line, &value)], "case {}", line.len());
+        }
+    }
+
+    #[test]
+    fn 一般化した手がかり語でも値でないものは対象外() {
+        let cases = [
+            "Pin to top",          // 値が英字だけ
+            "shipping: free",      // 手がかり語の一部(pin)を含む別の語
+            "spinner 12",          // 語の一部
+            "OTP sent",            // 値が英字だけ
+            "トークンの有効期限",  // 値が無い
+            "認証コードを送信しました",
+        ];
+        for line in cases {
+            assert!(labeled(line).is_empty(), "case {}", line.len());
+        }
+    }
+
+    #[test]
+    fn 認証系のラベルだけの観測の右隣を値とする() {
+        let value = secret_value();
+        for label in ["管理者 PIN", "署名シークレット", "パスコード", "Access key", "秘密鍵:"] {
+            let page = GridPage::new(&[(label, LEFT_CELL), (&value, RIGHT_CELL)]);
+            assert_eq!(
+                detect_page(&page, MatchDetail::LabeledSecret),
+                vec![Match::new(1, whole(&value), MatchDetail::LabeledSecret)],
+                "case {}",
+                label.len()
+            );
+        }
+    }
+
+    #[test]
+    fn ラベルの右隣や直下が秘密の値の形でなければ値にしない() {
+        // 画面の見出し・メニューの「API キー」の下に並ぶ項目名や日本語の見出しは値にしない
+        for value in ["Webhook", "名前", "abc", "Settings"] {
+            let page = FakePage::new(&["API キー", value]);
+            assert!(detect_page(&page, MatchDetail::LabeledSecret).is_empty(), "case {}", value.len());
+        }
+        // 数字・記号を含むか、大文字・小文字の切り替わりが 2 回以上あれば値とする
+        for value in ["Zd56aQw7bY", "hunter-2", "xQpLmRtw"] {
+            let page = FakePage::new(&["パスワード", value]);
+            assert_eq!(
+                detect_page(&page, MatchDetail::LabeledSecret),
+                vec![Match::new(1, whole(value), MatchDetail::LabeledSecret)],
+                "case {}",
+                value.len()
+            );
+        }
+    }
+
+    #[test]
+    fn 画面の端まで離れた右隣は値にしない() {
+        // サイドバーの項目と表の右端の列のように、同じ高さでも離れた観測は別の領域
+        let value = secret_value();
+        let page = GridPage::new(&[("API キー", (0.01, 0.5, 0.03, 0.013)), (&value, (0.84, 0.5, 0.05, 0.013))]);
+        assert!(detect_page(&page, MatchDetail::LabeledSecret).is_empty());
+    }
+
+    /// 表の見出しの行(3 列)と、2 列目の下に並ぶ値。
+    fn header_table(headers: [&str; 3], values: &[&str]) -> GridPage {
+        let mut cells: Vec<(&str, Cell)> = headers
+            .iter()
+            .enumerate()
+            .map(|(i, h)| (*h, (0.1 + 0.3 * i as f64, 0.8, 0.12, 0.03)))
+            .collect();
+        for (row, value) in values.iter().enumerate() {
+            cells.push((value, (0.37, 0.75 - 0.05 * row as f64, 0.2, 0.03)));
+        }
+        GridPage::new(&cells)
+    }
+
+    #[test]
+    fn 表の見出しにだけ手がかり語がある列の値を検出する() {
+        let values = [mixed(3, 12), mixed(11, 14), secret_value()];
+        let refs: Vec<&str> = values.iter().map(String::as_str).collect();
+        let page = header_table(["連携先", "署名シークレット", "状態"], &refs);
+        let expected: Vec<Match> = values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| Match::new(3 + i, whole(v), MatchDetail::LabeledSecret))
+            .collect();
+        assert_eq!(detect_page(&page, MatchDetail::LabeledSecret), expected);
+    }
+
+    #[test]
+    fn 表の見出しの列は日本語の値か離れた観測で終わる() {
+        let value = mixed(3, 12);
+        let page = header_table(["連携先", "パスワード", "状態"], &[&value, "未設定", "abc"]);
+        assert_eq!(detect_page(&page, MatchDetail::LabeledSecret), vec![Match::new(3, whole(&value), MatchDetail::LabeledSecret)]);
     }
 
     #[test]
