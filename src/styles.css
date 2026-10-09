@@ -35,6 +35,19 @@
   --surface-color: #ffffff;
   --hover-tint: rgb(0 0 0 / 6%);
   --press-tint: rgb(0 0 0 / 10%);
+
+  /* 自動マスキングの候補の印(AM-T12、UI_auto-masking §4.1)。種類の 4 色はアクセントではなく
+     「意味の色」(権限バナーの赤と同じ例外の扱い)。縁取りはキャプチャの明暗どちらでも輪郭を出す。 */
+  --mask-contact: #2563eb;
+  --mask-credential: #dc2626;
+  --mask-identifier: #7c3aed;
+  --mask-financial: #047857;
+  --mask-halo-light: #ffffff;
+  --mask-halo-dark: rgb(0 0 0 / 75%);
+  --mask-fill-alpha: 14%;
+  --mask-line-width: 2px;
+  --mask-label-text: #ffffff;
+  --mask-primary-bg: #1f1f1f;
 }
 
 /* T19: [hidden] を常にUAスタイルシート同等の `display: none` に固定する安全策。
@@ -462,6 +475,98 @@ body {
 .shape-overlay {
   position: absolute;
   pointer-events: none;
+}
+
+/* 自動マスキングの候補の印(AM-T12、UI_auto-masking §4)。Canvasに重ねたDOMのボタンで、
+   Canvasのピクセル(コピー・履歴)には含めない。位置・大きさは `src/ui/maskOverlay.ts` が
+   `.shape-overlay` と同じ合わせ方で指定する。確認中はレイヤー全体がポインタを受け、
+   印以外のクリックはCanvasへ届かない(ARCH_auto-masking §9.1)。 */
+.mask-overlay {
+  position: absolute;
+  z-index: 1;
+}
+
+.mask-mark {
+  --mask-color: var(--mask-contact);
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: var(--mask-line-width) solid var(--mask-color);
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--mask-color) var(--mask-fill-alpha), transparent);
+  box-shadow:
+    0 0 0 1px var(--mask-halo-light),
+    0 0 0 2px var(--mask-halo-dark);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mask-mark--contact {
+  --mask-color: var(--mask-contact);
+}
+
+.mask-mark--credential {
+  --mask-color: var(--mask-credential);
+}
+
+.mask-mark--identifier {
+  --mask-color: var(--mask-identifier);
+}
+
+.mask-mark--financial {
+  --mask-color: var(--mask-financial);
+}
+
+.mask-mark:hover,
+.mask-mark:focus-visible {
+  z-index: 1;
+}
+
+.mask-mark:not(.mask-mark--excluded):hover {
+  background-color: color-mix(in srgb, var(--mask-color) 28%, transparent);
+}
+
+.mask-mark:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 3px;
+}
+
+/* 種類のラベル。候補の文字にかぶせないよう印の右の外側(入りきらないときは左)に置く(§4.3)。 */
+.mask-mark__label {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + var(--mask-line-width) + 5px);
+  transform: translateY(-50%);
+  padding: 0 4px;
+  border-radius: 3px;
+  background-color: var(--mask-color);
+  box-shadow:
+    0 0 0 1px var(--mask-halo-light),
+    0 0 0 2px var(--mask-halo-dark);
+  color: var(--mask-label-text);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.mask-mark--label-start .mask-mark__label {
+  right: calc(100% + var(--mask-line-width) + 5px);
+  left: auto;
+}
+
+/* 外した候補(FR-010、§4.4)。破線・塗りなし・ラベルの地と文字の反転で、色に頼らず区別する。 */
+.mask-mark--excluded {
+  border-style: dashed;
+  background-color: transparent;
+  opacity: 0.55;
+}
+
+.mask-mark--excluded .mask-mark__label {
+  background-color: var(--mask-label-text);
+  color: var(--mask-color);
 }
 
 /* テキストツール(T27)。Canvasに重ねる単一行の入力欄。文字サイズ・位置・影は
