@@ -20,6 +20,10 @@ mod screencapture;
 
 pub use screencapture::ScreenCaptureCli;
 
+mod pixel_ratio;
+
+pub use pixel_ratio::read_pixel_ratio;
+
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -80,6 +84,9 @@ pub struct CaptureResult {
     pub kind: CaptureKind,
     /// ISO8601 形式の文字列(PRD §5)。生成は T06 で行う。
     pub created_at: String,
+    /// 撮った画面の倍率(`Some(1)` / `Some(2)`)。PNG の pHYs から読めなければ `None`
+    /// (JSON は `null`。縮めない側に倒す。ARCH_quick-edits §1.3 #10・§5.5)。
+    pub pixel_ratio: Option<u8>,
 }
 
 /// [`run`] の失敗系(ARCH §7.1 手順2-3)。
@@ -200,6 +207,34 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::time::Duration;
+
+    fn sample_result(pixel_ratio: Option<u8>) -> CaptureResult {
+        CaptureResult {
+            id: "capture-1".to_string(),
+            source_path: PathBuf::from("/tmp/tadcap-captures/capture-1.png"),
+            kind: CaptureKind::Range,
+            created_at: "2026-10-10T00:00:00.000Z".to_string(),
+            pixel_ratio,
+        }
+    }
+
+    #[test]
+    fn capture_resultのjsonに倍率がpixel_ratioのキーで出る() {
+        let json = serde_json::to_value(sample_result(Some(2))).expect("JSON にできるはず");
+        assert_eq!(json["pixelRatio"], serde_json::json!(2));
+        assert!(
+            json.get("pixel_ratio").is_none(),
+            "キー名は camelCase のはず"
+        );
+    }
+
+    #[test]
+    fn capture_resultのjsonは倍率が不明ならpixel_ratioがnull() {
+        let json = serde_json::to_value(sample_result(None)).expect("JSON にできるはず");
+        let obj = json.as_object().expect("オブジェクトのはず");
+        assert!(obj.contains_key("pixelRatio"), "null でもキーは省かない");
+        assert!(obj["pixelRatio"].is_null());
+    }
 
     /// NFR-001計測ログ整形の純粋関数テスト(T11)。
     #[test]

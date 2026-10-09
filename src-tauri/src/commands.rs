@@ -108,13 +108,24 @@ pub(crate) async fn run_capture(
         return Ok(None);
     }
 
-    let join_result =
-        tauri::async_runtime::spawn_blocking(move || capture::run(origin, start)).await;
+    // 倍率の読み取り(PNG の先頭のチャンク見出しと pHYs だけ)もブロッキング I/O なので、
+    // 同じ `spawn_blocking` の中で撮影の直後に行う。読めなくても撮影は成功のまま `None`
+    // (ARCH_quick-edits §5.5・§7.1 R-1)。
+    let join_result = tauri::async_runtime::spawn_blocking(move || {
+        capture::run(origin, start).map(|(outcome, source_path)| {
+            let pixel_ratio = match outcome {
+                CaptureOutcome::Completed => capture::read_pixel_ratio(&source_path),
+                CaptureOutcome::Cancelled => None,
+            };
+            (outcome, source_path, pixel_ratio)
+        })
+    })
+    .await;
     end_capture();
 
     let run_result = join_result.map_err(|e| AppError::Internal(e.to_string()))?;
-    let (outcome, source_path) = run_result.map_err(app_error_from_run_error)?;
-    let Some(result) = capture_result_for(outcome, source_path) else {
+    let (outcome, source_path, pixel_ratio) = run_result.map_err(app_error_from_run_error)?;
+    let Some(result) = capture_result_for(outcome, source_path, pixel_ratio) else {
         return Ok(None);
     };
     app.emit(CAPTURE_COMPLETED_EVENT, &result)
@@ -138,7 +149,12 @@ fn app_error_from_run_error(err: RunError) -> AppError {
 ///
 /// `Cancelled` の場合は画像が存在しないため `None` を返す(エラー扱いしない、
 /// ARCH §7.1 手順3)。Tauriのランタイムに依存しないためユニットテスト可能。
-fn capture_result_for(outcome: CaptureOutcome, source_path: PathBuf) -> Option<CaptureResult> {
+/// `pixel_ratio` は [`capture::read_pixel_ratio`] が撮った PNG から読んだ倍率(読めなければ `None`)。
+fn capture_result_for(
+    outcome: CaptureOutcome,
+    source_path: PathBuf,
+    pixel_ratio: Option<u8>,
+) -> Option<CaptureResult> {
     match outcome {
         CaptureOutcome::Cancelled => None,
         CaptureOutcome::Completed => Some(CaptureResult {
@@ -146,6 +162,7 @@ fn capture_result_for(outcome: CaptureOutcome, source_path: PathBuf) -> Option<C
             source_path,
             kind: CaptureKind::Range,
             created_at: now_iso8601_utc(),
+            pixel_ratio,
         }),
     }
 }
@@ -550,14 +567,28 @@ mod tests {
 
     #[test]
     fn capture_result_for_はcancelled時にnoneを返す() {
-        let result = capture_result_for(CaptureOutcome::Cancelled, PathBuf::from("/tmp/x.png"));
+        let result = capture_result_for(
+            CaptureOutcome::Cancelled,
+            PathBuf::from("/tmp/x.png"),
+            Some(2),
+        );
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn capture_result_for_は読んだ倍率を結果に載せる() {
+        let path = PathBuf::from("/tmp/tadcap-captures/capture-1-0-2.png");
+        for ratio in [Some(1), Some(2), None] {
+            let result = capture_result_for(CaptureOutcome::Completed, path.clone(), ratio)
+                .expect("Completedならcapture_resultを返すはず");
+            assert_eq!(result.pixel_ratio, ratio);
+        }
     }
 
     #[test]
     fn capture_result_for_はcompleted時に結果を構築する() {
         let path = PathBuf::from("/tmp/tadcap-captures/capture-1-0-2.png");
-        let result = capture_result_for(CaptureOutcome::Completed, path.clone())
+        let result = capture_result_for(CaptureOutcome::Completed, path.clone(), None)
             .expect("Completedならcapture_resultを返すはず");
 
         assert_eq!(result.source_path, path);
