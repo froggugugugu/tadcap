@@ -13,6 +13,7 @@
  *
  * 引数 `--set=holdout` で、調整に使っていないホールドアウト(`eval/masking/holdout/` の pages / images /
  * truth.json)を生成する。件数の規定はホールドアウト用(HOLDOUT_LIMITS)。引数なしは従来どおり(出力は変わらない)。
+ * `--set=holdout2` は 2 つ目のホールドアウト(`eval/masking/holdout2/`)。規定は holdout と同じ。
  */
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -25,6 +26,7 @@ const EVAL_DIR = path.join(ROOT, "eval", "masking");
 export const SETS = {
   default: { dir: EVAL_DIR },
   holdout: { dir: path.join(EVAL_DIR, "holdout") },
+  holdout2: { dir: path.join(EVAL_DIR, "holdout2") },
 };
 
 /** 種類(IPC の `kind`)ごとの細分。ARCH §5.3 の表の順 */
@@ -294,7 +296,7 @@ async function main() {
   const setName = parseSet(process.argv.slice(2));
   const dir = SETS[setName].dir;
   const dirs = { PAGES_DIR: path.join(dir, "pages"), IMAGES_DIR: path.join(dir, "images"), TRUTH_PATH: path.join(dir, "truth.json") };
-  const limits = setName === "holdout" ? HOLDOUT_LIMITS : DEFAULT_LIMITS;
+  const limits = setName === "default" ? DEFAULT_LIMITS : HOLDOUT_LIMITS;
   const { truth, targetTexts, genErrors } = await generate(dirs);
   const imageSizes = await loadImageSizes(truth, dirs.IMAGES_DIR);
   const { errors: checkErrors, counts } = selfCheck(truth, { imageSizes, targetTexts }, limits);

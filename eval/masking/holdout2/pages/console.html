@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin Console (fictional, holdout 2)</title>
+<link rel="stylesheet" href="../../pages/common.css">
+<style>
+  /* Members + invitations / billing / API keys + webhooks + audit log. A layout none of the other 9 pages use */
+  body { font-size: 12px; line-height: 1.45; font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif; }
+  .side { width: 128px; padding: 12px 8px; }
+  .main { display: grid; grid-template-columns: 1fr 1fr 1.12fr; gap: 10px; padding: 10px 12px; }
+  .col { overflow: hidden; }
+  .card { padding: 8px 11px; margin-bottom: 8px; }
+  .card h2 { font-size: 13px; margin: 0 0 5px; }
+  th, td { padding: 3px 6px; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .kv { grid-template-columns: 92px 1fr; gap: 2px 8px; }
+  .pill { display: inline-block; font-size: 10px; padding: 0 6px; border-radius: 9px; border: 1px solid var(--border); color: var(--muted); }
+  .paid { color: var(--ok); border-color: var(--ok); }
+  .due { color: var(--warn); border-color: var(--warn); }
+  .r { text-align: right; }
+  .log { font-family: Menlo, Monaco, "SF Mono", monospace; font-size: 11px; line-height: 1.55; }
+  .log div { border-bottom: 1px dotted var(--border); padding: 1px 0; white-space: nowrap; }
+  .log .ts { color: var(--muted); }
+  .addr { max-width: 260px; }
+</style>
+</head>
+<body>
+<!-- Fictional data only -->
+<div class="topbar"><span class="brand">Admin Console</span>
+  <span class="muted">Org: <span data-mask="identifier/company">Quillmarsh Ltd</span> · Tenant ID <span class="mono" data-mask="identifier/cued_number">T-88410293</span></span>
+  <span class="muted" style="margin-left:auto">Signed in as <span data-mask="contact/email">J.Whitlock@Example.COM</span></span></div>
+<div class="layout">
+  <div class="side"><div>Overview</div><div class="on">Members</div><div>Billing</div><div>API keys</div><div>Webhooks</div><div>Audit log</div><div>Settings</div></div>
+  <div class="main">
+    <div class="col">
+      <div class="card">
+        <h2>Members (9)</h2>
+        <table>
+          <tr><th>Name</th><th>Role</th><th>Phone</th></tr>
+          <tr><td><span data-mask="identifier/person_en">Whitlock, Jonah</span></td><td>Owner</td><td><span data-mask="contact/phone">+44 20 7946 0718</span></td></tr>
+          <tr><td><span data-mask="identifier/person_en">Okafor, Grace</span></td><td>Admin</td><td><span data-mask="contact/phone">+1 (555) 010-4477</span></td></tr>
+          <tr><td><span data-mask="identifier/person_en">Priya Raghunathan</span></td><td>Billing</td><td><span data-mask="contact/phone">+61 491 570 156</span></td></tr>
+          <tr><td><span data-mask="identifier/person_en">M. Lindqvist</span></td><td>Developer</td><td><span data-mask="contact/phone">+33 1 99 00 24 87</span></td></tr>
+          <tr><td><span data-mask="identifier/person_ja">鈴木 健一</span></td><td>Developer</td><td><span data-mask="contact/phone">+81 3-0000-7712</span></td></tr>
+          <tr><td><span data-mask="identifier/person_en">Siobhan Delacroix-Byrne</span></td><td>Viewer</td><td>—</td></tr>
+          <tr><td><span data-mask="identifier/person_ja">一尺八寸 怜</span></td><td>Viewer</td><td>—</td></tr>
+          <tr><td><span data-mask="identifier/person_en">Tomasz Wierzbicki</span></td><td>Support</td><td><span data-mask="contact/phone">(555) 010-2290</span></td></tr>
+        </table>
+        <div class="s muted" style="margin-top:3px">Contact for this table: <span data-mask="contact/email">it-admins+eu@quillmarsh.example.net</span></div>
+      </div>
+      <div class="card">
+        <h2>Pending invitations</h2>
+        <div class="s"><span data-mask="contact/email">r.osei@example.org</span><br><span class="mono">https://app.example.com/join<span data-mask="credential/url_query">?invite=Hk29Vx81&amp;org=qm</span></span></div>
+        <div class="s" style="margin-top:3px"><span data-mask="contact/email">noor.haddad@example.net</span><br><span class="mono">https://app.example.com/join<span data-mask="credential/url_query">?invite=pT40Lw7c&amp;org=qm</span></span></div>
+        <div class="s" style="margin-top:3px">Invited by <span data-mask="identifier/person_en">Grace Okafor</span> · expires in 6 days</div>
+      </div>
+      <div class="card">
+        <h2>Support case</h2>
+        <div class="kv">
+          <div>Case #</div><div class="mono"><span data-mask="identifier/cued_number">00918274</span></div>
+          <div>Reported by</div><div><span data-mask="identifier/person_en">Elena Marchetti-Vos</span> (<span data-mask="identifier/company">Larkspur Freight B.V.</span>)</div>
+          <div>Email</div><div><span data-mask="contact/email">e.marchetti@larkspur.example.com</span></div>
+          <div>Temp password</div><div class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="14"></span></div>
+          <div>Recovery code</div><div class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="10"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>Billing — Business plan</h2>
+        <div class="kv">
+          <div>Bill to</div><div><span data-mask="identifier/company">Quillmarsh Ltd</span></div>
+          <div>Address</div><div class="addr"><span data-mask="contact/address">Unit 12, 48 Fernhollow Road</span><br><span data-mask="contact/address">Ashbridge AB1 2CD, United Kingdom</span></div>
+          <div>VAT ID</div><div class="mono"><span data-mask="identifier/cued_number">GB 000 4417 26</span></div>
+          <div>PO number</div><div class="mono"><span data-mask="identifier/cued_number">4500012874</span></div>
+          <div>Next charge</div><div><span data-mask="financial/amount">$12,480.00</span> on Nov 1</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Invoices</h2>
+        <table>
+          <tr><th>Invoice</th><th>Entity</th><th class="r">Total</th><th></th></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">INV-2026-00418</span></td><td>UK</td><td class="r"><span data-mask="financial/amount">£845.00</span></td><td><span class="pill due">Due</span></td></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">INV-2026-00377</span></td><td>EU</td><td class="r"><span data-mask="financial/amount">€3.210,50</span></td><td><span class="pill paid">Paid</span></td></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">INV-2026-00351</span></td><td>US</td><td class="r"><span data-mask="financial/amount">1,299.00 USD</span></td><td><span class="pill paid">Paid</span></td></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">CN-2026-0007</span></td><td>US</td><td class="r"><span data-mask="financial/amount">-$120.00</span></td><td><span class="pill">Credit</span></td></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">INV-2026-00329</span></td><td>JP</td><td class="r"><span data-mask="financial/amount">¥98,000</span></td><td><span class="pill paid">Paid</span></td></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">INV-2026-00302</span></td><td>CH</td><td class="r"><span data-mask="financial/amount">CHF 2,450.00</span></td><td><span class="pill paid">Paid</span></td></tr>
+        </table>
+        <div class="s muted" style="margin-top:3px">Usage this month: <span data-mask="financial/amount">A$64.00</span> overage<br>PDF <span class="mono">https://files.example.com/i<span data-mask="credential/url_query">?exp=1760000000&amp;s=Gq0r</span></span></div>
+      </div>
+      <div class="card">
+        <h2>Payment methods</h2>
+        <table>
+          <tr><th>Type</th><th>Number</th><th>Holder</th></tr>
+          <tr><td>Card</td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></td><td><span data-mask="identifier/person_en">Jonah Whitlock</span></td></tr>
+          <tr><td>Card</td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-6-5" data-sep=" "></span></td><td>Corporate</td></tr>
+          <tr><td>Card</td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="16" data-sep=""></span></td><td>Backup</td></tr>
+          <tr><td>Card</td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-6-4" data-sep="-"></span></td><td>Travel</td></tr>
+          <tr><td>Bank</td><td class="mono">Acct <span data-mask="financial/account">41926370</span></td><td>Domestic</td></tr>
+          <tr><td>Bank</td><td class="mono"><span data-mask="financial/account">GB82 ZZQM 0000 0041 9263 70</span></td><td>IBAN</td></tr>
+        </table>
+        <div class="s muted" style="margin-top:3px">ACH account <span data-mask="financial/account">3349018822</span> · <span data-mask="identifier/company">Corvane Systems, Inc.</span></div>
+      </div>
+      <div class="card">
+        <h2>Offices</h2>
+        <div class="addr s"><span data-mask="contact/address">2200 Brindle Ave, Suite 9</span>, <span data-mask="contact/address">Northfield, NV 89000</span></div>
+        <div class="addr s"><span data-mask="contact/address">3-5-12 Kitahama, Sazanami-shi, Osaka 541-0000, Japan</span></div>
+        <div class="s">Tokyo desk <span data-mask="contact/phone">03-0000-6620</span> · <span data-mask="contact/email">tokyo-desk@quillmarsh.example.jp</span></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>API keys</h2>
+        <table>
+          <tr><th>Name / created by</th><th>Secret</th></tr>
+          <tr><td>prod-billing<br><span class="s muted"><span data-mask="identifier/person_en">G. Okafor</span></span></td><td class="mono s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="0" data-len="24"></span></td></tr>
+          <tr><td>ci-deploy<br><span class="s muted"><span data-mask="identifier/person_ja">鈴木 健一</span></span></td><td class="mono s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="2" data-len="30"></span></td></tr>
+          <tr><td>chat-alerts<br><span class="s muted"><span data-mask="identifier/person_en">M. Lindqvist</span></span></td><td class="mono s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="7" data-len="28"></span></td></tr>
+          <tr><td>storage-sync<br><span class="s muted">system</span></td><td class="mono s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="4" data-len="16"></span></td></tr>
+          <tr><td>pkg-publish<br><span class="s muted"><span data-mask="identifier/person_en">Tomasz Wierzbicki</span></span></td><td class="mono s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="6" data-len="30"></span></td></tr>
+          <tr><td>ml-batch<br><span class="s muted"><span data-mask="identifier/person_en">Priya Raghunathan</span></span></td><td class="mono s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="10" data-len="24"></span></td></tr>
+          <tr><td>mailer<br><span class="s muted">system</span></td><td class="mono s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="11" data-len="22"></span></td></tr>
+        </table>
+        <div class="kv s" style="margin-top:4px">
+          <div>Key ID</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="20"></span></div>
+          <div>Build hash</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="12"></span></div>
+          <div>Client ID</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="24"></span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Webhooks</h2>
+        <div class="kv s">
+          <div>Endpoint</div><div class="mono">https://hooks.example.net/in<span data-mask="credential/url_query">?token=Wm3qZ8</span></div>
+          <div>Signing secret</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="40"></span></div>
+          <div>SSO callback</div><div class="mono">https://sso.example.org/acs<span data-mask="credential/url_query">?tid=8841&amp;rs=a1B9</span></div>
+          <div>SMTP user</div><div class="mono">relay@quillmarsh.example.net</div>
+          <div>SMTP password</div><div class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="16"></span></div>
+          <div>Vendor</div><div><span data-mask="identifier/company">Halvorsen &amp; Pike GmbH</span> · <span data-mask="identifier/company">Tidewell Labs PLC</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Audit log</h2>
+        <div class="log">
+          <div><span class="ts">10-09 08:14</span> <span data-mask="contact/email">g.okafor@example.com</span> key.rotate prod-billing</div>
+          <div><span class="ts">10-09 08:15</span> req <span data-mask="credential/random_string" data-gen="random" data-len="22"></span></div>
+          <div><span class="ts">10-09 08:31</span> member.reset_pw passcode=<span data-mask="credential/cue_value" data-gen="secret" data-len="11"></span></div>
+          <div><span class="ts">10-09 08:40</span> billing.refund <span data-mask="financial/amount">USD 18,900</span> → <span data-mask="identifier/company">Brightwater Pty Ltd</span></div>
+          <div><span class="ts">10-09 08:52</span> session <span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="28"></span></div>
+          <div><span class="ts">10-09 09:03</span> device.pair PIN <span data-mask="credential/cue_value">582046</span> by <span data-mask="identifier/person_en">Noor Haddad</span></div>
+          <div><span class="ts">10-09 09:10</span> order.lookup Order No. <span data-mask="identifier/cued_number">112-0000000-4417</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../../pages/fixture.js"></script>
+</body>
+</html>

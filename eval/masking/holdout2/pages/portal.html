@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>社内ポータル(架空・ホールドアウト 2)</title>
+<link rel="stylesheet" href="../../pages/common.css">
+<style>
+  /* お知らせ + 社員名簿 / 稟議 / 経費精算の 3 列。既存 9 画面に無い構成(グループウェアの一覧と申請) */
+  body { font-size: 12px; line-height: 1.45; }
+  .side { width: 112px; padding: 12px 8px; }
+  .main { display: grid; grid-template-columns: 0.96fr 1.14fr 0.96fr; gap: 10px; padding: 10px 12px; }
+  .col { overflow: hidden; }
+  .card { padding: 8px 11px; margin-bottom: 8px; }
+  .card h2 { font-size: 13px; margin: 0 0 5px; }
+  th, td { padding: 3px 6px; }
+  th { font-size: 11px; }
+  .news div.item { padding: 4px 0; border-bottom: 1px dotted var(--border); }
+  .news .tag { display: inline-block; font-size: 10px; padding: 0 5px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); margin-right: 4px; }
+  .kv { grid-template-columns: 74px 1fr; gap: 2px 8px; }
+  .route { font-size: 12px; }
+  .route .arrow { color: var(--muted); margin: 0 3px; }
+  .addr { max-width: 300px; }
+  .r { text-align: right; }
+  .stamp { display: inline-block; font-size: 10px; border: 1px solid var(--warn); color: var(--warn); border-radius: 3px; padding: 0 3px; }
+</style>
+</head>
+<body>
+<!-- 架空データのみ -->
+<div class="topbar"><span class="brand">社内ポータル</span><span class="muted">ホーム / 申請・承認</span>
+  <span class="muted" style="margin-left:auto">ログイン中: <span data-mask="identifier/person_ja">中村彩</span>(総務部)</span></div>
+<div class="layout">
+  <div class="side"><div>ホーム</div><div>お知らせ</div><div>社員名簿</div><div class="on">稟議</div><div>経費精算</div><div>出張申請</div><div>設備予約</div></div>
+  <div class="main">
+    <div class="col">
+      <div class="card news">
+        <h2>お知らせ</h2>
+        <div class="item"><span class="tag">情報システム</span>来客用 Wi-Fi を更新しました。SSID は guest-5F、パスワードは <span class="mono" data-mask="credential/cue_value">Hoshi7-Nagi24</span> です(<span data-mask="identifier/person_ja">四十物 拓真</span>)</div>
+        <div class="item"><span class="tag">総務</span>健康診断の受診先は <span data-mask="identifier/company">医療法人社団あさなぎ会</span> です。<br>
+          所在地 <span class="addr" data-mask="contact/address">静岡県あおい浜市駿河台一丁目14番6号</span> / 予約は <span data-mask="contact/phone">054(000)3871</span><br>
+          <span class="mono s">https://kenshin.example.jp/r<span data-mask="credential/url_query">?c=HQ27&amp;emp=0412873</span></span></div>
+        <div class="item"><span class="tag">経理</span>10 月の締めは 25 日です。法人カードの明細は <span data-mask="identifier/person_ja">佐藤美咲</span>(<span data-mask="contact/email">m-sato@corp.example.jp</span>)まで</div>
+        <div class="item"><span class="tag">人事</span>海外営業部に <span data-mask="identifier/person_en">Elif Demirtas</span> さんが着任しました。連絡先 <span data-mask="contact/phone">+90 212 000 41 77</span></div>
+        <div class="item"><span class="tag">施設</span>5 階会議室の解錠コードは <span class="mono" data-mask="credential/cue_value">604918</span>(毎月 1 日に変更)</div>
+        <div class="item"><span class="tag">情報システム</span>勤怠連携の再設定手順は社内 Wiki へ。新しい連携用トークン <span class="mono" data-mask="credential/prefixed_token" data-gen="token" data-prefix="5" data-len="20"></span></div>
+      </div>
+      <div class="card">
+        <h2>社員名簿(管理部門)</h2>
+        <table>
+          <tr><th>氏名</th><th>社員コード</th><th>内線</th><th>携帯</th></tr>
+          <tr><td><span data-mask="identifier/person_ja">高橋 大輔</span></td><td><span data-mask="identifier/cued_number">0412873</span></td><td>2104</td><td><span data-mask="contact/phone">090-0000-1846</span></td></tr>
+          <tr><td><span data-mask="identifier/person_ja">勅使河原 純</span></td><td><span data-mask="identifier/cued_number">0398120</span></td><td>2311</td><td><span data-mask="contact/phone">080-0000-6627</span></td></tr>
+          <tr><td><span data-mask="identifier/person_ja">田中 悠斗</span></td><td><span data-mask="identifier/cued_number">0455061</span></td><td>2207</td><td><span data-mask="contact/phone">+81-70-0000-3328</span></td></tr>
+          <tr><td><span data-mask="identifier/person_ja">小鳥遊 遼</span></td><td><span data-mask="identifier/cued_number">0420399</span></td><td>2118</td><td>—</td></tr>
+          <tr><td><span data-mask="identifier/person_ja">渡辺 由美</span></td><td><span data-mask="identifier/cued_number">0377742</span></td><td>2005</td><td><span data-mask="contact/phone">090(0000)5194</span></td></tr>
+          <tr><td><span data-mask="identifier/person_ja">五百旗頭 奏</span></td><td><span data-mask="identifier/cued_number">0461230</span></td><td>2402</td><td>—</td></tr>
+        </table>
+        <div class="s muted" style="margin-top:4px">代表 <span data-mask="contact/email">soumu@corp.example.jp</span> · 名簿の書き出し<br><span class="mono">https://portal.example.jp/dir<span data-mask="credential/url_query">?d=kanri&amp;sid=Rw58</span></span></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>稟議一覧(承認待ち 4 件)</h2>
+        <table>
+          <tr><th>No.</th><th>件名 / 取引先</th><th class="r">金額</th><th>申請者</th></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">RG-26-0418</span></td><td>基幹サーバ保守の更新<br><span class="s muted"><span data-mask="identifier/company">カ)ミナモトコウギョウ</span></span></td><td class="r"><span data-mask="financial/amount">1,250,000円</span></td><td><span data-mask="identifier/person_ja">高橋 大輔</span></td></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">RG-26-0421</span></td><td>研修講師の委託<br><span class="s muted"><span data-mask="identifier/company">一般社団法人ことのは技能協会</span></span></td><td class="r"><span data-mask="financial/amount">32万4,000円</span></td><td><span data-mask="identifier/person_ja">東海林 慧</span></td></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">RG-26-0425</span></td><td>寄付(地域清掃活動)<br><span class="s muted"><span data-mask="identifier/company">特定非営利活動法人そらいろネット</span></span></td><td class="r"><span data-mask="financial/amount">¥ 50,000</span></td><td><span data-mask="identifier/person_ja">山本 翔</span></td></tr>
+          <tr><td class="mono"><span data-mask="identifier/cued_number">RG-26-0430</span></td><td>職場体験の受入れ<br><span class="s muted"><span data-mask="identifier/company">学校法人くすのき学園</span></span></td><td class="r">—</td><td><span data-mask="identifier/person_ja">月見里 汐音</span></td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2>RG-26-0418 基幹サーバ保守の更新 <span class="stamp">承認待ち</span></h2>
+        <div class="kv">
+          <div>取引先</div><div><span data-mask="identifier/company">シラサギ電装株式会社</span>(販売代理 <span data-mask="identifier/company">カ)ミナモトコウギョウ</span>)</div>
+          <div>所在地</div><div class="addr"><span data-mask="contact/address">大阪府さざなみ市北浜二丁目3番18号 さざなみセンタービル7階</span></div>
+          <div>先方担当</div><div><span data-mask="identifier/person_ja">九十九 一馬</span> <span data-mask="contact/email">k.tsukumo@shirasagi.example.co.jp</span></div>
+          <div>金額</div><div>税抜 <span data-mask="financial/amount">1,250,000円</span>(税込 <span data-mask="financial/amount">￥1,375,000-</span>)</div>
+          <div>支払先</div><div>みずなら銀行 本店営業部 (普)<span data-mask="financial/account">2948105</span></div>
+          <div>見積書</div><div class="mono s">共有コード <span data-mask="credential/random_string" data-gen="random" data-len="24"></span></div>
+          <div>承認ルート</div><div class="route"><span data-mask="identifier/person_ja">高橋 大輔</span><span class="arrow">→</span><span data-mask="identifier/person_ja">勅使河原 純</span><span class="arrow">→</span><span data-mask="identifier/person_ja">五百旗頭 奏</span></div>
+        </div>
+        <div class="s" style="margin-top:4px">承認用リンク <span class="mono">https://wf.example.jp/approve<span data-mask="credential/url_query">?req=RG260418&amp;sig=c7Pz3Kq1</span></span></div>
+      </div>
+      <div class="card">
+        <h2>出張申請 — 福岡(10/21〜10/23)</h2>
+        <div class="kv">
+          <div>宿泊先</div><div><span data-mask="identifier/company">ホテルあかつき博多(株式会社アカツキリゾート)</span></div>
+          <div>住所</div><div class="addr"><span data-mask="contact/address">〒812-0000</span> <span data-mask="contact/address">福岡県くすのき市大字上野482-3</span></div>
+          <div>予約番号</div><div class="mono"><span data-mask="identifier/cued_number">HK7Q-20261021</span></div>
+          <div>宿泊費</div><div><span data-mask="financial/amount">1.5万円</span> × 2 泊(決済 <span class="mono" data-mask="financial/card" data-gen="card" data-group="16" data-sep=""></span>)</div>
+          <div>同行</div><div><span data-mask="identifier/person_en">Sofia Ramirez-Ohta</span>(<span data-mask="contact/email">sofia.r-ohta@corp.example.jp</span>)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>経費精算 EX-1029(<span data-mask="identifier/person_ja">小林 千尋</span>)</h2>
+        <table>
+          <tr><th>日付</th><th>内容</th><th class="r">金額</th></tr>
+          <tr><td>10/02</td><td>タクシー(客先訪問)</td><td class="r"><span data-mask="financial/amount">￥3,960-</span></td></tr>
+          <tr><td>10/04</td><td>会議用お茶代</td><td class="r"><span data-mask="financial/amount">820円</span></td></tr>
+          <tr><td>10/07</td><td>書籍(法務関連)</td><td class="r"><span data-mask="financial/amount">12,100 円</span></td></tr>
+          <tr><td colspan="2">合計(うち法人カード払い <span data-mask="financial/amount">¥4,780</span>)</td><td class="r"><span data-mask="financial/amount">16,880円</span></td></tr>
+        </table>
+        <div class="kv" style="margin-top:4px">
+          <div>法人カード</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></div>
+          <div>ETC カード</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep="-"></span></div>
+          <div>予備カード</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-6-5" data-sep=" "></span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>立替金の振込先</h2>
+        <table>
+          <tr><th>氏名</th><th>金融機関</th><th>口座番号</th></tr>
+          <tr><td><span data-mask="identifier/person_ja">小林 千尋</span></td><td>やまぶき銀行 駅前支店</td><td class="mono"><span data-mask="financial/account">6170482</span></td></tr>
+          <tr><td><span data-mask="identifier/person_ja">東海林 慧</span></td><td>ゆうちょ銀行</td><td class="mono"><span data-mask="financial/account">10180-35781291</span></td></tr>
+          <tr><td><span data-mask="identifier/person_ja">山本 翔</span></td><td>あおば信用組合 本店</td><td class="mono"><span data-mask="financial/account">0093317</span></td></tr>
+          <tr><td><span data-mask="identifier/person_en">Elif Demirtas</span></td><td>みずなら銀行 国際営業部</td><td class="mono"><span data-mask="financial/account">8805126</span></td></tr>
+        </table>
+        <div class="s muted" style="margin-top:3px">会社の引落口座 普通預金 <span data-mask="financial/account">0011458</span> · 振込は毎月 10 日</div>
+      </div>
+      <div class="card">
+        <h2>共有アカウント(総務部)</h2>
+        <table>
+          <tr><th>サービス</th><th>ID</th><th>パスワード</th></tr>
+          <tr><td>備品購入サイト</td><td class="mono">soumu01</td><td class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="12"></span></td></tr>
+          <tr><td>社用車予約</td><td class="mono">car-pool</td><td class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="10"></span></td></tr>
+          <tr><td>郵便料金計器</td><td class="mono">meter-5F</td><td class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="9"></span></td></tr>
+        </table>
+        <div class="s" style="margin-top:3px">複合機の管理者 PIN <span class="mono" data-mask="credential/cue_value">739104</span></div>
+      </div>
+      <div class="card">
+        <h2>勤怠連携の設定</h2>
+        <div class="kv s">
+          <div>接続トークン</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="9" data-len="28"></span></div>
+          <div>署名キー</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="32"></span></div>
+          <div>旧署名キー</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="16"></span></div>
+          <div>端末 ID</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="20"></span></div>
+          <div>問い合わせ</div><div><span data-mask="identifier/company">合同会社ホタルビ商会</span> <span data-mask="contact/phone">0120-000-559</span></div>
+        </div>
+        <div class="s mono" style="margin-top:2px">https://kintai.example.jp/h<span data-mask="credential/url_query">?corp=8812&amp;secret=Uv61Tq</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../../pages/fixture.js"></script>
+</body>
+</html>
