@@ -605,6 +605,48 @@ fn masking_eval() {
     assert!(missing.is_empty(), "95% 未達の細分: {missing:?}");
 }
 
+/// README・紹介ページの画像用に、評価画像 1 枚の実際の検出結果を書き出す(`#[ignore]`、macOS)。
+///
+/// `eval/masking/images/<MASK_MEDIA_IMAGE>`(既定 `billing.fhd.light.png`、架空データのみ)を `scan()` に
+/// そのまま通し、候補(矩形と種類だけ。文字列は含まない)を `e2e/screenshots/fixtures/auto-mask-candidates.json`
+/// に書く。撮影スペック `e2e/screenshots/autoMaskMedia.visual.ts` がこれをモックの応答に使う。
+/// 検出率の評価(`masking_eval`)は行わず、`testreport/`・`output/` にも書かない。
+/// 実行: `cargo test masking::eval::media_candidates -- --ignored`
+#[cfg(target_os = "macos")]
+#[test]
+#[ignore = "実機の Vision を使う画像用の書き出し(macOS。cargo test masking::eval::media_candidates -- --ignored)"]
+fn media_candidates() {
+    #[derive(Serialize)]
+    struct MediaCandidates {
+        image: String,
+        width: u32,
+        height: u32,
+        candidates: Vec<MaskCandidate>,
+    }
+
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
+    let file = std::env::var("MASK_MEDIA_IMAGE")
+        .ok()
+        .filter(|f| !f.is_empty())
+        .unwrap_or_else(|| "billing.fhd.light.png".to_string());
+    assert!(
+        !file.contains('/') && !file.contains(".."),
+        "MASK_MEDIA_IMAGE は eval/masking/images/ の中のファイル名だけ"
+    );
+    let bytes = std::fs::read(format!("{root}/eval/masking/images/{file}")).expect("評価画像を読めなかった");
+    let (width, height) = super::image_size(&bytes).expect("評価画像が PNG でない");
+    let candidates = super::scan(&bytes).expect("読み取りに失敗した");
+
+    let out = MediaCandidates { image: file, width, height, candidates };
+    let dir = format!("{root}/e2e/screenshots/fixtures");
+    std::fs::create_dir_all(&dir).expect("出力先を作れなかった");
+    std::fs::write(
+        format!("{dir}/auto-mask-candidates.json"),
+        serde_json::to_string_pretty(&out).expect("シリアライズに失敗した") + "\n",
+    )
+    .expect("候補を書けなかった");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

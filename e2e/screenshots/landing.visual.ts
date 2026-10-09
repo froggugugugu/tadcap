@@ -3,6 +3,10 @@
 //! 通常の `npm run e2e` の対象外(`*.visual.ts`、`playwright.config.ts` の説明どおり)。
 //! 実行: `npx playwright test --config=e2e/screenshots/playwright.config.ts landing`
 //!
+//! 一部の画像だけを撮り直すときは `LANDING_MEDIA` に書き出すファイル名をカンマ区切りで渡す
+//! (指定の無いファイルは書き換えない)。例: エディタとツールバーだけ
+//! `LANDING_MEDIA=editor.png,toolbar.png npx playwright test --config=e2e/screenshots/playwright.config.ts landing -g 使用例`
+//!
 //! キャプチャ画像はチェッカーボードではなく、架空のアプリの「設定画面」を HTML で描いて
 //! PNG にしたものを使う(実在の製品名・ロゴ・個人情報は含めない)。その画像を
 //! `capture-flow.spec.ts` と同じ IPC モックで読み込ませ、実際のツールで矢印・矩形・円・
@@ -24,6 +28,19 @@ import {
 } from "../fixtures/tauriMock";
 
 const MEDIA_DIR = path.join(process.cwd(), "docs/media");
+
+/** `LANDING_MEDIA`(カンマ区切りのファイル名)。未指定ならすべて書き出す。 */
+const ONLY_MEDIA = process.env.LANDING_MEDIA?.split(",")
+  .map((name) => name.trim())
+  .filter((name) => name.length > 0);
+
+/** `docs/media/<name>` へ書き出す(`LANDING_MEDIA` の対象外なら何もしない)。 */
+function writeMedia(name: string, data: Buffer): void {
+  if (ONLY_MEDIA && ONLY_MEDIA.length > 0 && !ONLY_MEDIA.includes(name)) {
+    return;
+  }
+  writeFileSync(path.join(MEDIA_DIR, name), data);
+}
 
 const sampleCaptureResult: MockCaptureResult = {
   id: "landing-1",
@@ -207,16 +224,18 @@ test("紹介ページ用: 使用例(注釈入りのエディタ)とツールバ�
   await tool(page, "矢印");
   await page.getByRole("button", { name: "ピンク", exact: true }).click();
   await page.mouse.move(5, 690);
+  // キャプチャ直後の自動コピーのトーストが消えてから撮る(`autoMask.visual.ts` と同じ)。
+  await expect(page.locator("#clipboard-status")).toBeHidden({ timeout: 10_000 });
 
   const editor = await page.screenshot();
   const toolbar = await page.locator(".toolbar").screenshot();
   const annotated = await canvas.evaluate((el: HTMLCanvasElement) => el.toDataURL("image/png"));
   await context.close();
 
-  writeFileSync(path.join(MEDIA_DIR, "editor.png"), editor);
-  writeFileSync(path.join(MEDIA_DIR, "toolbar.png"), toolbar);
-  writeFileSync(
-    path.join(MEDIA_DIR, "annotated.png"),
+  writeMedia("editor.png", editor);
+  writeMedia("toolbar.png", toolbar);
+  writeMedia(
+    "annotated.png",
     Buffer.from(annotated.replace(/^data:image\/png;base64,/, ""), "base64"),
   );
 });
@@ -240,7 +259,7 @@ test("紹介ページ用: 画面収録の許可の案内", async ({ browser }) =
   await page.mouse.move(400, 415);
   const shot = await page.screenshot();
   await context.close();
-  writeFileSync(path.join(MEDIA_DIR, "permission.png"), shot);
+  writeMedia("permission.png", shot);
 });
 
 test("紹介ページ用: ロゴ(icon.svg → icon.png)", async ({ browser }) => {
@@ -254,5 +273,5 @@ test("紹介ページ用: ロゴ(icon.svg → icon.png)", async ({ browser }) =>
   await page.locator("img").evaluate((img: HTMLImageElement) => img.decode());
   const png = await page.screenshot({ omitBackground: true });
   await page.close();
-  writeFileSync(path.join(MEDIA_DIR, "icon.png"), png);
+  writeMedia("icon.png", png);
 });

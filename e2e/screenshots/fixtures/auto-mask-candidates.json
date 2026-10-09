@@ -1,0 +1,168 @@
+{
+  "image": "billing.fhd.light.png",
+  "width": 1920,
+  "height": 1080,
+  "candidates": [
+    {
+      "x": 232,
+      "y": 106,
+      "width": 164,
+      "height": 28,
+      "kind": "identifier"
+    },
+    {
+      "x": 280,
+      "y": 126,
+      "width": 76,
+      "height": 30,
+      "kind": "identifier"
+    },
+    {
+      "x": 232,
+      "y": 148,
+      "width": 83,
+      "height": 28,
+      "kind": "contact"
+    },
+    {
+      "x": 232,
+      "y": 168,
+      "width": 256,
+      "height": 27,
+      "kind": "contact"
+    },
+    {
+      "x": 225,
+      "y": 546,
+      "width": 183,
+      "height": 35,
+      "kind": "financial"
+    },
+    {
+      "x": 224,
+      "y": 570,
+      "width": 238,
+      "height": 40,
+      "kind": "financial"
+    },
+    {
+      "x": 230,
+      "y": 601,
+      "width": 132,
+      "height": 23,
+      "kind": "financial"
+    },
+    {
+      "x": 229,
+      "y": 617,
+      "width": 139,
+      "height": 28,
+      "kind": "financial"
+    },
+    {
+      "x": 819,
+      "y": 101,
+      "width": 168,
+      "height": 40,
+      "kind": "identifier"
+    },
+    {
+      "x": 889,
+      "y": 125,
+      "width": 114,
+      "height": 35,
+      "kind": "identifier"
+    },
+    {
+      "x": 823,
+      "y": 148,
+      "width": 120,
+      "height": 28,
+      "kind": "contact"
+    },
+    {
+      "x": 941,
+      "y": 148,
+      "width": 103,
+      "height": 28,
+      "kind": "contact"
+    },
+    {
+      "x": 890,
+      "y": 168,
+      "width": 81,
+      "height": 27,
+      "kind": "identifier"
+    },
+    {
+      "x": 1302,
+      "y": 306,
+      "width": 80,
+      "height": 35,
+      "kind": "financial"
+    },
+    {
+      "x": 1295,
+      "y": 337,
+      "width": 89,
+      "height": 40,
+      "kind": "financial"
+    },
+    {
+      "x": 1291,
+      "y": 369,
+      "width": 92,
+      "height": 35,
+      "kind": "financial"
+    },
+    {
+      "x": 1304,
+      "y": 408,
+      "width": 76,
+      "height": 24,
+      "kind": "financial"
+    },
+    {
+      "x": 1238,
+      "y": 430,
+      "width": 148,
+      "height": 60,
+      "kind": "financial"
+    },
+    {
+      "x": 797,
+      "y": 568,
+      "width": 69,
+      "height": 36,
+      "kind": "financial"
+    },
+    {
+      "x": 796,
+      "y": 591,
+      "width": 70,
+      "height": 35,
+      "kind": "financial"
+    },
+    {
+      "x": 768,
+      "y": 614,
+      "width": 69,
+      "height": 28,
+      "kind": "financial"
+    },
+    {
+      "x": 1239,
+      "y": 547,
+      "width": 151,
+      "height": 28,
+      "kind": "credential"
+    },
+    {
+      "x": 1077,
+      "y": 567,
+      "width": 173,
+      "height": 27,
+      "kind": "credential"
+    }
+  ]
+}
