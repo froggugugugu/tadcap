@@ -15,7 +15,15 @@
 //! - (c) 手がかり語なし: 2 字以上の姓(辞書)+ 空白 0〜2 個 + かな漢字 1〜3 字。**1 字の姓は使わない**(辞書の承認時の決定)
 //! - (d) 英字: ローマ字の姓・名の辞書の語を含む大文字始まりの 2〜3 語、または「Mr.」「Ms.」「Mrs.」「Dear」の後の大文字始まりの 1〜3 語。
 //!   **2 字の辞書の語(go・ai・yu など)は大文字始まりの連なりの規則では手がかりにしない**(2026-10-09 の決定。1 字の姓と同じ扱い)。
-//!   敬称・呼びかけ・ラベルがあれば 2 字の語も人名とする
+//!   敬称・呼びかけ・ラベルがあれば 2 字の語も人名とする。呼びかけと敬称が続く形(「Dear Mr.」)、
+//!   挨拶 + 読点(「Welcome,」)の後、山括弧のメールアドレスの直前(「Name <user@…>」)も人名とする
+//!
+//! AM-T23 で足した規則(手がかり語なしで辞書に無い姓・名を拾うため。辞書の中身は変えない)。
+//!
+//! - (e) 読み仮名の括弧(「(しおみ ちかげ)」)の直前のかな漢字列。名前か読みに空白があるときだけ
+//! - (f) 人名とわかった 3 字以上の文字列の、同じページの別の出現
+//! - (g) 観測全体が大文字始まりの 2〜3 語で、同じページのメールアドレスのローカル部と 2 語が対応するもの
+//! - (h) 表の見出し(「氏名」「担当者」「担当」)の下に並ぶ、観測全体が名前の形の値
 //!
 //! 会社名(ARCH_auto-masking §5.3)。
 //!
@@ -34,11 +42,11 @@ use regex::Regex;
 
 use super::super::layout::{next_line_below, right_neighbor};
 use super::super::text::{normalize, SensitiveText};
-use super::super::{Match, MatchDetail, RecognizedPage};
+use super::super::{Match, MatchDetail, NormalizedRect, RecognizedPage};
 use super::lexicon::{
     COMPANY_LABELS_ASCII, COMPANY_LABELS_JA, COMPANY_NAME_PARTICLES, COMPANY_SUFFIXES_ASCII, COMPANY_TYPES_JA,
-    CUED_NUMBER_CUES_ASCII, CUED_NUMBER_CUES_JA, ENGLISH_NAME_TITLES, GIVEN_NAMES_ROMAJI, HONORIFICS,
-    HONORIFIC_NON_NAMES, PERSON_LABELS_ASCII, PERSON_LABELS_JA, SURNAMES_JA, SURNAMES_ROMAJI,
+    CUED_NUMBER_CUES_ASCII, CUED_NUMBER_CUES_JA, ENGLISH_NAME_GREETINGS, ENGLISH_NAME_TITLES, GIVEN_NAMES_ROMAJI, HONORIFICS,
+    HONORIFIC_NON_NAMES, PERSON_COLUMN_LABELS_JA, PERSON_LABELS_ASCII, PERSON_LABELS_JA, SURNAMES_JA, SURNAMES_ROMAJI,
 };
 use super::{is_hiragana, is_kana_kanji, is_kanji, is_katakana, is_katakana_mark, Line};
 
@@ -302,37 +310,248 @@ fn company_value(text: &str, start: usize) -> Option<Range<usize>> {
     (end > start).then_some(start..end)
 }
 
-/// ③人名の検出(敬称・ラベル・姓の辞書・英字の人名)。同じ範囲は 1 つにする。
+/// ③人名の検出(敬称・ラベル・姓の辞書・英字の人名・読み仮名・メールアドレス・表の列・同じページの別の出現)。
+/// 同じ範囲は 1 つにし、`lines` の順・範囲の順に並べる。
 fn detect_person_names(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
-    let mut matches = Vec::new();
-    for line in lines {
+    // (`lines` の位置, バイト範囲)
+    let mut found: Vec<(usize, Range<usize>)> = Vec::new();
+    let email_locals = email_local_parts(lines);
+    for (pos, line) in lines.iter().enumerate() {
         let text = line.as_str();
         let mut ranges = names_before_honorifics(text);
         ranges.extend(labeled_names(text));
         ranges.extend(surname_names(text));
         ranges.extend(english_names(text));
-        ranges.sort_by_key(|r| (r.start, r.end));
-        ranges.dedup();
-        matches.extend(ranges.into_iter().filter_map(|r| line.to_match(r, MatchDetail::PersonName)));
+        ranges.extend(names_before_readings(text));
+        ranges.extend(email_matched_name(text, &email_locals));
+        found.extend(ranges.into_iter().map(|r| (pos, r)));
     }
 
-    for line in lines.iter().filter(|line| is_person_label_only(line.as_str())) {
+    for (pos, line) in lines.iter().enumerate().filter(|(_, line)| is_person_label_only(line.as_str())) {
+        // 表の見出しなら下に並ぶ値を人名とし、右隣(別の列の見出し)は値にしない
+        let column = column_names(page, lines, pos);
+        if !column.is_empty() {
+            found.extend(column);
+            continue;
+        }
         let Some(neighbor) = right_neighbor(page, line.index) else {
             continue;
         };
-        let Some(value) = lines.iter().find(|l| l.index == neighbor) else {
+        let Some(value_pos) = lines.iter().position(|l| l.index == neighbor) else {
             continue;
         };
-        if is_person_label_only(value.as_str()) {
+        let value = lines[value_pos].as_str();
+        if is_person_label_only(value) {
             continue;
         }
-        if let Some(found) = name_value(value.as_str(), 0).and_then(|r| value.to_match(r, MatchDetail::PersonName)) {
-            if !matches.contains(&found) {
-                matches.push(found);
+        if let Some(range) = name_value(value, 0) {
+            found.push((value_pos, range));
+        }
+    }
+
+    let repeated = repeated_names(lines, &found);
+    found.extend(repeated);
+    found.sort_by_key(|(pos, r)| (*pos, r.start, r.end));
+    found.dedup();
+    found.into_iter().filter_map(|(pos, r)| lines[pos].to_match(r, MatchDetail::PersonName)).collect()
+}
+
+/// (e) 読み仮名の括弧(「(しおみ ちかげ)」)。かな 1〜2 語。
+static READING: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\((?P<reading>[\x{3041}-\x{3096}\x{30a1}-\x{30fa}\-]+(?:\x20[\x{3041}-\x{3096}\x{30a1}-\x{30fa}\-]+)?)\)")
+        .expect("固定の正規表現が不正")
+});
+
+/// (e) 読み仮名の括弧の直前のかな漢字列(漢字を含む)。名前か読みのどちらかに空白(姓と名の区切り)があること
+/// (「注意(ちゅうい)」のような語の読みを除く)。
+fn names_before_readings(text: &str) -> Vec<Range<usize>> {
+    READING
+        .captures_iter(text)
+        .filter_map(|caps| {
+            let (whole, reading) = (caps.get(0)?, caps.name("reading")?);
+            let range = name_before(text, whole.start())?;
+            let name = &text[range.clone()];
+            (name.chars().any(is_kanji) && (name.contains(' ') || reading.as_str().contains(' '))).then_some(range)
+        })
+        .collect()
+}
+
+/// (g) メールアドレスのローカル部(`@` の前)。
+static EMAIL_LOCAL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?P<local>[A-Za-z0-9][A-Za-z0-9._+\-]*)@[A-Za-z0-9\-]+\.").expect("固定の正規表現が不正")
+});
+
+/// (g) 観測全体が大文字始まりの 2〜3 語。
+static WHOLE_CAPITALIZED_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(r"^[A-Z][A-Za-z'\-]+(?:\x20[A-Z][A-Za-z'\-]+){{1,{}}}$", MAX_ENGLISH_WORDS - 1))
+        .expect("固定の正規表現が不正")
+});
+
+/// (g) メールアドレスのローカル部の名前と照らす語の長さの下限(頭文字は別に扱う)。
+const MIN_EMAIL_NAME_TOKEN_LEN: usize = 3;
+
+/// ページ内のメールアドレスのローカル部を `.`・`_`・`+`・`-` で区切った語(小文字)。アドレスごとに返す。
+fn email_local_parts(lines: &[Line]) -> Vec<Vec<String>> {
+    lines
+        .iter()
+        .flat_map(|line| EMAIL_LOCAL.captures_iter(line.as_str()).filter_map(|caps| caps.name("local")))
+        .map(|local| {
+            local
+                .as_str()
+                .split(['.', '_', '+', '-'])
+                .filter(|token| !token.is_empty())
+                .map(str::to_ascii_lowercase)
+                .collect()
+        })
+        .collect()
+}
+
+/// (g) 観測全体が大文字始まりの 2〜3 語で、同じページのメールアドレスのローカル部と 2 語が対応するもの
+/// (1 語が 3 字以上の語と一致し、別の 1 語が別の語と一致するか頭文字が 1 字の語と一致する。
+/// 「Sales Report」と `sales@` のような 1 語だけの一致は除く)。
+fn email_matched_name(text: &str, email_locals: &[Vec<String>]) -> Option<Range<usize>> {
+    let trimmed = text.trim();
+    if email_locals.is_empty() || !WHOLE_CAPITALIZED_NAME.is_match(trimmed) {
+        return None;
+    }
+    let words: Vec<String> = trimmed.split(' ').map(str::to_ascii_lowercase).collect();
+    let matched = email_locals.iter().any(|tokens| {
+        words.iter().enumerate().any(|(i, word)| {
+            let Some(t) = tokens.iter().position(|token| token.len() >= MIN_EMAIL_NAME_TOKEN_LEN && token == word) else {
+                return false;
+            };
+            words.iter().enumerate().filter(|&(j, _)| j != i).any(|(_, other)| {
+                tokens.iter().enumerate().filter(|&(k, _)| k != t).any(|(_, token)| {
+                    token == other || (token.len() == 1 && other.starts_with(token.as_str()))
+                })
+            })
+        })
+    });
+    let start = text.len() - text.trim_start().len();
+    matched.then_some(start..start + trimmed.len())
+}
+
+/// (h) 表の見出しとみなす行の観測の数の下限(ラベルと値の 2 列だけのフォームを除く)。
+const MIN_HEADER_ROW_CELLS: usize = 3;
+
+/// (h) 表の見出しとみなす観測の文字数の上限。
+const MAX_HEADER_CHARS: usize = 8;
+
+/// (h) 表の見出しらしい観測か(短く、空白・数字を含まない)。
+fn is_header_like(text: &str) -> bool {
+    let text = text.trim();
+    !text.is_empty()
+        && text.chars().count() <= MAX_HEADER_CHARS
+        && !text.chars().any(|c| c == ' ' || c.is_ascii_digit())
+}
+
+/// (h) 表の列の見出しになる人名のラベル(「氏名」「担当者:」など)か。
+fn is_person_column_label(text: &str) -> bool {
+    let label = text.trim().trim_end_matches(':').trim_end();
+    PERSON_COLUMN_LABELS_JA
+        .iter()
+        .any(|l| normalize(&SensitiveText::new((*l).to_string())).as_str() == label)
+}
+
+/// (h) 表の列として下へたどる行の数の上限。
+const MAX_COLUMN_ROWS: usize = 50;
+
+/// 縦の中心が `row` の高さの範囲に入るか(同じ行とみなす)。
+fn in_same_row(rect: &NormalizedRect, row: &NormalizedRect) -> bool {
+    let center = rect.y + rect.height / 2.0;
+    center >= row.y && center <= row.y + row.height
+}
+
+/// (h) 表の列の見出しになる人名のラベル(`PERSON_COLUMN_LABELS_JA`)だけの観測が表の見出しなら、
+/// その下に並ぶ値の観測を人名とする。表の見出しとみなすのは、同じ行に 3 つ以上の観測があり、
+/// そのすべてが見出しらしい(短く、空白・数字を含まない)とき(隣に値が並ぶフォームを除く)。
+/// 左端が見出しの左端から見出しの高さ以内に揃う観測を上から順にたどり、前の観測との間が前の観測の高さ以内で、
+/// 観測全体が人名の値の形(ラベルでない)である間だけ続ける。
+fn column_names(page: &dyn RecognizedPage, lines: &[Line], header_pos: usize) -> Vec<(usize, Range<usize>)> {
+    if !is_person_column_label(lines[header_pos].as_str()) {
+        return Vec::new();
+    }
+    let header = page.line_box(lines[header_pos].index);
+    let row: Vec<&Line> = lines.iter().filter(|l| in_same_row(&page.line_box(l.index), &header)).collect();
+    if row.len() < MIN_HEADER_ROW_CELLS || !row.iter().all(|l| is_header_like(l.as_str())) {
+        return Vec::new();
+    }
+    let mut found = Vec::new();
+    let mut prev_box = header;
+    for _ in 0..MAX_COLUMN_ROWS {
+        // 前の観測より下(縦の中心が前の観測の下端より下)で、左端が見出しの左端に揃う観測のうち最も上のもの
+        let Some((pos, cell)) = lines
+            .iter()
+            .enumerate()
+            .map(|(pos, l)| (pos, page.line_box(l.index)))
+            .filter(|(_, cell)| cell.y + cell.height / 2.0 < prev_box.y && (cell.x - header.x).abs() <= header.height)
+            .max_by(|(pa, a), (pb, b)| (a.y + a.height).total_cmp(&(b.y + b.height)).then(pb.cmp(pa)))
+        else {
+            break;
+        };
+        if prev_box.y - (cell.y + cell.height) > prev_box.height {
+            break;
+        }
+        let Some(range) = whole_name_value(lines[pos].as_str()) else {
+            break;
+        };
+        found.push((pos, range));
+        prev_box = cell;
+    }
+    found
+}
+
+/// 観測全体(前後の空白を除く)が人名の値の形ならその範囲。ラベル・番号を含むものは除く。
+fn whole_name_value(text: &str) -> Option<Range<usize>> {
+    if is_person_label_only(text) || is_label_only(text) || is_company_label_only(text) {
+        return None;
+    }
+    let range = name_value(text, 0)?;
+    (range.end == text.trim_end().len()).then_some(range)
+}
+
+/// (f) 同じページの別の出現として広げる名前の長さの下限(空白を除く文字数)。
+const MIN_REPEATED_NAME_CHARS: usize = 3;
+
+/// (f) 見つけた人名と同じ文字列(空白の有無は問わない)の、同じページの別の出現。
+/// 広げるのは漢字・カタカナを含む 3 字以上の名前と、大文字始まりの 2〜3 語の英字の名前だけ。
+fn repeated_names(lines: &[Line], found: &[(usize, Range<usize>)]) -> Vec<(usize, Range<usize>)> {
+    let mut keys: Vec<Vec<char>> = found
+        .iter()
+        .filter_map(|(pos, r)| {
+            let name = lines[*pos].as_str().get(r.clone())?;
+            let japanese = name.chars().any(|c| is_kanji(c) || is_katakana(c));
+            let english = WHOLE_CAPITALIZED_NAME.is_match(name);
+            (japanese || english).then(|| name.chars().filter(|&c| c != ' ').collect::<Vec<char>>())
+        })
+        .filter(|key| key.len() >= MIN_REPEATED_NAME_CHARS)
+        .collect();
+    keys.sort();
+    keys.dedup();
+
+    let mut repeated = Vec::new();
+    for (pos, line) in lines.iter().enumerate() {
+        let text = line.as_str();
+        let compact: Vec<(usize, char)> = text.char_indices().filter(|&(_, c)| c != ' ').collect();
+        for key in &keys {
+            for start in 0..compact.len().saturating_sub(key.len() - 1) {
+                let window = &compact[start..start + key.len()];
+                if !window.iter().map(|&(_, c)| c).eq(key.iter().copied()) {
+                    continue;
+                }
+                let (begin, (last, last_char)) = (window[0].0, window[key.len() - 1]);
+                let end = last + last_char.len_utf8();
+                // 英字の名前は語の一部でないこと
+                let bounded = !key[0].is_ascii()
+                    || (!text[..begin].chars().next_back().is_some_and(|c| c.is_ascii_alphanumeric())
+                        && !text[end..].chars().next().is_some_and(|c| c.is_ascii_alphanumeric()));
+                if bounded {
+                    repeated.push((pos, begin..end));
+                }
             }
         }
     }
-    matches
+    repeated
 }
 
 /// 人名とみなす文字列の長さの上限(空白を除く文字数)。
@@ -461,7 +680,14 @@ fn name_value(text: &str, start: usize) -> Option<Range<usize>> {
     let first = text[start..].chars().next()?;
     if first.is_ascii_alphabetic() {
         let value = ENGLISH_VALUE.find(&text[start..])?;
-        Some(start..start + value.end())
+        let end = start + value.end();
+        // メールアドレス・ドメインの一部(直後が `@`、または `.` + 英数字)は名前にしない
+        let mut rest = text[end..].chars();
+        let next = rest.next();
+        if next == Some('@') || (next == Some('.') && rest.next().is_some_and(|c| c.is_ascii_alphanumeric())) {
+            return None;
+        }
+        Some(start..end)
     } else if is_kana_kanji(first) {
         japanese_name_after(text, start)
     } else {
@@ -551,8 +777,27 @@ static CAPITALIZED_RUN: LazyLock<Regex> = LazyLock::new(|| {
 /// (d) 敬称・呼びかけの後の大文字始まりの 1〜3 語。
 static TITLED_NAME: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"(?:^|[^A-Za-z0-9])(?:{titles})\x20+(?P<name>[A-Z][A-Za-z'\-]+(?:\x20[A-Z][A-Za-z'\-]+){{0,{more}}})",
+        r"(?:^|[^A-Za-z0-9])(?:{titles})(?:\x20+(?:{titles}))*\x20+(?P<name>[A-Z][A-Za-z'\-]+(?:\x20[A-Z][A-Za-z'\-]+){{0,{more}}})",
         titles = ENGLISH_NAME_TITLES.join("|"),
+        more = MAX_ENGLISH_WORDS - 1,
+    ))
+    .expect("固定の正規表現が不正")
+});
+
+/// (d) 挨拶 + 読点の後の大文字始まりの 1〜3 語(「Welcome, …」)。挨拶は大文字・小文字を区別しない。
+static GREETED_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"(?:^|[^A-Za-z0-9])(?i:{greetings}),\x20*(?P<name>[A-Z][A-Za-z'\-]+(?:\x20[A-Z][A-Za-z'\-]+){{0,{more}}})",
+        greetings = ENGLISH_NAME_GREETINGS.join("|"),
+        more = MAX_ENGLISH_WORDS - 1,
+    ))
+    .expect("固定の正規表現が不正")
+});
+
+/// (d) 山括弧のメールアドレスの直前の大文字始まりの 2〜3 語(「Name <user@example.com>」)。
+static NAME_BEFORE_ADDRESS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"(?:^|[^A-Za-z0-9])(?P<name>[A-Z][A-Za-z'\-]+(?:\x20[A-Z][A-Za-z'\-]+){{1,{more}}})\x20*<[^<>\x20]*@",
         more = MAX_ENGLISH_WORDS - 1,
     ))
     .expect("固定の正規表現が不正")
@@ -571,8 +816,10 @@ fn is_romaji_name(word: &str) -> bool {
 
 /// (d) 英字の人名(バイト範囲)。
 fn english_names(text: &str) -> Vec<Range<usize>> {
-    let mut found: Vec<Range<usize>> =
-        TITLED_NAME.captures_iter(text).filter_map(|caps| caps.name("name").map(|m| m.range())).collect();
+    let mut found: Vec<Range<usize>> = [&*TITLED_NAME, &*GREETED_NAME, &*NAME_BEFORE_ADDRESS]
+        .iter()
+        .flat_map(|re| re.captures_iter(text).filter_map(|caps| caps.name("name").map(|m| m.range())))
+        .collect();
     for caps in CAPITALIZED_RUN.captures_iter(text) {
         let Some(run) = caps.name("run") else {
             continue;
@@ -960,6 +1207,189 @@ mod tests {
         let line = "社員番号 E-204871 佐藤 美緒 Mio Sato";
         assert_eq!(cued(line), vec![span(line, "E-204871")]);
         assert_eq!(names(line), vec![span(line, "佐藤 美緒"), span(line, "Mio Sato")]);
+    }
+
+    // ---- ③人名の調整(AM-T23)。人名はすべて架空 ----
+
+    #[test]
+    fn 呼びかけと敬称が続いても後の名前を人名とする() {
+        let cases = [
+            ("Dear Mr. Tobias Brandt, the file is attached.", "Tobias Brandt"),
+            ("Dear Ms. Rin", "Rin"),
+            ("Dear Mrs Kirishima", "Kirishima"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+    }
+
+    #[test]
+    fn 挨拶と読点の後の大文字始まりの語を人名とする() {
+        let cases = [
+            ("Welcome, Tobias Brandt", "Tobias Brandt"),
+            ("welcome, Rin Kirishima", "Rin Kirishima"),
+            ("weLcome, Tobias Brandt", "Tobias Brandt"),
+            ("Hello, Tobias", "Tobias"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+        // 読点が無い・小文字の語が続くものは対象外
+        for line in ["Welcome Back", "Welcome to Settings", "Welcome, guest", "Hi there"] {
+            assert!(names(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn ログイン中のラベルの後の値を人名とする() {
+        for (line, expected) in [("ログイン中: 汐見 千景", "汐見 千景"), ("ログイン中：汐見千景", "汐見千景")] {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+        assert!(names("ログイン中").is_empty());
+    }
+
+    #[test]
+    fn 英字の連絡先のラベルの後の名前を人名とする() {
+        let line = "Contact: Tobias Brandt";
+        assert_eq!(names(line), vec![span(line, "Tobias Brandt")]);
+        // メールアドレス・ドメインの一部は名前にしない
+        for line in ["Contact: support@example.com", "Contact: sales.team@example.com", "Contact: 03-0000-1111"] {
+            assert!(names(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn 山括弧のメールアドレスの直前の大文字始まりの語を人名とする() {
+        let line = "a91c2e0 Tobias Brandt <t.brandt@example.org>";
+        assert_eq!(names(line), vec![span(line, "Tobias Brandt")]);
+        for line in ["0e84aa1 deploy-bot <bot@example.com>", "Tobias <t@example.org>"] {
+            assert!(names(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn 同じページのメールアドレスのローカル部と2語が対応する観測を人名とする() {
+        for email in ["tobias.lindgren@example.net", "t.lindgren@example.org", "lindgren-tobias@example.jp"] {
+            let page = FakePage::new(&["Tobias Lindgren", email]);
+            assert_eq!(detect_page_names(&page), vec![Match::new(0, 0..15, MatchDetail::PersonName)]);
+        }
+        // 1 語だけの対応・観測の一部の連なりは対象外
+        for (line, email) in [("Sales Report", "sales@example.com"), ("Tobias Lindgren joined", "tobias.lindgren@example.net")] {
+            let page = FakePage::new(&[line, email]);
+            assert!(detect_page_names(&page).iter().all(|m| m.line != 0));
+        }
+    }
+
+    #[test]
+    fn 読み仮名の括弧が続くかな漢字列を人名とする() {
+        let cases = [
+            ("汐見 千景(しおみ ちかげ)", "汐見 千景"),
+            ("汐見千景(しおみ ちかげ)", "汐見千景"),
+            ("汐見 千景(しおみちかげ)", "汐見 千景"),
+            ("葛城千景(カツラギ チカゲ)", "葛城千景"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+        // 名前にも読みにも空白が無いもの(語の読み)は対象外
+        for line in ["注意(ちゅうい)", "汐見千景(しおみちかげ)"] {
+            assert!(names(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn 人名とわかった文字列の同じページの別の出現も人名とする() {
+        let page = FakePage::new(&["汐見千景", "汐見 千景(しおみ ちかげ)", "宛先 汐見千景 ほか"]);
+        assert_eq!(
+            detect_page_names(&page),
+            vec![
+                Match::new(0, 0..4, MatchDetail::PersonName),
+                Match::new(1, 0..5, MatchDetail::PersonName),
+                Match::new(2, 3..7, MatchDetail::PersonName),
+            ]
+        );
+        let page = FakePage::new(&["Tobias Brandt", "Dear Mr. Tobias Brandt,"]);
+        let found = detect_page_names(&page);
+        assert!(found.contains(&Match::new(0, 0..13, MatchDetail::PersonName)));
+        // 3 字未満の名前は広げない
+        let page = FakePage::new(&["汐見", "汐見様"]);
+        assert_eq!(detect_page_names(&page), vec![Match::new(1, 0..2, MatchDetail::PersonName)]);
+    }
+
+    /// 表の見出しの行(4 列)と、2 列目の見出しの下に並ぶ値。正規化座標・左下原点。
+    fn table_page(cells_below: &[&str]) -> GridPage {
+        let mut cells: Vec<(&str, Cell)> = vec![
+            ("社員番号", (0.10, 0.80, 0.06, 0.02)),
+            ("氏名", (0.30, 0.80, 0.03, 0.02)),
+            ("英字表記", (0.45, 0.80, 0.06, 0.02)),
+            ("メール", (0.60, 0.80, 0.04, 0.02)),
+        ];
+        for (k, text) in cells_below.iter().enumerate() {
+            cells.push((text, (0.297, 0.80 - 0.03 * (k as f64 + 1.0), 0.05, 0.022)));
+        }
+        GridPage::new(&cells)
+    }
+
+    #[test]
+    fn 表の人名の見出しの下に並ぶ値を人名とする() {
+        let page = table_page(&["汐見千景", "葛城 千景", "Tobias Brandt"]);
+        let found = detect_page_names(&page);
+        for (line, len) in [(4, 4), (5, 5), (6, 13)] {
+            assert!(found.contains(&Match::new(line, 0..len, MatchDetail::PersonName)));
+        }
+        // 見出しの右隣(別の列の見出し)は値にしない
+        assert!(found.iter().all(|m| m.line != 2));
+    }
+
+    #[test]
+    fn 表の列は人名の形でない値か離れた観測で終わる() {
+        // 番号を含む値で止まり、その下の名前の形の観測も拾わない
+        let page = table_page(&["汐見千景", "E-204871", "アサギリ リオ"]);
+        let lines: Vec<usize> = detect_page_names(&page).iter().map(|m| m.line).collect();
+        assert_eq!(lines, vec![4]);
+        // 行の間が大きく空いた観測(表の外)は拾わない
+        let mut cells: Vec<(&str, Cell)> = vec![
+            ("社員番号", (0.10, 0.80, 0.06, 0.02)),
+            ("氏名", (0.30, 0.80, 0.03, 0.02)),
+            ("メール", (0.60, 0.80, 0.04, 0.02)),
+            ("汐見千景", (0.297, 0.77, 0.05, 0.022)),
+        ];
+        cells.push(("請求先情報", (0.297, 0.60, 0.05, 0.022)));
+        let lines: Vec<usize> = detect_page_names(&GridPage::new(&cells)).iter().map(|m| m.line).collect();
+        assert_eq!(lines, vec![3]);
+    }
+
+    #[test]
+    fn フォームのラベルの下の別のラベルは人名にしない() {
+        // ラベルと値の 2 列だけの行は表の見出しとみなさない
+        let page = GridPage::new(&[
+            ("氏名", (0.10, 0.80, 0.03, 0.02)),
+            ("葛城 千景", (0.30, 0.80, 0.08, 0.02)),
+            ("住所", (0.10, 0.77, 0.03, 0.02)),
+            ("所在地未登録", (0.30, 0.77, 0.10, 0.02)),
+        ]);
+        assert_eq!(detect_page_names(&page), vec![Match::new(1, 0..5, MatchDetail::PersonName)]);
+        // 隣のカードと同じ高さで 3 つ以上並んでも、見出しでない観測(空白・数字を含む値)があれば表とみなさない
+        let page = GridPage::new(&[
+            ("氏名", (0.10, 0.80, 0.03, 0.02)),
+            ("葛城 千景", (0.30, 0.80, 0.08, 0.02)),
+            ("会員番号", (0.60, 0.80, 0.06, 0.02)),
+            ("M-55-01928", (0.70, 0.80, 0.08, 0.02)),
+            ("住所", (0.10, 0.77, 0.03, 0.02)),
+        ]);
+        assert!(detect_page_names(&page).iter().all(|m| m.line != 4));
+    }
+
+    #[test]
+    fn 名前の見出しの列は人名にしない() {
+        // 「名前」「Name」は人以外(キー・ファイルなど)の名前の列にも使われるため、列の規則に使わない
+        let page = GridPage::new(&[
+            ("名前", (0.30, 0.80, 0.03, 0.02)),
+            ("キー", (0.45, 0.80, 0.03, 0.02)),
+            ("作成日", (0.60, 0.80, 0.04, 0.02)),
+            ("本番決済", (0.297, 0.77, 0.05, 0.022)),
+        ]);
+        assert!(detect_page_names(&page).iter().all(|m| m.line != 3));
     }
 
     // ---- ③会社名(AM-T22)。会社名はすべて架空 ----

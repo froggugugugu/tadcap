@@ -67,13 +67,21 @@ pub(super) const HONORIFIC_NON_NAMES: [&str; 12] =
     ["客", "皆", "みな", "みんな", "仕", "同", "模", "多", "異", "一", "各", "両"];
 
 /// ③識別子(人名): 値が人名になる日本語のラベル。比較前に行と同じ `normalize` を通す。長いものを先に書く。
-pub(super) const PERSON_LABELS_JA: [&str; 6] = ["担当者", "差出人", "氏名", "名前", "担当", "宛名"];
+/// 「ログイン中」は画面上部の利用者名の表示(AM-T23)。
+pub(super) const PERSON_LABELS_JA: [&str; 7] = ["ログイン中", "担当者", "差出人", "氏名", "名前", "担当", "宛名"];
 
-/// ③識別子(人名): 値が人名になる英字のラベル(大文字・小文字を区別しない)。
-pub(super) const PERSON_LABELS_ASCII: [&str; 1] = ["name"];
+/// ③識別子(人名): 表の見出しなら下に並ぶ値を人名とするラベル(AM-T23)。比較前に `normalize` を通す。
+/// 「名前」「Name」は人以外(キー・ファイルなど)の名前の列にも使われるため含めない。
+pub(super) const PERSON_COLUMN_LABELS_JA: [&str; 3] = ["担当者", "氏名", "担当"];
+
+/// ③識別子(人名): 値が人名になる英字のラベル(大文字・小文字を区別しない)。「contact」は AM-T23 で追加。
+pub(super) const PERSON_LABELS_ASCII: [&str; 2] = ["contact", "name"];
 
 /// ③識別子(人名): 英字の人名の前に付く敬称・呼びかけ(正規表現の断片・大文字小文字を区別する)。
 pub(super) const ENGLISH_NAME_TITLES: [&str; 4] = [r"Mrs\.?", r"Mr\.?", r"Ms\.?", "Dear"];
+
+/// ③識別子(人名): 読点(`,`)を挟んで英字の人名の前に付く挨拶(大文字・小文字を区別しない。AM-T23)。
+pub(super) const ENGLISH_NAME_GREETINGS: [&str; 3] = ["welcome", "hello", "hi"];
 
 /// ③識別子(会社名): 日本語の会社の種類。前後に続く名前の列と合わせて会社名とする。
 /// 比較前に行と同じ `normalize` を通す(全角の括弧は半角になる)。㈱・㈲は 1 文字のまま。
