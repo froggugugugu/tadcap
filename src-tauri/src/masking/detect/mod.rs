@@ -48,11 +48,35 @@ impl Line {
     }
 }
 
+// ---- 文字の種類(人名・会社名・住所の規則で共有する) ----
+
+fn is_kanji(c: char) -> bool {
+    matches!(c, '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}' | '\u{f900}'..='\u{faff}' | '々' | '〆')
+}
+
+fn is_hiragana(c: char) -> bool {
+    matches!(c, '\u{3041}'..='\u{3096}' | '\u{309d}'..='\u{309e}')
+}
+
+/// カタカナ(半角を含む。長音 `ー` は `normalize` で `-` になるため別に扱う)。
+fn is_katakana(c: char) -> bool {
+    matches!(c, '\u{30a1}'..='\u{30fa}' | '\u{30fd}'..='\u{30ff}' | '\u{ff66}'..='\u{ff9d}')
+}
+
+fn is_kana_kanji(c: char) -> bool {
+    is_kanji(c) || is_hiragana(c) || is_katakana(c)
+}
+
+/// カタカナの後に続く長音(正規化後の `-`)・中黒。
+fn is_katakana_mark(c: char) -> bool {
+    matches!(c, '-' | '・')
+}
+
 /// 検出器。ページ(行の位置。右隣・直下の観測を探す規則が使う)と正規化済みの全行を受け取る。
 type Detector = fn(&dyn RecognizedPage, &[Line]) -> Vec<Match>;
 
 /// 登録済みの検出器(①連絡先 → ②認証情報 → ③識別子 → ④金額・口座)。
-/// ③識別子は手がかり語付きの番号と人名(会社名は AM-T22 で `identifier::detect` に足す)。
+/// ③識別子は手がかり語付きの番号・人名・会社名、①連絡先はメール・電話番号・住所。
 const DETECTORS: [Detector; 4] = [contact::detect, credential::detect, identifier::detect, financial::detect];
 
 /// ページ全体に全検出器を当て、行の番号・範囲の順に並べた結果を返す(完全に同じ結果は 1 つにする)。

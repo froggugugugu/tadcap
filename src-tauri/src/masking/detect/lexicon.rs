@@ -1,6 +1,6 @@
 //! 手がかり語・接頭辞・敬称・会社の種類などの定数と、埋め込み辞書の読み込み(ARCH_auto-masking §5.3)。
-//! ①連絡先(AM-T11)・②認証情報(AM-T14)・③手がかり語付きの番号と④金額・口座(AM-T16)・③人名(AM-T21)の定数を置く。
-//! 他の種類の定数は各検出器のタスクで足す。
+//! ①連絡先(AM-T11)・②認証情報(AM-T14)・③手がかり語付きの番号と④金額・口座(AM-T16)・③人名(AM-T21)・
+//! ③会社名と①住所(AM-T22)の定数を置く。
 //!
 //! 辞書(`../lexicon/*.txt`)は `include_str!` でバイナリに埋め込み、実行時に何も読まない・取得しない。
 //! 中身は承認済みの報告書(`output/reports/security/SECURITY_auto-masking-lexicon_*.md`)の SHA-256 とバイト一致させる。
@@ -75,6 +75,28 @@ pub(super) const PERSON_LABELS_ASCII: [&str; 1] = ["name"];
 /// ③識別子(人名): 英字の人名の前に付く敬称・呼びかけ(正規表現の断片・大文字小文字を区別する)。
 pub(super) const ENGLISH_NAME_TITLES: [&str; 4] = [r"Mrs\.?", r"Mr\.?", r"Ms\.?", "Dear"];
 
+/// ③識別子(会社名): 日本語の会社の種類。前後に続く名前の列と合わせて会社名とする。
+/// 比較前に行と同じ `normalize` を通す(全角の括弧は半角になる)。㈱・㈲は 1 文字のまま。
+pub(super) const COMPANY_TYPES_JA: [&str; 10] =
+    ["株式会社", "有限会社", "合同会社", "合資会社", "合名会社", "(株)", "(有)", "(同)", "㈱", "㈲"];
+
+/// ③識別子(会社名): 会社の種類の直後に来ると名前ではないとみなすひらがな(助詞)。
+pub(super) const COMPANY_NAME_PARTICLES: [char; 9] = ['の', 'は', 'が', 'を', 'に', 'で', 'と', 'も', 'へ'];
+
+/// ③識別子(会社名): 英字の会社の種類(正規表現の断片・大文字小文字を区別する)。前に大文字始まりの語が要る。
+/// 長いものを先に書く。`.` の有無・`Co.,` と `Ltd` の間の空白の有無・末尾の `.` が `,` と読まれた形を許す。
+pub(super) const COMPANY_SUFFIXES_ASCII: [&str; 5] =
+    [r"Co\.?\x20?,?\x20?Ltd\b[.,]?", r"Inc\b[.,]?", r"Ltd\b[.,]?", r"LLC\b", r"Corp\b[.,]?"];
+
+/// ③識別子(会社名): 値が会社名になる日本語のラベル。比較前に `normalize` を通す。長いものを先に書く。
+pub(super) const COMPANY_LABELS_JA: [&str; 3] = ["会社名", "勤務先", "社名"];
+
+/// ③識別子(会社名): 値が会社名になる英字のラベル(大文字・小文字を区別しない)。
+pub(super) const COMPANY_LABELS_ASCII: [&str; 1] = ["company"];
+
+/// ①連絡先(住所): 郵便番号の前に付くラベル。郵便番号だけの行の判定に使う。
+pub(super) const POSTAL_LABELS: [&str; 1] = ["郵便番号"];
+
 /// 埋め込み辞書の 1 行 1 語を読む。`#` で始まる行(由来の注記)と空行を飛ばし、前後の空白を除く。
 fn lexicon_words(text: &'static str) -> HashSet<&'static str> {
     text.lines().map(str::trim).filter(|line| !line.is_empty() && !line.starts_with('#')).collect()
@@ -92,8 +114,7 @@ pub(super) static SURNAMES_ROMAJI: LazyLock<HashSet<&'static str>> =
 pub(super) static GIVEN_NAMES_ROMAJI: LazyLock<HashSet<&'static str>> =
     LazyLock::new(|| lexicon_words(include_str!("../lexicon/given-names-romaji.txt")));
 
-/// 都道府県(47 件)。①住所の規則(AM-T22)で使う。
-#[cfg_attr(not(test), allow(dead_code))]
+/// 都道府県(47 件)。①住所の規則(都道府県名で始まる行の残り)で使う。
 pub(super) static PREFECTURES: LazyLock<HashSet<&'static str>> =
     LazyLock::new(|| lexicon_words(include_str!("../lexicon/prefectures.txt")));
 

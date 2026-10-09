@@ -8,19 +8,27 @@ use super::{NormalizedRect, RecognizedPage};
 
 /// `line` と同じ行(縦の中心が `line` の高さの範囲に入る)で、右側にある最も近い観測。
 ///
-/// 「右側」は観測の左端が `line` の右端以上にあること。距離は左端と `line` の右端の差。
-/// 距離が等しければ番号の小さい方。見つからなければ `None`。
+/// 「右側」は観測の左端が `line` の右端以上にあること。ただし読み取りの領域の誤差で
+/// わずかに重なる場合を許し、`line` の高さ × `MAX_OVERLAP_RATIO` までの重なりは右側とみなす。
+/// 距離は左端と `line` の右端の差(重なると負)。距離が等しければ番号の小さい方。見つからなければ `None`。
 pub(super) fn right_neighbor<P: RecognizedPage + ?Sized>(page: &P, line: usize) -> Option<usize> {
     let label = page.line_box(line);
     let label_right = label.x + label.width;
+    let min_left = label_right - label.height * MAX_OVERLAP_RATIO - EPSILON;
     nearest(
         (0..page.line_count())
             .filter(|&i| i != line)
             .map(|i| (i, page.line_box(i)))
-            .filter(|(_, rect)| center_within(rect, &label) && rect.x >= label_right - EPSILON)
+            .filter(|(_, rect)| center_within(rect, &label) && rect.x >= min_left)
             .map(|(i, rect)| (i, rect.x - label_right)),
     )
 }
+
+/// 右隣として許すラベルとの重なり(ラベルの高さに対する割合)。
+///
+/// 正規化座標の横と縦は画像の幅・高さで別々に割られているため、横長の画像では実ピクセルの許容幅が
+/// 高さ × 割合 より広くなる(16:9 で約 1.8 倍)。それでも 1 文字の幅より狭い。
+const MAX_OVERLAP_RATIO: f64 = 0.25;
 
 /// `line` の直下の行で、左端が `line` の左端に最も近い観測。
 ///
@@ -159,6 +167,22 @@ mod tests {
             (0.4, 0.45, 0.2, 0.15), // 1: 中心 0.525。ラベルより背が高い
         ]);
         assert_eq!(right_neighbor(&page, 0), Some(1));
+    }
+
+    #[test]
+    fn ラベルとわずかに重なる観測も右隣とみなす() {
+        // ラベルの右端 0.3・高さ 0.05。重なりが高さの 25%(0.0125)までなら右隣
+        let page = BoxesPage::new(&[LABEL, (0.29, 0.5, 0.2, 0.05)]);
+        assert_eq!(right_neighbor(&page, 0), Some(1));
+        let page = BoxesPage::new(&[LABEL, (0.3 - 0.0125, 0.5, 0.2, 0.05)]);
+        assert_eq!(right_neighbor(&page, 0), Some(1));
+    }
+
+    #[test]
+    fn ラベルと大きく重なる観測は右隣にしない() {
+        // 重なりが高さの 25% を超える(0.015 = 30%)/ ラベルと同じ位置
+        let page = BoxesPage::new(&[LABEL, (0.285, 0.5, 0.2, 0.05), (0.1, 0.5, 0.2, 0.05)]);
+        assert_eq!(right_neighbor(&page, 0), None);
     }
 
     #[test]

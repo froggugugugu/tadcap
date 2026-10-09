@@ -109,11 +109,7 @@ enum MatchDetail {
     LabeledSecret,
     UrlQuery,
     LabeledNumber,
-    // 人名(AM-T21)・会社名(AM-T22)の検出器はまだ無く、本番ビルドでは作られない。
-    // 検出器が入ったら下の属性を外す(テストビルドでは抑えない)。
-    #[cfg_attr(not(test), allow(dead_code))]
     PersonName,
-    #[cfg_attr(not(test), allow(dead_code))]
     CompanyName,
     CardNumber,
     AccountNumber,

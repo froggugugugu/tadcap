@@ -1,17 +1,24 @@
 //! ①連絡先: メール・電話番号・住所(FR-003・FR-007)。メール・電話番号・郵便番号は AM-T11、都道府県で始まる住所は AM-T22 で実装する。
-
 //!
 //! 正規化(全角→半角)後の文字列に規則を当てる。正規表現は線形時間の `regex` クレートだけを使い、
 //! 電話番号は数字の組を左から読む手書きの走査(1 つの開始位置につき読む長さに上限がある)で判定する。
+//!
+//! 住所(ARCH_auto-masking §5.3)。複数行の住所は行(観測)ごとに判定する。
+//!
+//! - 郵便番号: 「〒」+ 7 桁、または記号なしの `NNN-NNNN`
+//! - 都道府県名(辞書)+ かな漢字で始まる部分から行の終わりまで
+//! - 郵便番号だけの観測(「郵便番号」のラベル付きを含む)の後に続く観測(同じ行の近い右隣、無ければ直下の行)。
+//!   かな漢字を含むものだけ。都道府県で始まる行の次の行(建物名など)は手がかりが無いので拾わない
 
 use std::ops::Range;
 use std::sync::LazyLock;
 
 use regex::Regex;
 
+use super::super::layout::{next_line_below, right_neighbor};
 use super::super::{Match, MatchDetail, RecognizedPage};
-use super::lexicon::{ELEVEN_DIGIT_PHONE_PREFIXES, JP_COUNTRY_CODE, POSTAL_MARK};
-use super::Line;
+use super::lexicon::{ELEVEN_DIGIT_PHONE_PREFIXES, JP_COUNTRY_CODE, POSTAL_LABELS, POSTAL_MARK, PREFECTURES};
+use super::{is_kana_kanji, Line};
 
 /// メール。`@` と `.` の前後に読み取りで入った空白(1 つ)を許す。
 ///
@@ -34,22 +41,91 @@ const DOTLESS_TLDS: [&str; 4] = ["com", "net", "org", "jp"];
 
 /// 郵便番号。`〒` + 7 桁(ハイフン・空白は任意)、または記号なしの `NNN-NNNN`(ハイフン必須)。
 static POSTAL: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"{POSTAL_MARK}\x20?[0-9]{{3}}(?:\x20?-\x20?)?[0-9]{{4}}|[0-9]{{3}}-[0-9]{{4}}"))
+    Regex::new(&format!(r"{POSTAL_MARK}\x20?{POSTAL_DIGITS}|[0-9]{{3}}-[0-9]{{4}}")).expect("固定の正規表現が不正")
+});
+
+/// 郵便番号の数字の形(郵便記号を除く)。
+const POSTAL_DIGITS: &str = r"[0-9]{3}(?:\x20?-\x20?)?[0-9]{4}";
+
+/// 郵便番号だけの観測(ラベル・郵便記号は任意)。前後の空白を除いた文字列に当てる。
+static POSTAL_ONLY: LazyLock<Regex> = LazyLock::new(|| {
+    let labels = POSTAL_LABELS.iter().map(|label| regex::escape(label)).collect::<Vec<_>>().join("|");
+    Regex::new(&format!(r"^(?:(?:{labels})\x20*:?\x20*)?(?:{POSTAL_MARK}\x20?{POSTAL_DIGITS}|[0-9]{{3}}-[0-9]{{4}})$"))
         .expect("固定の正規表現が不正")
 });
 
-/// ①連絡先の検出器。行ごとに独立して判定する(ページの位置は使わない)。
-pub(super) fn detect(_page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
+/// ①連絡先の検出器。行ごとの規則に加え、郵便番号だけの観測から右隣・直下の観測を住所として探す。
+pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
     let mut matches = Vec::new();
     for line in lines {
         let text = line.as_str();
         let found = find_emails(text)
             .map(|r| (r, MatchDetail::Email))
             .chain(find_phones(text).into_iter().map(|r| (r, MatchDetail::Phone)))
-            .chain(find_postal_codes(text).map(|r| (r, MatchDetail::Address)));
+            .chain(find_postal_codes(text).map(|r| (r, MatchDetail::Address)))
+            .chain(prefecture_address(text).map(|r| (r, MatchDetail::Address)));
         matches.extend(found.filter_map(|(range, detail)| line.to_match(range, detail)));
     }
+
+    for line in lines.iter().filter(|line| is_postal_only(line.as_str())) {
+        let near_right = right_neighbor(page, line.index).filter(|&i| is_near_right(page, line.index, i));
+        let Some(neighbor) = near_right.or_else(|| next_line_below(page, line.index)) else {
+            continue;
+        };
+        let Some(value) = lines.iter().find(|l| l.index == neighbor) else {
+            continue;
+        };
+        if let Some(found) = address_after_postal(value.as_str()).and_then(|r| value.to_match(r, MatchDetail::Address)) {
+            if !matches.contains(&found) {
+                matches.push(found);
+            }
+        }
+    }
     matches
+}
+
+/// 郵便番号だけの観測と右隣の観測の間隔の上限(郵便番号の観測の高さに対する倍率)。
+/// これより離れた右隣は別の枠・列の観測とみなす。
+const MAX_POSTAL_GAP_RATIO: f64 = 2.0;
+
+/// `neighbor` の左端が `line` の右端から `line` の高さ × `MAX_POSTAL_GAP_RATIO` 以内にあるか(正規化座標)。
+fn is_near_right(page: &dyn RecognizedPage, line: usize, neighbor: usize) -> bool {
+    let (label, value) = (page.line_box(line), page.line_box(neighbor));
+    value.x - (label.x + label.width) <= label.height * MAX_POSTAL_GAP_RATIO
+}
+
+fn is_postal_only(text: &str) -> bool {
+    POSTAL_ONLY.is_match(text.trim())
+}
+
+/// 都道府県名の長さ(文字数)の候補。長いもの(「神奈川県」など)を先に試す。
+const PREFECTURE_CHAR_LENS: [usize; 2] = [4, 3];
+
+/// `text` が都道府県名で始まるなら、その長さ(バイト)。
+fn prefecture_len(text: &str) -> Option<usize> {
+    PREFECTURE_CHAR_LENS.iter().find_map(|&n| {
+        let end = text.char_indices().nth(n).map_or(text.len(), |(i, _)| i);
+        (text[..end].chars().count() == n && PREFECTURES.contains(&text[..end])).then_some(end)
+    })
+}
+
+/// 都道府県名 + かな漢字で始まる部分から行の終わり(末尾の空白を除く)まで(バイト範囲)。行の最初の 1 件だけ。
+fn prefecture_address(text: &str) -> Option<Range<usize>> {
+    let end = text.trim_end_matches(' ').len();
+    text.char_indices().find_map(|(pos, _)| {
+        let len = prefecture_len(&text[pos..])?;
+        text[pos + len..].chars().next().is_some_and(is_kana_kanji).then_some(pos..end)
+    })
+}
+
+/// 郵便番号だけの観測の後に続く観測の住所(前後の空白を除いた範囲)。かな漢字を含み、
+/// 郵便番号だけでも都道府県で始まる住所を含むものでもない(それぞれ行ごとの規則で拾う)とき。
+fn address_after_postal(text: &str) -> Option<Range<usize>> {
+    let start = text.len() - text.trim_start().len();
+    let end = text.trim_end().len();
+    let value = text.get(start..end)?;
+    let is_address = value.chars().any(is_kana_kanji) && !is_postal_only(value) && prefecture_address(value).is_none();
+    is_address.then_some(start..end)
 }
 
 fn find_emails(text: &str) -> impl Iterator<Item = Range<usize>> + '_ {
@@ -210,8 +286,11 @@ fn is_valid_national_number(digits: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::MatchDetail;
+    use super::super::super::text::SensitiveText;
+    use super::super::super::{Match, MatchDetail, NormalizedRect, RecognizedPage};
+    use super::super::fake::FakePage;
     use super::super::test_support::{ranges_in, span};
+    use super::super::Line;
     use super::detect;
 
     // 失敗時に文字列を表示しないよう、比較は UTF-16 範囲(数値)だけで行う。
@@ -464,6 +543,127 @@ mod tests {
         let line = "045-123-4567";
         assert!(addresses(line).is_empty());
         assert_eq!(phones(line), vec![0..12]);
+    }
+
+    // ---- 都道府県で始まる住所(AM-T22)。市町村名・番地はすべて架空 ----
+
+    /// ページ全体に検出器を当て、住所の結果だけを返す。
+    fn detect_page_addresses(page: &dyn RecognizedPage) -> Vec<Match> {
+        let lines: Vec<Line> = (0..page.line_count()).map(|i| Line::new(i, page.line_text(i))).collect();
+        detect(page, &lines).into_iter().filter(|m| m.detail == MatchDetail::Address).collect()
+    }
+
+    #[test]
+    fn 都道府県名で始まる行の残りを住所とする() {
+        let cases = [
+            ("愛知県ひがしの市栄町4-9-1 ユズリハビル3F", "愛知県ひがしの市栄町4-9-1 ユズリハビル3F"),
+            ("北海道すずらん町北3条西4-6", "北海道すずらん町北3条西4-6"),
+            ("住所 千葉県うみなり市幕張西１－１０－４", "千葉県うみなり市幕張西１－１０－４"),
+            ("自宅住所:東京都みどり野区青葉台2-8-14  ", "東京都みどり野区青葉台2-8-14"),
+            ("京都府かもがわ市三条通8-3", "京都府かもがわ市三条通8-3"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(addresses(line), vec![span(line, expected)]);
+        }
+    }
+
+    #[test]
+    fn 郵便番号と都道府県が同じ行にあればそれぞれ住所とする() {
+        let line = "〒330-0000 埼玉県さくら坂市本郷6-2-9";
+        assert_eq!(addresses(line), vec![span(line, "〒330-0000"), span(line, "埼玉県さくら坂市本郷6-2-9")]);
+    }
+
+    #[test]
+    fn 郵便番号だけの行の後に続く行を住所とする() {
+        // 都道府県を省いた住所(直下の行)
+        let page = FakePage::new(&["〒460-0000", "ひがしの市栄町4-9-1", "次の段落"]);
+        assert_eq!(
+            detect_page_addresses(&page),
+            vec![Match::new(0, 0..9, MatchDetail::Address), Match::new(1, 0..12, MatchDetail::Address)]
+        );
+        // 郵便番号のラベル付き
+        let page = FakePage::new(&["郵便番号 260-0000", "うみなり市幕張西1-10-4"]);
+        assert_eq!(
+            detect_page_addresses(&page),
+            vec![Match::new(0, 5..13, MatchDetail::Address), Match::new(1, 0..14, MatchDetail::Address)]
+        );
+    }
+
+    /// 観測の領域(x・y・幅・高さ。正規化座標・左下原点)。
+    type Cell = (f64, f64, f64, f64);
+
+    /// 観測の領域ごとに文字列を指定できる偽物のページ。
+    struct GridPage {
+        texts: Vec<SensitiveText>,
+        boxes: Vec<NormalizedRect>,
+    }
+
+    impl GridPage {
+        fn new(cells: &[(&str, Cell)]) -> Self {
+            Self {
+                texts: cells.iter().map(|(text, _)| SensitiveText::new((*text).to_string())).collect(),
+                boxes: cells.iter().map(|&(_, (x, y, width, height))| NormalizedRect { x, y, width, height }).collect(),
+            }
+        }
+    }
+
+    impl RecognizedPage for GridPage {
+        fn line_count(&self) -> usize {
+            self.texts.len()
+        }
+        fn line_text(&self, line: usize) -> &SensitiveText {
+            &self.texts[line]
+        }
+        fn line_box(&self, line: usize) -> NormalizedRect {
+            self.boxes[line]
+        }
+        fn range_box(&self, _line: usize, _range: std::ops::Range<usize>) -> Option<NormalizedRect> {
+            None
+        }
+    }
+
+    #[test]
+    fn 郵便番号だけの観測の近い右隣を住所とし遠い右隣は使わない() {
+        // 近い右隣(間隔が行の高さ 0.03 の 2 倍以内)
+        let near = "ひがしの市栄町4-9-1";
+        let page = GridPage::new(&[("〒460-0000", (0.1, 0.5, 0.1, 0.03)), (near, (0.21, 0.5, 0.2, 0.03))]);
+        assert_eq!(
+            detect_page_addresses(&page),
+            vec![Match::new(0, 0..9, MatchDetail::Address), Match::new(1, 0..12, MatchDetail::Address)]
+        );
+        // 遠い右隣(別の枠の観測)は使わず、直下の行を見る
+        let page = GridPage::new(&[
+            ("〒150-0000", (0.1, 0.5, 0.1, 0.03)),
+            ("ログイン情報", (0.6, 0.5, 0.2, 0.03)),
+            ("みどり野区青葉台2-8-14", (0.1, 0.45, 0.2, 0.03)),
+        ]);
+        assert_eq!(
+            detect_page_addresses(&page),
+            vec![Match::new(0, 0..9, MatchDetail::Address), Match::new(2, 0..14, MatchDetail::Address)]
+        );
+    }
+
+    #[test]
+    fn 二行目の建物名は手がかりが無ければ対象外() {
+        // 都道府県で始まる行の次の行(建物名だけ)は拾わない(ARCH §5.3)
+        let page = FakePage::new(&["大阪府なにわ台市本町1-22-7", "なにわ台ビルディング南館 12階"]);
+        assert_eq!(detect_page_addresses(&page), vec![Match::new(0, 0..16, MatchDetail::Address)]);
+    }
+
+    #[test]
+    fn 郵便番号の行の後でも住所の形でない行は対象外() {
+        // 郵便番号以外の文字を含む行の後 / 次の行にかな漢字が無い
+        let page = FakePage::new(&["〒460-0000 は旧番号です", "ひがしの市栄町4-9-1"]);
+        assert_eq!(detect_page_addresses(&page), vec![Match::new(0, 0..9, MatchDetail::Address)]);
+        let page = FakePage::new(&["〒460-0000", "TEL 052-000-0000"]);
+        assert_eq!(detect_page_addresses(&page), vec![Match::new(0, 0..9, MatchDetail::Address)]);
+    }
+
+    #[test]
+    fn 都道府県名だけ_都道府県名を含まない行は対象外() {
+        for line in ["東京都", "京都", "大阪", "ひがしの市栄町4-9-1", "東京都 "] {
+            assert!(addresses(line).is_empty());
+        }
     }
 
     // ---- UTF-16 範囲 ----
