@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>開発者設定(架空)</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<!-- 架空データのみ。トークン・ランダム列・カード番号は fixture.js が実行時に埋め込む -->
+<div class="topbar"><span class="brand">設定</span><span class="muted">開発者 / API とシークレット</span><span class="muted" style="margin-left:auto">組織: <span data-mask="identifier/company">合同会社クレセントノード</span></span></div>
+<div class="layout">
+  <div class="side"><div>一般</div><div>メンバー</div><div class="on">API キー</div><div>Webhook</div><div>支払い</div></div>
+  <div class="main">
+    <div class="card">
+      <h2>API キー</h2>
+      <table class="mono">
+        <tr><th>名前</th><th>キー</th><th>作成日</th></tr>
+        <tr><td>本番 決済</td><td><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="0" data-len="24"></span></td><td>2026-08-02</td></tr>
+        <tr><td>CI 用</td><td class="s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="1" data-len="36"></span></td><td>2026-07-19</td></tr>
+        <tr><td>アプリ連携</td><td><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="2" data-len="36"></span></td><td>2026-06-30</td></tr>
+        <tr><td>通知ボット</td><td class="s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="3" data-len="24"></span></td><td>2026-05-11</td></tr>
+        <tr><td>ストレージ</td><td class="m"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="4" data-len="16"></span></td><td>2026-04-02</td></tr>
+        <tr><td>地図</td><td><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="7" data-len="35"></span></td><td>2026-03-15</td></tr>
+      </table>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>OAuth クライアント</h2>
+        <div class="kv">
+          <div>Client ID</div><div class="mono s"><span data-mask="credential/random_string" data-gen="random" data-len="32"></span></div>
+          <div>署名鍵(ハッシュ)</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="40"></span></div>
+          <div>リダイレクト</div><div class="mono s">https://app.example.com/callback<span data-mask="credential/url_query">?state=x8Kd02&amp;prompt=consent</span></div>
+          <div>管理者パスワード</div><div class="mono">password: <span data-mask="credential/cue_value" data-gen="secret" data-len="11"></span></div>
+          <div>Webhook secret</div><div class="mono l"><span data-mask="credential/cue_value" data-gen="secret" data-len="16"></span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Webhook</h2>
+        <div class="kv">
+          <div>送信先</div><div class="mono s">https://hooks.example.net/in/7781<span data-mask="credential/url_query">?key=Yt5mQ2rW9z&amp;v=2</span></div>
+          <div>配信 ID</div><div class="mono s"><span data-mask="credential/random_string" data-gen="random" data-len="24"></span></div>
+          <div>再送用</div><div class="mono">https://hooks.example.net/retry<span data-mask="credential/url_query">?id=553&amp;token=Lk2Pq</span></div>
+          <div>担当</div><div><span data-mask="identifier/person_en">Haruka Ishizaki</span>(<span data-mask="contact/phone">050-0000-6627</span>)</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>支払い方法</h2>
+        <div class="kv m">
+          <div>登録カード</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></div>
+          <div>予備カード</div><div class="mono s"><span data-mask="financial/card" data-gen="card" data-group="4-6-5" data-sep="-"></span></div>
+          <div>引き落とし口座</div><div>普通 <span data-mask="financial/account">3058172</span></div>
+          <div>返金用口座</div><div>口座番号 <span data-mask="financial/account">00419286</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>データベース接続</h2>
+        <div class="kv mono s">
+          <div>pwd</div><div><span data-mask="credential/cue_value" data-gen="secret" data-len="10"></span></div>
+          <div>api key</div><div><span data-mask="credential/cue_value" data-gen="secret" data-len="18"></span></div>
+          <div>接続文字列</div><div>https://db-admin.example.com/connect<span data-mask="credential/url_query">?sslmode=require&amp;app=portal</span></div>
+          <div>セッション</div><div><span data-mask="credential/random_string" data-gen="random" data-len="30"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="fixture.js"></script>
+</body>
+</html>

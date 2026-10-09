@@ -108,7 +108,13 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
     ├── smoke.test.ts         # Vitest 配線確認用プレースホルダ(T01)
     └── latencySummary.test.ts # scripts/latency-summary.mjs の集計関数テスト(T11)
 scripts/
-└── latency-summary.mjs       # NFR-001中間計測ログ([tadcap:latency]行)の集計スクリプト(依存追加なし、T11)
+├── latency-summary.mjs       # NFR-001中間計測ログ([tadcap:latency]行)の集計スクリプト(依存追加なし、T11)
+├── gen-third-party-licenses.mjs # 依存のライセンス全文 THIRD_PARTY_LICENSES.md の生成・照合(`npm run licenses` / `licenses:check`、依存追加なし)
+└── mask-eval-fixtures.mjs    # 自動マスキングの評価用画像と正解 eval/masking/ の生成・自己検査(AM-T05、既存の Playwright のみ)
+eval/masking/                 # 自動マスキングの評価セット(架空データのみ)
+├── pages/                    # 架空画面の HTML(正解を <span data-mask="種類/細分"> で囲む。トークン形は実行時に組み立てる)
+├── images/                   # 7 画面 × フルHD/Retina × 明/暗 = 28 枚
+└── truth.json                # 正解の矩形・種類・細分(文字列は持たない)
 src-tauri/src/                # Rustバックエンド
 ├── main.rs                   # 既存。バイナリエントリーポイント
 ├── settings.rs               # アプリ設定ファイル(`app_config_dir()/settings.json`、`{version, captureShortcut}`)の読込・原子的書込(KS-T1)

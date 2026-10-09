@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ターミナル(架空)</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap { padding: 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .title { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<!-- 架空データのみ。トークン・ランダム列は fixture.js が実行時に埋め込む -->
+<div class="topbar"><span class="brand">ターミナル</span><span class="muted">deploy@build-01: ~/app</span></div>
+<div class="wrap">
+<div>
+<div class="title">1: シェル</div>
+<div class="term"><span class="dim">$</span> cat .env.production
+APP_ENV=production
+API_KEY=<span data-mask="credential/cue_value" data-gen="secret" data-len="16"></span>
+DB_PASSWORD=<span data-mask="credential/cue_value" data-gen="secret" data-len="12"></span>
+SESSION_SECRET=<span data-mask="credential/cue_value" data-gen="secret" data-len="20"></span>
+REGISTRY_TOKEN=<span data-mask="credential/prefixed_token" data-gen="token" data-prefix="6" data-len="36"></span>
+CI_TOKEN=<span data-mask="credential/prefixed_token" data-gen="token" data-prefix="1" data-len="36"></span>
+NOTIFY_HOOK=<span data-mask="credential/prefixed_token" data-gen="token" data-prefix="3" data-len="24"></span>
+<span class="dim">$</span> export AUTH_TOKEN=<span data-mask="credential/cue_value" data-gen="secret" data-len="14"></span>
+<span class="dim">$</span> curl -s "https://api.example.com/v1/users<span data-mask="credential/url_query">?page=2&amp;access=Zr81kPq0Xe</span>"
+<span class="ok">200 OK</span>  request-id: <span data-mask="credential/random_string" data-gen="random" data-len="32"></span>
+<span class="dim">$</span> curl -I "https://cdn.example.net/a.js<span data-mask="credential/url_query">?v=4471&amp;sig=Pq7Rt2</span>"
+<span class="ok">304 Not Modified</span>
+</div>
+</div>
+<div>
+<div class="title">2: git</div>
+<div class="term"><span class="dim">$</span> git log -3 --format='%h %an &lt;%ae&gt;'
+<span class="warn">a91c2e0</span> <span data-mask="identifier/person_en">Sora Tachibana</span> &lt;<span data-mask="contact/email">sora.tachibana@example.com</span>&gt;
+<span class="warn">5d0f7b3</span> <span data-mask="identifier/person_en">Tomas Lindqvist</span> &lt;<span data-mask="contact/email">tomas@dev.example.org</span>&gt;
+<span class="warn">0e84aa1</span> deploy-bot &lt;bot@example.com&gt;
+<span class="dim">$</span> git remote -v
+origin  https://git.example.com/acme/app.git (fetch)
+<span class="dim">$</span> cat ~/.pkgrc
+//registry.example.com/:_authToken=<span data-mask="credential/prefixed_token" data-gen="token" data-prefix="6" data-len="36"></span>
+<span class="dim">$</span> cloud-cli configure list
+access_key  <span data-mask="credential/prefixed_token" data-gen="token" data-prefix="4" data-len="16"></span>
+secret_key  <span data-mask="credential/random_string" data-gen="random" data-len="40"></span>
+</div>
+</div>
+<div>
+<div class="title">3: ログ</div>
+<div class="term s"><span class="dim">2026-10-09T09:12:03Z</span> INFO  trace=<span data-mask="credential/random_string" data-gen="random" data-len="26"></span>
+<span class="dim">2026-10-09T09:12:04Z</span> INFO  GET /export<span data-mask="credential/url_query">?from=2026-09-01&amp;key=Hn4wT9</span> 200
+<span class="dim">2026-10-09T09:12:05Z</span> WARN  retry job=<span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="32"></span>
+<span class="dim">2026-10-09T09:12:06Z</span> INFO  bearer <span data-mask="credential/prefixed_token" data-gen="token" data-prefix="8" data-len="40"></span>
+<span class="dim">2026-10-09T09:12:07Z</span> INFO  tenant=<span data-mask="identifier/company">Kirinoha Systems Inc.</span> plan=team
+</div>
+</div>
+<div>
+<div class="title">4: SSH</div>
+<div class="term l"><span class="dim">$</span> ssh ops@10.0.0.12
+Password: <span data-mask="credential/cue_value" data-gen="secret" data-len="10"></span>
+Welcome, <span data-mask="identifier/person_en">Mina Kurogane</span>
+</div>
+</div>
+</div>
+<script src="fixture.js"></script>
+</body>
+</html>

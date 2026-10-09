@@ -1,0 +1,95 @@
+/* 評価用ページ共通のスタイル。明るい/暗いは prefers-color-scheme で切り替える(撮影側が emulateMedia する) */
+:root {
+  --bg: #eef0f3;
+  --panel: #ffffff;
+  --panel-2: #f6f7f9;
+  --text: #1d2026;
+  --muted: #5d6470;
+  --border: #d7dbe1;
+  --accent: #2f6fde;
+  --accent-text: #ffffff;
+  --term-bg: #fbfbf7;
+  --term-text: #23262b;
+  --term-dim: #6c7380;
+  --ok: #1f8a4c;
+  --warn: #b35c00;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --panel: #1e2127;
+    --panel-2: #262a31;
+    --text: #e4e7eb;
+    --muted: #9ba3ae;
+    --border: #353a43;
+    --accent: #6c9cff;
+    --accent-text: #0d1220;
+    --term-bg: #0f1114;
+    --term-text: #d6dbe2;
+    --term-dim: #808896;
+    --ok: #58c98a;
+    --warn: #f0a75a;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  overflow: hidden;
+}
+.mono { font-family: Menlo, Monaco, "SF Mono", monospace; }
+.s { font-size: 12px; }
+.m { font-size: 15px; }
+.l { font-size: 19px; }
+.xl { font-size: 24px; }
+.muted { color: var(--muted); }
+.topbar {
+  display: flex; align-items: center; gap: 24px;
+  height: 48px; padding: 0 20px;
+  background: var(--panel); border-bottom: 1px solid var(--border);
+}
+.topbar .brand { font-weight: 700; }
+.layout { display: flex; height: calc(100% - 48px); }
+.side {
+  width: 200px; flex: none; padding: 16px; background: var(--panel-2);
+  border-right: 1px solid var(--border);
+}
+.side div { padding: 6px 8px; border-radius: 6px; color: var(--muted); }
+.side .on { background: var(--accent); color: var(--accent-text); }
+.main { flex: 1; padding: 16px 20px; overflow: hidden; }
+.card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 12px;
+}
+.card h2 { font-size: 15px; margin: 0 0 8px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; }
+.kv > div:nth-child(odd) { color: var(--muted); }
+.field { border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; background: var(--panel-2); }
+.btn {
+  display: inline-block; padding: 4px 12px; border-radius: 6px;
+  background: var(--accent); color: var(--accent-text); font-size: 12px;
+}
+.term {
+  background: var(--term-bg); color: var(--term-text);
+  font-family: Menlo, Monaco, "SF Mono", monospace; font-size: 13px; line-height: 1.5;
+  white-space: pre; padding: 14px 18px; border-radius: 8px; border: 1px solid var(--border);
+}
+.term .dim { color: var(--term-dim); }
+.term .ok { color: var(--ok); }
+.term .warn { color: var(--warn); }
+.narrow { max-width: 230px; }
+/* URL は折り返さない(クエリだけが次の行に回ると「http(s):// で始まる URL」の形でなくなるため) */
+:not(.term):has(> [data-mask="credential/url_query"]) { white-space: nowrap; }
+/* 複数行にまたがる正解は住所だけ(意図して折り返す)。他の正解は 1 行に収める */
+[data-mask]:not([data-mask="contact/address"]) { white-space: nowrap; }

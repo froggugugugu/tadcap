@@ -1,0 +1,8198 @@
+{
+ "version": 1,
+ "generator": "scripts/mask-eval-fixtures.mjs",
+ "details": {
+  "contact": [
+   "email",
+   "phone",
+   "address"
+  ],
+  "credential": [
+   "prefixed_token",
+   "random_string",
+   "cue_value",
+   "url_query"
+  ],
+  "identifier": [
+   "cued_number",
+   "person_ja",
+   "person_en",
+   "company"
+  ],
+  "financial": [
+   "card",
+   "account",
+   "amount"
+  ]
+ },
+ "images": [
+  {
+   "file": "billing.fhd.light.png",
+   "page": "billing.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "billing#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 237,
+     "y": 112,
+     "width": 150,
+     "height": 16
+    },
+    {
+     "target": "billing#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 287,
+     "y": 134,
+     "width": 61,
+     "height": 15
+    },
+    {
+     "target": "billing#02",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 237,
+     "y": 156,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "billing#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 237,
+     "y": 174,
+     "width": 244,
+     "height": 13
+    },
+    {
+     "target": "billing#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 291,
+     "y": 193,
+     "width": 78,
+     "height": 13
+    },
+    {
+     "target": "billing#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 833,
+     "y": 112,
+     "width": 147,
+     "height": 16
+    },
+    {
+     "target": "billing#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 896,
+     "y": 134,
+     "width": 98,
+     "height": 15
+    },
+    {
+     "target": "billing#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 833,
+     "y": 156,
+     "width": 101,
+     "height": 13
+    },
+    {
+     "target": "billing#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 947,
+     "y": 156,
+     "width": 88,
+     "height": 13
+    },
+    {
+     "target": "billing#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 897,
+     "y": 174,
+     "width": 68,
+     "height": 13
+    },
+    {
+     "target": "billing#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1313,
+     "y": 315,
+     "width": 60,
+     "height": 15
+    },
+    {
+     "target": "billing#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1309,
+     "y": 348,
+     "width": 64,
+     "height": 15
+    },
+    {
+     "target": "billing#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1301,
+     "y": 381,
+     "width": 72,
+     "height": 15
+    },
+    {
+     "target": "billing#13",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1312,
+     "y": 413,
+     "width": 61,
+     "height": 13
+    },
+    {
+     "target": "billing#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1251,
+     "y": 449,
+     "width": 122,
+     "height": 23
+    },
+    {
+     "target": "billing#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 554,
+     "width": 161,
+     "height": 17
+    },
+    {
+     "target": "billing#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 577,
+     "width": 218,
+     "height": 23
+    },
+    {
+     "target": "billing#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 606,
+     "width": 116,
+     "height": 15
+    },
+    {
+     "target": "billing#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 624,
+     "width": 123,
+     "height": 15
+    },
+    {
+     "target": "billing#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 802,
+     "y": 578,
+     "width": 57,
+     "height": 13
+    },
+    {
+     "target": "billing#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 802,
+     "y": 601,
+     "width": 57,
+     "height": 13
+    },
+    {
+     "target": "billing#21",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 774,
+     "y": 623,
+     "width": 57,
+     "height": 13
+    },
+    {
+     "target": "billing#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1245,
+     "y": 554,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "billing#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1084,
+     "y": 573,
+     "width": 160,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "billing.fhd.dark.png",
+   "page": "billing.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "billing#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 237,
+     "y": 112,
+     "width": 150,
+     "height": 16
+    },
+    {
+     "target": "billing#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 287,
+     "y": 134,
+     "width": 61,
+     "height": 15
+    },
+    {
+     "target": "billing#02",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 237,
+     "y": 156,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "billing#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 237,
+     "y": 174,
+     "width": 244,
+     "height": 13
+    },
+    {
+     "target": "billing#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 291,
+     "y": 193,
+     "width": 78,
+     "height": 13
+    },
+    {
+     "target": "billing#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 833,
+     "y": 112,
+     "width": 147,
+     "height": 16
+    },
+    {
+     "target": "billing#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 896,
+     "y": 134,
+     "width": 98,
+     "height": 15
+    },
+    {
+     "target": "billing#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 833,
+     "y": 156,
+     "width": 101,
+     "height": 13
+    },
+    {
+     "target": "billing#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 947,
+     "y": 156,
+     "width": 88,
+     "height": 13
+    },
+    {
+     "target": "billing#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 897,
+     "y": 174,
+     "width": 68,
+     "height": 13
+    },
+    {
+     "target": "billing#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1313,
+     "y": 315,
+     "width": 60,
+     "height": 15
+    },
+    {
+     "target": "billing#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1309,
+     "y": 348,
+     "width": 64,
+     "height": 15
+    },
+    {
+     "target": "billing#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1301,
+     "y": 381,
+     "width": 72,
+     "height": 15
+    },
+    {
+     "target": "billing#13",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1312,
+     "y": 413,
+     "width": 61,
+     "height": 13
+    },
+    {
+     "target": "billing#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1251,
+     "y": 449,
+     "width": 122,
+     "height": 23
+    },
+    {
+     "target": "billing#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 554,
+     "width": 161,
+     "height": 17
+    },
+    {
+     "target": "billing#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 577,
+     "width": 218,
+     "height": 23
+    },
+    {
+     "target": "billing#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 606,
+     "width": 116,
+     "height": 15
+    },
+    {
+     "target": "billing#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 624,
+     "width": 123,
+     "height": 15
+    },
+    {
+     "target": "billing#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 802,
+     "y": 578,
+     "width": 57,
+     "height": 13
+    },
+    {
+     "target": "billing#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 802,
+     "y": 601,
+     "width": 57,
+     "height": 13
+    },
+    {
+     "target": "billing#21",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 774,
+     "y": 623,
+     "width": 57,
+     "height": 13
+    },
+    {
+     "target": "billing#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1245,
+     "y": 554,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "billing#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1084,
+     "y": 573,
+     "width": 160,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "billing.retina.light.png",
+   "page": "billing.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "billing#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 474,
+     "y": 224,
+     "width": 300,
+     "height": 31
+    },
+    {
+     "target": "billing#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 574,
+     "y": 269,
+     "width": 122,
+     "height": 28
+    },
+    {
+     "target": "billing#02",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 474,
+     "y": 312,
+     "width": 144,
+     "height": 25
+    },
+    {
+     "target": "billing#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 474,
+     "y": 349,
+     "width": 487,
+     "height": 25
+    },
+    {
+     "target": "billing#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 583,
+     "y": 386,
+     "width": 154,
+     "height": 25
+    },
+    {
+     "target": "billing#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1666,
+     "y": 224,
+     "width": 293,
+     "height": 31
+    },
+    {
+     "target": "billing#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1792,
+     "y": 269,
+     "width": 196,
+     "height": 28
+    },
+    {
+     "target": "billing#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1666,
+     "y": 312,
+     "width": 202,
+     "height": 25
+    },
+    {
+     "target": "billing#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1894,
+     "y": 312,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "billing#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1794,
+     "y": 349,
+     "width": 135,
+     "height": 25
+    },
+    {
+     "target": "billing#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2627,
+     "y": 631,
+     "width": 119,
+     "height": 29
+    },
+    {
+     "target": "billing#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2619,
+     "y": 697,
+     "width": 127,
+     "height": 28
+    },
+    {
+     "target": "billing#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2603,
+     "y": 762,
+     "width": 143,
+     "height": 29
+    },
+    {
+     "target": "billing#13",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2624,
+     "y": 827,
+     "width": 122,
+     "height": 25
+    },
+    {
+     "target": "billing#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2502,
+     "y": 899,
+     "width": 244,
+     "height": 45
+    },
+    {
+     "target": "billing#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 1109,
+     "width": 321,
+     "height": 33
+    },
+    {
+     "target": "billing#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 1155,
+     "width": 435,
+     "height": 45
+    },
+    {
+     "target": "billing#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 1212,
+     "width": 232,
+     "height": 29
+    },
+    {
+     "target": "billing#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 1249,
+     "width": 246,
+     "height": 29
+    },
+    {
+     "target": "billing#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1605,
+     "y": 1157,
+     "width": 112,
+     "height": 24
+    },
+    {
+     "target": "billing#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1605,
+     "y": 1202,
+     "width": 112,
+     "height": 25
+    },
+    {
+     "target": "billing#21",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1549,
+     "y": 1247,
+     "width": 112,
+     "height": 25
+    },
+    {
+     "target": "billing#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2491,
+     "y": 1109,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "billing#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2168,
+     "y": 1147,
+     "width": 319,
+     "height": 28
+    }
+   ]
+  },
+  {
+   "file": "billing.retina.dark.png",
+   "page": "billing.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "billing#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 474,
+     "y": 224,
+     "width": 300,
+     "height": 31
+    },
+    {
+     "target": "billing#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 574,
+     "y": 269,
+     "width": 122,
+     "height": 28
+    },
+    {
+     "target": "billing#02",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 474,
+     "y": 312,
+     "width": 144,
+     "height": 25
+    },
+    {
+     "target": "billing#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 474,
+     "y": 349,
+     "width": 487,
+     "height": 25
+    },
+    {
+     "target": "billing#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 583,
+     "y": 386,
+     "width": 154,
+     "height": 25
+    },
+    {
+     "target": "billing#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1666,
+     "y": 224,
+     "width": 293,
+     "height": 31
+    },
+    {
+     "target": "billing#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1792,
+     "y": 269,
+     "width": 196,
+     "height": 28
+    },
+    {
+     "target": "billing#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1666,
+     "y": 312,
+     "width": 202,
+     "height": 25
+    },
+    {
+     "target": "billing#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1894,
+     "y": 312,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "billing#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1794,
+     "y": 349,
+     "width": 135,
+     "height": 25
+    },
+    {
+     "target": "billing#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2627,
+     "y": 631,
+     "width": 119,
+     "height": 29
+    },
+    {
+     "target": "billing#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2619,
+     "y": 697,
+     "width": 127,
+     "height": 28
+    },
+    {
+     "target": "billing#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2603,
+     "y": 762,
+     "width": 143,
+     "height": 29
+    },
+    {
+     "target": "billing#13",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2624,
+     "y": 827,
+     "width": 122,
+     "height": 25
+    },
+    {
+     "target": "billing#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2502,
+     "y": 899,
+     "width": 244,
+     "height": 45
+    },
+    {
+     "target": "billing#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 1109,
+     "width": 321,
+     "height": 33
+    },
+    {
+     "target": "billing#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 1155,
+     "width": 435,
+     "height": 45
+    },
+    {
+     "target": "billing#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 1212,
+     "width": 232,
+     "height": 29
+    },
+    {
+     "target": "billing#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 1249,
+     "width": 246,
+     "height": 29
+    },
+    {
+     "target": "billing#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1605,
+     "y": 1157,
+     "width": 112,
+     "height": 24
+    },
+    {
+     "target": "billing#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1605,
+     "y": 1202,
+     "width": 112,
+     "height": 25
+    },
+    {
+     "target": "billing#21",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1549,
+     "y": 1247,
+     "width": 112,
+     "height": 25
+    },
+    {
+     "target": "billing#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2491,
+     "y": 1109,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "billing#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2168,
+     "y": 1147,
+     "width": 319,
+     "height": 28
+    }
+   ]
+  },
+  {
+   "file": "crm.fhd.light.png",
+   "page": "crm.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "crm#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1853,
+     "y": 15,
+     "width": 47,
+     "height": 15
+    },
+    {
+     "target": "crm#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 145,
+     "width": 81,
+     "height": 15
+    },
+    {
+     "target": "crm#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 547,
+     "y": 145,
+     "width": 95,
+     "height": 15
+    },
+    {
+     "target": "crm#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 819,
+     "y": 145,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "crm#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1060,
+     "y": 145,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "crm#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1297,
+     "y": 145,
+     "width": 173,
+     "height": 13
+    },
+    {
+     "target": "crm#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1656,
+     "y": 145,
+     "width": 91,
+     "height": 15
+    },
+    {
+     "target": "crm#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 293,
+     "y": 178,
+     "width": 69,
+     "height": 15
+    },
+    {
+     "target": "crm#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 547,
+     "y": 179,
+     "width": 106,
+     "height": 16
+    },
+    {
+     "target": "crm#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 819,
+     "y": 178,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "crm#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1060,
+     "y": 178,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "crm#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1297,
+     "y": 178,
+     "width": 173,
+     "height": 13
+    },
+    {
+     "target": "crm#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1656,
+     "y": 178,
+     "width": 86,
+     "height": 15
+    },
+    {
+     "target": "crm#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 212,
+     "width": 81,
+     "height": 15
+    },
+    {
+     "target": "crm#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 547,
+     "y": 212,
+     "width": 127,
+     "height": 15
+    },
+    {
+     "target": "crm#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 819,
+     "y": 212,
+     "width": 110,
+     "height": 15
+    },
+    {
+     "target": "crm#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1060,
+     "y": 212,
+     "width": 108,
+     "height": 13
+    },
+    {
+     "target": "crm#17",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1297,
+     "y": 212,
+     "width": 166,
+     "height": 13
+    },
+    {
+     "target": "crm#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1656,
+     "y": 212,
+     "width": 108,
+     "height": 15
+    },
+    {
+     "target": "crm#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 245,
+     "width": 81,
+     "height": 15
+    },
+    {
+     "target": "crm#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 547,
+     "y": 245,
+     "width": 127,
+     "height": 15
+    },
+    {
+     "target": "crm#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 819,
+     "y": 245,
+     "width": 48,
+     "height": 15
+    },
+    {
+     "target": "crm#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1060,
+     "y": 245,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "crm#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1297,
+     "y": 245,
+     "width": 161,
+     "height": 13
+    },
+    {
+     "target": "crm#24",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 379,
+     "y": 344,
+     "width": 171,
+     "height": 20
+    },
+    {
+     "target": "crm#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 379,
+     "y": 375,
+     "width": 61,
+     "height": 15
+    },
+    {
+     "target": "crm#26",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 379,
+     "y": 401,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "crm#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 454,
+     "y": 401,
+     "width": 153,
+     "height": 13
+    },
+    {
+     "target": "crm#27",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 379,
+     "y": 420,
+     "width": 192,
+     "height": 13
+    },
+    {
+     "target": "crm#28",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 379,
+     "y": 442,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "crm#29",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 943,
+     "y": 342,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "crm#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 943,
+     "y": 368,
+     "width": 48,
+     "height": 15
+    },
+    {
+     "target": "crm#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 943,
+     "y": 393,
+     "width": 79,
+     "height": 15
+    },
+    {
+     "target": "crm#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 943,
+     "y": 419,
+     "width": 171,
+     "height": 15
+    },
+    {
+     "target": "crm#33",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 943,
+     "y": 444,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "crm#34",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 943,
+     "y": 469,
+     "width": 167,
+     "height": 15
+    },
+    {
+     "target": "crm#35",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1539,
+     "y": 342,
+     "width": 66,
+     "height": 15
+    },
+    {
+     "target": "crm#36",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1507,
+     "y": 369,
+     "width": 60,
+     "height": 16
+    },
+    {
+     "target": "crm#37",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1507,
+     "y": 395,
+     "width": 50,
+     "height": 15
+    },
+    {
+     "target": "crm#38",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1507,
+     "y": 421,
+     "width": 162,
+     "height": 13
+    },
+    {
+     "target": "crm#39",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1687,
+     "y": 445,
+     "width": 81,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "crm.fhd.dark.png",
+   "page": "crm.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "crm#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1853,
+     "y": 15,
+     "width": 47,
+     "height": 15
+    },
+    {
+     "target": "crm#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 145,
+     "width": 81,
+     "height": 15
+    },
+    {
+     "target": "crm#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 547,
+     "y": 145,
+     "width": 95,
+     "height": 15
+    },
+    {
+     "target": "crm#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 819,
+     "y": 145,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "crm#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1060,
+     "y": 145,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "crm#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1297,
+     "y": 145,
+     "width": 173,
+     "height": 13
+    },
+    {
+     "target": "crm#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1656,
+     "y": 145,
+     "width": 91,
+     "height": 15
+    },
+    {
+     "target": "crm#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 293,
+     "y": 178,
+     "width": 69,
+     "height": 15
+    },
+    {
+     "target": "crm#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 547,
+     "y": 179,
+     "width": 106,
+     "height": 16
+    },
+    {
+     "target": "crm#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 819,
+     "y": 178,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "crm#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1060,
+     "y": 178,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "crm#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1297,
+     "y": 178,
+     "width": 173,
+     "height": 13
+    },
+    {
+     "target": "crm#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1656,
+     "y": 178,
+     "width": 86,
+     "height": 15
+    },
+    {
+     "target": "crm#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 212,
+     "width": 81,
+     "height": 15
+    },
+    {
+     "target": "crm#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 547,
+     "y": 212,
+     "width": 127,
+     "height": 15
+    },
+    {
+     "target": "crm#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 819,
+     "y": 212,
+     "width": 110,
+     "height": 15
+    },
+    {
+     "target": "crm#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1060,
+     "y": 212,
+     "width": 108,
+     "height": 13
+    },
+    {
+     "target": "crm#17",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1297,
+     "y": 212,
+     "width": 166,
+     "height": 13
+    },
+    {
+     "target": "crm#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1656,
+     "y": 212,
+     "width": 108,
+     "height": 15
+    },
+    {
+     "target": "crm#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 245,
+     "width": 81,
+     "height": 15
+    },
+    {
+     "target": "crm#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 547,
+     "y": 245,
+     "width": 127,
+     "height": 15
+    },
+    {
+     "target": "crm#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 819,
+     "y": 245,
+     "width": 48,
+     "height": 15
+    },
+    {
+     "target": "crm#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1060,
+     "y": 245,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "crm#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1297,
+     "y": 245,
+     "width": 161,
+     "height": 13
+    },
+    {
+     "target": "crm#24",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 379,
+     "y": 344,
+     "width": 171,
+     "height": 20
+    },
+    {
+     "target": "crm#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 379,
+     "y": 375,
+     "width": 61,
+     "height": 15
+    },
+    {
+     "target": "crm#26",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 379,
+     "y": 401,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "crm#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 454,
+     "y": 401,
+     "width": 153,
+     "height": 13
+    },
+    {
+     "target": "crm#27",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 379,
+     "y": 420,
+     "width": 192,
+     "height": 13
+    },
+    {
+     "target": "crm#28",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 379,
+     "y": 442,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "crm#29",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 943,
+     "y": 342,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "crm#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 943,
+     "y": 368,
+     "width": 48,
+     "height": 15
+    },
+    {
+     "target": "crm#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 943,
+     "y": 393,
+     "width": 79,
+     "height": 15
+    },
+    {
+     "target": "crm#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 943,
+     "y": 419,
+     "width": 171,
+     "height": 15
+    },
+    {
+     "target": "crm#33",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 943,
+     "y": 444,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "crm#34",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 943,
+     "y": 469,
+     "width": 167,
+     "height": 15
+    },
+    {
+     "target": "crm#35",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1539,
+     "y": 342,
+     "width": 66,
+     "height": 15
+    },
+    {
+     "target": "crm#36",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1507,
+     "y": 369,
+     "width": 60,
+     "height": 16
+    },
+    {
+     "target": "crm#37",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1507,
+     "y": 395,
+     "width": 50,
+     "height": 15
+    },
+    {
+     "target": "crm#38",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1507,
+     "y": 421,
+     "width": 162,
+     "height": 13
+    },
+    {
+     "target": "crm#39",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1687,
+     "y": 445,
+     "width": 81,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "crm.retina.light.png",
+   "page": "crm.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "crm#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2746,
+     "y": 31,
+     "width": 94,
+     "height": 29
+    },
+    {
+     "target": "crm#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 291,
+     "width": 161,
+     "height": 29
+    },
+    {
+     "target": "crm#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 919,
+     "y": 291,
+     "width": 189,
+     "height": 29
+    },
+    {
+     "target": "crm#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1305,
+     "y": 291,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "crm#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1646,
+     "y": 291,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "crm#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1982,
+     "y": 291,
+     "width": 346,
+     "height": 25
+    },
+    {
+     "target": "crm#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2490,
+     "y": 291,
+     "width": 182,
+     "height": 29
+    },
+    {
+     "target": "crm#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 587,
+     "y": 357,
+     "width": 136,
+     "height": 29
+    },
+    {
+     "target": "crm#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 919,
+     "y": 359,
+     "width": 211,
+     "height": 31
+    },
+    {
+     "target": "crm#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1305,
+     "y": 357,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "crm#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1646,
+     "y": 357,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "crm#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1982,
+     "y": 357,
+     "width": 346,
+     "height": 25
+    },
+    {
+     "target": "crm#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2490,
+     "y": 357,
+     "width": 172,
+     "height": 29
+    },
+    {
+     "target": "crm#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 425,
+     "width": 161,
+     "height": 29
+    },
+    {
+     "target": "crm#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 919,
+     "y": 425,
+     "width": 253,
+     "height": 29
+    },
+    {
+     "target": "crm#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1305,
+     "y": 425,
+     "width": 219,
+     "height": 29
+    },
+    {
+     "target": "crm#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1646,
+     "y": 425,
+     "width": 215,
+     "height": 25
+    },
+    {
+     "target": "crm#17",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1982,
+     "y": 425,
+     "width": 330,
+     "height": 25
+    },
+    {
+     "target": "crm#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2490,
+     "y": 425,
+     "width": 215,
+     "height": 29
+    },
+    {
+     "target": "crm#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 490,
+     "width": 161,
+     "height": 29
+    },
+    {
+     "target": "crm#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 919,
+     "y": 490,
+     "width": 253,
+     "height": 29
+    },
+    {
+     "target": "crm#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1305,
+     "y": 490,
+     "width": 94,
+     "height": 29
+    },
+    {
+     "target": "crm#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1646,
+     "y": 490,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "crm#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1982,
+     "y": 490,
+     "width": 321,
+     "height": 25
+    },
+    {
+     "target": "crm#24",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 758,
+     "y": 688,
+     "width": 342,
+     "height": 39
+    },
+    {
+     "target": "crm#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 758,
+     "y": 751,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "crm#26",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 803,
+     "width": 144,
+     "height": 25
+    },
+    {
+     "target": "crm#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 909,
+     "y": 803,
+     "width": 217,
+     "height": 25
+    },
+    {
+     "target": "crm#27",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 840,
+     "width": 385,
+     "height": 25
+    },
+    {
+     "target": "crm#27",
+     "line": 2,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 877,
+     "width": 96,
+     "height": 25
+    },
+    {
+     "target": "crm#28",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 758,
+     "y": 922,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "crm#29",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1521,
+     "y": 684,
+     "width": 177,
+     "height": 29
+    },
+    {
+     "target": "crm#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1521,
+     "y": 736,
+     "width": 96,
+     "height": 29
+    },
+    {
+     "target": "crm#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1521,
+     "y": 787,
+     "width": 158,
+     "height": 29
+    },
+    {
+     "target": "crm#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1521,
+     "y": 838,
+     "width": 341,
+     "height": 29
+    },
+    {
+     "target": "crm#33",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1521,
+     "y": 888,
+     "width": 276,
+     "height": 29
+    },
+    {
+     "target": "crm#34",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1521,
+     "y": 939,
+     "width": 334,
+     "height": 29
+    },
+    {
+     "target": "crm#35",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2351,
+     "y": 684,
+     "width": 129,
+     "height": 29
+    },
+    {
+     "target": "crm#36",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2285,
+     "y": 738,
+     "width": 120,
+     "height": 31
+    },
+    {
+     "target": "crm#37",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2285,
+     "y": 790,
+     "width": 101,
+     "height": 29
+    },
+    {
+     "target": "crm#38",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2285,
+     "y": 842,
+     "width": 324,
+     "height": 25
+    },
+    {
+     "target": "crm#39",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2647,
+     "y": 891,
+     "width": 159,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "crm.retina.dark.png",
+   "page": "crm.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "crm#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2746,
+     "y": 31,
+     "width": 94,
+     "height": 29
+    },
+    {
+     "target": "crm#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 291,
+     "width": 161,
+     "height": 29
+    },
+    {
+     "target": "crm#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 919,
+     "y": 291,
+     "width": 189,
+     "height": 29
+    },
+    {
+     "target": "crm#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1305,
+     "y": 291,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "crm#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1646,
+     "y": 291,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "crm#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1982,
+     "y": 291,
+     "width": 346,
+     "height": 25
+    },
+    {
+     "target": "crm#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2490,
+     "y": 291,
+     "width": 182,
+     "height": 29
+    },
+    {
+     "target": "crm#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 587,
+     "y": 357,
+     "width": 136,
+     "height": 29
+    },
+    {
+     "target": "crm#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 919,
+     "y": 359,
+     "width": 211,
+     "height": 31
+    },
+    {
+     "target": "crm#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1305,
+     "y": 357,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "crm#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1646,
+     "y": 357,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "crm#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1982,
+     "y": 357,
+     "width": 346,
+     "height": 25
+    },
+    {
+     "target": "crm#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2490,
+     "y": 357,
+     "width": 172,
+     "height": 29
+    },
+    {
+     "target": "crm#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 425,
+     "width": 161,
+     "height": 29
+    },
+    {
+     "target": "crm#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 919,
+     "y": 425,
+     "width": 253,
+     "height": 29
+    },
+    {
+     "target": "crm#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1305,
+     "y": 425,
+     "width": 219,
+     "height": 29
+    },
+    {
+     "target": "crm#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1646,
+     "y": 425,
+     "width": 215,
+     "height": 25
+    },
+    {
+     "target": "crm#17",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1982,
+     "y": 425,
+     "width": 330,
+     "height": 25
+    },
+    {
+     "target": "crm#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2490,
+     "y": 425,
+     "width": 215,
+     "height": 29
+    },
+    {
+     "target": "crm#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 490,
+     "width": 161,
+     "height": 29
+    },
+    {
+     "target": "crm#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 919,
+     "y": 490,
+     "width": 253,
+     "height": 29
+    },
+    {
+     "target": "crm#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1305,
+     "y": 490,
+     "width": 94,
+     "height": 29
+    },
+    {
+     "target": "crm#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1646,
+     "y": 490,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "crm#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1982,
+     "y": 490,
+     "width": 321,
+     "height": 25
+    },
+    {
+     "target": "crm#24",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 758,
+     "y": 688,
+     "width": 342,
+     "height": 39
+    },
+    {
+     "target": "crm#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 758,
+     "y": 751,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "crm#26",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 803,
+     "width": 144,
+     "height": 25
+    },
+    {
+     "target": "crm#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 909,
+     "y": 803,
+     "width": 217,
+     "height": 25
+    },
+    {
+     "target": "crm#27",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 840,
+     "width": 385,
+     "height": 25
+    },
+    {
+     "target": "crm#27",
+     "line": 2,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 877,
+     "width": 96,
+     "height": 25
+    },
+    {
+     "target": "crm#28",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 758,
+     "y": 922,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "crm#29",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1521,
+     "y": 684,
+     "width": 177,
+     "height": 29
+    },
+    {
+     "target": "crm#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1521,
+     "y": 736,
+     "width": 96,
+     "height": 29
+    },
+    {
+     "target": "crm#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1521,
+     "y": 787,
+     "width": 158,
+     "height": 29
+    },
+    {
+     "target": "crm#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1521,
+     "y": 838,
+     "width": 341,
+     "height": 29
+    },
+    {
+     "target": "crm#33",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1521,
+     "y": 888,
+     "width": 276,
+     "height": 29
+    },
+    {
+     "target": "crm#34",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1521,
+     "y": 939,
+     "width": 334,
+     "height": 29
+    },
+    {
+     "target": "crm#35",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2351,
+     "y": 684,
+     "width": 129,
+     "height": 29
+    },
+    {
+     "target": "crm#36",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2285,
+     "y": 738,
+     "width": 120,
+     "height": 31
+    },
+    {
+     "target": "crm#37",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2285,
+     "y": 790,
+     "width": 101,
+     "height": 29
+    },
+    {
+     "target": "crm#38",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2285,
+     "y": 842,
+     "width": 324,
+     "height": 25
+    },
+    {
+     "target": "crm#39",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2647,
+     "y": 891,
+     "width": 159,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "employees.fhd.light.png",
+   "page": "employees.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "employees#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1839,
+     "y": 15,
+     "width": 61,
+     "height": 15
+    },
+    {
+     "target": "employees#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 145,
+     "width": 70,
+     "height": 15
+    },
+    {
+     "target": "employees#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 605,
+     "y": 145,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "employees#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 850,
+     "y": 145,
+     "width": 63,
+     "height": 15
+    },
+    {
+     "target": "employees#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1136,
+     "y": 145,
+     "width": 146,
+     "height": 15
+    },
+    {
+     "target": "employees#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1577,
+     "y": 145,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "employees#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 293,
+     "y": 178,
+     "width": 76,
+     "height": 15
+    },
+    {
+     "target": "employees#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 605,
+     "y": 178,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "employees#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 850,
+     "y": 178,
+     "width": 101,
+     "height": 15
+    },
+    {
+     "target": "employees#09",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1136,
+     "y": 178,
+     "width": 165,
+     "height": 13
+    },
+    {
+     "target": "employees#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1577,
+     "y": 178,
+     "width": 97,
+     "height": 13
+    },
+    {
+     "target": "employees#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 211,
+     "width": 70,
+     "height": 15
+    },
+    {
+     "target": "employees#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 605,
+     "y": 213,
+     "width": 84,
+     "height": 20
+    },
+    {
+     "target": "employees#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 850,
+     "y": 211,
+     "width": 90,
+     "height": 15
+    },
+    {
+     "target": "employees#14",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1136,
+     "y": 211,
+     "width": 157,
+     "height": 15
+    },
+    {
+     "target": "employees#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1577,
+     "y": 211,
+     "width": 113,
+     "height": 15
+    },
+    {
+     "target": "employees#16",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 251,
+     "width": 70,
+     "height": 15
+    },
+    {
+     "target": "employees#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 605,
+     "y": 251,
+     "width": 76,
+     "height": 15
+    },
+    {
+     "target": "employees#18",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 379,
+     "y": 349,
+     "width": 65,
+     "height": 16
+    },
+    {
+     "target": "employees#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 379,
+     "y": 376,
+     "width": 134,
+     "height": 16
+    },
+    {
+     "target": "employees#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 379,
+     "y": 404,
+     "width": 149,
+     "height": 16
+    },
+    {
+     "target": "employees#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 379,
+     "y": 431,
+     "width": 90,
+     "height": 16
+    },
+    {
+     "target": "employees#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 379,
+     "y": 454,
+     "width": 216,
+     "height": 16
+    },
+    {
+     "target": "employees#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 379,
+     "y": 481,
+     "width": 120,
+     "height": 16
+    },
+    {
+     "target": "employees#24",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 414,
+     "y": 509,
+     "width": 70,
+     "height": 16
+    },
+    {
+     "target": "employees#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1284,
+     "y": 348,
+     "width": 63,
+     "height": 15
+    },
+    {
+     "target": "employees#26",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1311,
+     "y": 373,
+     "width": 103,
+     "height": 17
+    },
+    {
+     "target": "employees#27",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1463,
+     "y": 398,
+     "width": 174,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "employees.fhd.dark.png",
+   "page": "employees.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "employees#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1839,
+     "y": 15,
+     "width": 61,
+     "height": 15
+    },
+    {
+     "target": "employees#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 145,
+     "width": 70,
+     "height": 15
+    },
+    {
+     "target": "employees#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 605,
+     "y": 145,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "employees#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 850,
+     "y": 145,
+     "width": 63,
+     "height": 15
+    },
+    {
+     "target": "employees#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1136,
+     "y": 145,
+     "width": 146,
+     "height": 15
+    },
+    {
+     "target": "employees#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1577,
+     "y": 145,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "employees#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 293,
+     "y": 178,
+     "width": 76,
+     "height": 15
+    },
+    {
+     "target": "employees#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 605,
+     "y": 178,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "employees#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 850,
+     "y": 178,
+     "width": 101,
+     "height": 15
+    },
+    {
+     "target": "employees#09",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1136,
+     "y": 178,
+     "width": 165,
+     "height": 13
+    },
+    {
+     "target": "employees#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1577,
+     "y": 178,
+     "width": 97,
+     "height": 13
+    },
+    {
+     "target": "employees#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 211,
+     "width": 70,
+     "height": 15
+    },
+    {
+     "target": "employees#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 605,
+     "y": 213,
+     "width": 84,
+     "height": 20
+    },
+    {
+     "target": "employees#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 850,
+     "y": 211,
+     "width": 90,
+     "height": 15
+    },
+    {
+     "target": "employees#14",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1136,
+     "y": 211,
+     "width": 157,
+     "height": 15
+    },
+    {
+     "target": "employees#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1577,
+     "y": 211,
+     "width": 113,
+     "height": 15
+    },
+    {
+     "target": "employees#16",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 307,
+     "y": 251,
+     "width": 70,
+     "height": 15
+    },
+    {
+     "target": "employees#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 605,
+     "y": 251,
+     "width": 76,
+     "height": 15
+    },
+    {
+     "target": "employees#18",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 379,
+     "y": 349,
+     "width": 65,
+     "height": 16
+    },
+    {
+     "target": "employees#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 379,
+     "y": 376,
+     "width": 134,
+     "height": 16
+    },
+    {
+     "target": "employees#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 379,
+     "y": 404,
+     "width": 149,
+     "height": 16
+    },
+    {
+     "target": "employees#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 379,
+     "y": 431,
+     "width": 90,
+     "height": 16
+    },
+    {
+     "target": "employees#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 379,
+     "y": 454,
+     "width": 216,
+     "height": 16
+    },
+    {
+     "target": "employees#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 379,
+     "y": 481,
+     "width": 120,
+     "height": 16
+    },
+    {
+     "target": "employees#24",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 414,
+     "y": 509,
+     "width": 70,
+     "height": 16
+    },
+    {
+     "target": "employees#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1284,
+     "y": 348,
+     "width": 63,
+     "height": 15
+    },
+    {
+     "target": "employees#26",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1311,
+     "y": 373,
+     "width": 103,
+     "height": 17
+    },
+    {
+     "target": "employees#27",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1463,
+     "y": 398,
+     "width": 174,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "employees.retina.light.png",
+   "page": "employees.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "employees#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2718,
+     "y": 31,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "employees#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 291,
+     "width": 139,
+     "height": 29
+    },
+    {
+     "target": "employees#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1002,
+     "y": 291,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "employees#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1349,
+     "y": 291,
+     "width": 124,
+     "height": 29
+    },
+    {
+     "target": "employees#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1754,
+     "y": 291,
+     "width": 290,
+     "height": 29
+    },
+    {
+     "target": "employees#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2379,
+     "y": 291,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "employees#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 587,
+     "y": 357,
+     "width": 150,
+     "height": 29
+    },
+    {
+     "target": "employees#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1002,
+     "y": 357,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "employees#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1349,
+     "y": 357,
+     "width": 200,
+     "height": 29
+    },
+    {
+     "target": "employees#09",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1754,
+     "y": 357,
+     "width": 329,
+     "height": 25
+    },
+    {
+     "target": "employees#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2379,
+     "y": 357,
+     "width": 192,
+     "height": 25
+    },
+    {
+     "target": "employees#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 422,
+     "width": 139,
+     "height": 29
+    },
+    {
+     "target": "employees#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1002,
+     "y": 426,
+     "width": 166,
+     "height": 39
+    },
+    {
+     "target": "employees#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1349,
+     "y": 422,
+     "width": 178,
+     "height": 29
+    },
+    {
+     "target": "employees#14",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1754,
+     "y": 422,
+     "width": 312,
+     "height": 29
+    },
+    {
+     "target": "employees#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2379,
+     "y": 422,
+     "width": 224,
+     "height": 29
+    },
+    {
+     "target": "employees#16",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 503,
+     "width": 139,
+     "height": 29
+    },
+    {
+     "target": "employees#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1002,
+     "y": 503,
+     "width": 150,
+     "height": 29
+    },
+    {
+     "target": "employees#18",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 758,
+     "y": 699,
+     "width": 130,
+     "height": 31
+    },
+    {
+     "target": "employees#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 758,
+     "y": 753,
+     "width": 268,
+     "height": 31
+    },
+    {
+     "target": "employees#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 758,
+     "y": 808,
+     "width": 298,
+     "height": 31
+    },
+    {
+     "target": "employees#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 862,
+     "width": 179,
+     "height": 31
+    },
+    {
+     "target": "employees#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 909,
+     "width": 431,
+     "height": 31
+    },
+    {
+     "target": "employees#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 758,
+     "y": 963,
+     "width": 239,
+     "height": 31
+    },
+    {
+     "target": "employees#24",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 828,
+     "y": 1018,
+     "width": 139,
+     "height": 31
+    },
+    {
+     "target": "employees#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2088,
+     "y": 697,
+     "width": 125,
+     "height": 29
+    },
+    {
+     "target": "employees#26",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2143,
+     "y": 746,
+     "width": 204,
+     "height": 33
+    },
+    {
+     "target": "employees#27",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2446,
+     "y": 797,
+     "width": 348,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "employees.retina.dark.png",
+   "page": "employees.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "employees#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2718,
+     "y": 31,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "employees#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 291,
+     "width": 139,
+     "height": 29
+    },
+    {
+     "target": "employees#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1002,
+     "y": 291,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "employees#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1349,
+     "y": 291,
+     "width": 124,
+     "height": 29
+    },
+    {
+     "target": "employees#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1754,
+     "y": 291,
+     "width": 290,
+     "height": 29
+    },
+    {
+     "target": "employees#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2379,
+     "y": 291,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "employees#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 587,
+     "y": 357,
+     "width": 150,
+     "height": 29
+    },
+    {
+     "target": "employees#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1002,
+     "y": 357,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "employees#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1349,
+     "y": 357,
+     "width": 200,
+     "height": 29
+    },
+    {
+     "target": "employees#09",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1754,
+     "y": 357,
+     "width": 329,
+     "height": 25
+    },
+    {
+     "target": "employees#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2379,
+     "y": 357,
+     "width": 192,
+     "height": 25
+    },
+    {
+     "target": "employees#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 422,
+     "width": 139,
+     "height": 29
+    },
+    {
+     "target": "employees#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1002,
+     "y": 426,
+     "width": 166,
+     "height": 39
+    },
+    {
+     "target": "employees#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1349,
+     "y": 422,
+     "width": 178,
+     "height": 29
+    },
+    {
+     "target": "employees#14",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1754,
+     "y": 422,
+     "width": 312,
+     "height": 29
+    },
+    {
+     "target": "employees#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2379,
+     "y": 422,
+     "width": 224,
+     "height": 29
+    },
+    {
+     "target": "employees#16",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 615,
+     "y": 503,
+     "width": 139,
+     "height": 29
+    },
+    {
+     "target": "employees#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1002,
+     "y": 503,
+     "width": 150,
+     "height": 29
+    },
+    {
+     "target": "employees#18",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 758,
+     "y": 699,
+     "width": 130,
+     "height": 31
+    },
+    {
+     "target": "employees#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 758,
+     "y": 753,
+     "width": 268,
+     "height": 31
+    },
+    {
+     "target": "employees#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 758,
+     "y": 808,
+     "width": 298,
+     "height": 31
+    },
+    {
+     "target": "employees#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 862,
+     "width": 179,
+     "height": 31
+    },
+    {
+     "target": "employees#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 758,
+     "y": 909,
+     "width": 431,
+     "height": 31
+    },
+    {
+     "target": "employees#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 758,
+     "y": 963,
+     "width": 239,
+     "height": 31
+    },
+    {
+     "target": "employees#24",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 828,
+     "y": 1018,
+     "width": 139,
+     "height": 31
+    },
+    {
+     "target": "employees#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2088,
+     "y": 697,
+     "width": 125,
+     "height": 29
+    },
+    {
+     "target": "employees#26",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2143,
+     "y": 746,
+     "width": 204,
+     "height": 33
+    },
+    {
+     "target": "employees#27",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2446,
+     "y": 797,
+     "width": 348,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "mail.fhd.light.png",
+   "page": "mail.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "mail#00",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1717,
+     "y": 15,
+     "width": 183,
+     "height": 15
+    },
+    {
+     "target": "mail#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 14,
+     "y": 60,
+     "width": 47,
+     "height": 14
+    },
+    {
+     "target": "mail#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 14,
+     "y": 119,
+     "width": 118,
+     "height": 15
+    },
+    {
+     "target": "mail#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 14,
+     "y": 140,
+     "width": 175,
+     "height": 13
+    },
+    {
+     "target": "mail#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 14,
+     "y": 178,
+     "width": 154,
+     "height": 15
+    },
+    {
+     "target": "mail#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 14,
+     "y": 239,
+     "width": 83,
+     "height": 20
+    },
+    {
+     "target": "mail#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 14,
+     "y": 304,
+     "width": 92,
+     "height": 15
+    },
+    {
+     "target": "mail#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 448,
+     "y": 98,
+     "width": 136,
+     "height": 13
+    },
+    {
+     "target": "mail#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 628,
+     "y": 98,
+     "width": 117,
+     "height": 13
+    },
+    {
+     "target": "mail#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 406,
+     "y": 142,
+     "width": 65,
+     "height": 16
+    },
+    {
+     "target": "mail#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 788,
+     "y": 180,
+     "width": 65,
+     "height": 16
+    },
+    {
+     "target": "mail#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 551,
+     "y": 203,
+     "width": 69,
+     "height": 16
+    },
+    {
+     "target": "mail#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 778,
+     "y": 203,
+     "width": 59,
+     "height": 16
+    },
+    {
+     "target": "mail#13",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 723,
+     "y": 267,
+     "width": 175,
+     "height": 15
+    },
+    {
+     "target": "mail#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 474,
+     "y": 303,
+     "width": 115,
+     "height": 16
+    },
+    {
+     "target": "mail#15",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 577,
+     "y": 340,
+     "width": 189,
+     "height": 15
+    },
+    {
+     "target": "mail#16",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 508,
+     "y": 372,
+     "width": 204,
+     "height": 15
+    },
+    {
+     "target": "mail#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 406,
+     "y": 412,
+     "width": 120,
+     "height": 13
+    },
+    {
+     "target": "mail#18",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 406,
+     "y": 431,
+     "width": 40,
+     "height": 13
+    },
+    {
+     "target": "mail#19",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 406,
+     "y": 449,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "mail#20",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 481,
+     "y": 449,
+     "width": 153,
+     "height": 13
+    },
+    {
+     "target": "mail#20",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 406,
+     "y": 468,
+     "width": 187,
+     "height": 13
+    },
+    {
+     "target": "mail#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 432,
+     "y": 487,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "mail#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 406,
+     "y": 505,
+     "width": 143,
+     "height": 13
+    },
+    {
+     "target": "mail#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 731,
+     "y": 532,
+     "width": 204,
+     "height": 15
+    },
+    {
+     "target": "mail#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 510,
+     "y": 551,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "mail#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 653,
+     "y": 571,
+     "width": 131,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "mail.fhd.dark.png",
+   "page": "mail.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "mail#00",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1717,
+     "y": 15,
+     "width": 183,
+     "height": 15
+    },
+    {
+     "target": "mail#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 14,
+     "y": 60,
+     "width": 47,
+     "height": 14
+    },
+    {
+     "target": "mail#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 14,
+     "y": 119,
+     "width": 118,
+     "height": 15
+    },
+    {
+     "target": "mail#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 14,
+     "y": 140,
+     "width": 175,
+     "height": 13
+    },
+    {
+     "target": "mail#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 14,
+     "y": 178,
+     "width": 154,
+     "height": 15
+    },
+    {
+     "target": "mail#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 14,
+     "y": 239,
+     "width": 83,
+     "height": 20
+    },
+    {
+     "target": "mail#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 14,
+     "y": 304,
+     "width": 92,
+     "height": 15
+    },
+    {
+     "target": "mail#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 448,
+     "y": 98,
+     "width": 136,
+     "height": 13
+    },
+    {
+     "target": "mail#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 628,
+     "y": 98,
+     "width": 117,
+     "height": 13
+    },
+    {
+     "target": "mail#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 406,
+     "y": 142,
+     "width": 65,
+     "height": 16
+    },
+    {
+     "target": "mail#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 788,
+     "y": 180,
+     "width": 65,
+     "height": 16
+    },
+    {
+     "target": "mail#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 551,
+     "y": 203,
+     "width": 69,
+     "height": 16
+    },
+    {
+     "target": "mail#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 778,
+     "y": 203,
+     "width": 59,
+     "height": 16
+    },
+    {
+     "target": "mail#13",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 723,
+     "y": 267,
+     "width": 175,
+     "height": 15
+    },
+    {
+     "target": "mail#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 474,
+     "y": 303,
+     "width": 115,
+     "height": 16
+    },
+    {
+     "target": "mail#15",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 577,
+     "y": 340,
+     "width": 189,
+     "height": 15
+    },
+    {
+     "target": "mail#16",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 508,
+     "y": 372,
+     "width": 204,
+     "height": 15
+    },
+    {
+     "target": "mail#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 406,
+     "y": 412,
+     "width": 120,
+     "height": 13
+    },
+    {
+     "target": "mail#18",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 406,
+     "y": 431,
+     "width": 40,
+     "height": 13
+    },
+    {
+     "target": "mail#19",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 406,
+     "y": 449,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "mail#20",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 481,
+     "y": 449,
+     "width": 153,
+     "height": 13
+    },
+    {
+     "target": "mail#20",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 406,
+     "y": 468,
+     "width": 187,
+     "height": 13
+    },
+    {
+     "target": "mail#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 432,
+     "y": 487,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "mail#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 406,
+     "y": 505,
+     "width": 143,
+     "height": 13
+    },
+    {
+     "target": "mail#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 731,
+     "y": 532,
+     "width": 204,
+     "height": 15
+    },
+    {
+     "target": "mail#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 510,
+     "y": 551,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "mail#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 653,
+     "y": 571,
+     "width": 131,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "mail.retina.light.png",
+   "page": "mail.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "mail#00",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2474,
+     "y": 31,
+     "width": 366,
+     "height": 29
+    },
+    {
+     "target": "mail#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 28,
+     "y": 120,
+     "width": 94,
+     "height": 28
+    },
+    {
+     "target": "mail#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 28,
+     "y": 238,
+     "width": 236,
+     "height": 29
+    },
+    {
+     "target": "mail#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 28,
+     "y": 281,
+     "width": 349,
+     "height": 25
+    },
+    {
+     "target": "mail#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 28,
+     "y": 357,
+     "width": 308,
+     "height": 29
+    },
+    {
+     "target": "mail#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 28,
+     "y": 479,
+     "width": 165,
+     "height": 39
+    },
+    {
+     "target": "mail#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 28,
+     "y": 609,
+     "width": 184,
+     "height": 29
+    },
+    {
+     "target": "mail#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 897,
+     "y": 196,
+     "width": 270,
+     "height": 25
+    },
+    {
+     "target": "mail#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1256,
+     "y": 196,
+     "width": 234,
+     "height": 25
+    },
+    {
+     "target": "mail#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 812,
+     "y": 284,
+     "width": 130,
+     "height": 31
+    },
+    {
+     "target": "mail#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1577,
+     "y": 360,
+     "width": 128,
+     "height": 31
+    },
+    {
+     "target": "mail#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1102,
+     "y": 407,
+     "width": 138,
+     "height": 31
+    },
+    {
+     "target": "mail#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1557,
+     "y": 407,
+     "width": 117,
+     "height": 31
+    },
+    {
+     "target": "mail#13",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1447,
+     "y": 534,
+     "width": 348,
+     "height": 29
+    },
+    {
+     "target": "mail#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 948,
+     "y": 606,
+     "width": 229,
+     "height": 31
+    },
+    {
+     "target": "mail#15",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1154,
+     "y": 681,
+     "width": 377,
+     "height": 29
+    },
+    {
+     "target": "mail#16",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1017,
+     "y": 744,
+     "width": 406,
+     "height": 29
+    },
+    {
+     "target": "mail#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 812,
+     "y": 825,
+     "width": 240,
+     "height": 25
+    },
+    {
+     "target": "mail#18",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 812,
+     "y": 862,
+     "width": 80,
+     "height": 25
+    },
+    {
+     "target": "mail#19",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 812,
+     "y": 899,
+     "width": 143,
+     "height": 25
+    },
+    {
+     "target": "mail#20",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 962,
+     "y": 899,
+     "width": 306,
+     "height": 25
+    },
+    {
+     "target": "mail#20",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 812,
+     "y": 937,
+     "width": 374,
+     "height": 24
+    },
+    {
+     "target": "mail#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 865,
+     "y": 974,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "mail#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 812,
+     "y": 1011,
+     "width": 286,
+     "height": 25
+    },
+    {
+     "target": "mail#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1463,
+     "y": 1064,
+     "width": 406,
+     "height": 29
+    },
+    {
+     "target": "mail#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1020,
+     "y": 1103,
+     "width": 203,
+     "height": 29
+    },
+    {
+     "target": "mail#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1307,
+     "y": 1142,
+     "width": 261,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "mail.retina.dark.png",
+   "page": "mail.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "mail#00",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2474,
+     "y": 31,
+     "width": 366,
+     "height": 29
+    },
+    {
+     "target": "mail#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 28,
+     "y": 120,
+     "width": 94,
+     "height": 28
+    },
+    {
+     "target": "mail#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 28,
+     "y": 238,
+     "width": 236,
+     "height": 29
+    },
+    {
+     "target": "mail#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 28,
+     "y": 281,
+     "width": 349,
+     "height": 25
+    },
+    {
+     "target": "mail#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 28,
+     "y": 357,
+     "width": 308,
+     "height": 29
+    },
+    {
+     "target": "mail#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 28,
+     "y": 479,
+     "width": 165,
+     "height": 39
+    },
+    {
+     "target": "mail#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 28,
+     "y": 609,
+     "width": 184,
+     "height": 29
+    },
+    {
+     "target": "mail#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 897,
+     "y": 196,
+     "width": 270,
+     "height": 25
+    },
+    {
+     "target": "mail#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1256,
+     "y": 196,
+     "width": 234,
+     "height": 25
+    },
+    {
+     "target": "mail#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 812,
+     "y": 284,
+     "width": 130,
+     "height": 31
+    },
+    {
+     "target": "mail#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1577,
+     "y": 360,
+     "width": 128,
+     "height": 31
+    },
+    {
+     "target": "mail#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1102,
+     "y": 407,
+     "width": 138,
+     "height": 31
+    },
+    {
+     "target": "mail#12",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1557,
+     "y": 407,
+     "width": 117,
+     "height": 31
+    },
+    {
+     "target": "mail#13",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1447,
+     "y": 534,
+     "width": 348,
+     "height": 29
+    },
+    {
+     "target": "mail#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 948,
+     "y": 606,
+     "width": 229,
+     "height": 31
+    },
+    {
+     "target": "mail#15",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1154,
+     "y": 681,
+     "width": 377,
+     "height": 29
+    },
+    {
+     "target": "mail#16",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1017,
+     "y": 744,
+     "width": 406,
+     "height": 29
+    },
+    {
+     "target": "mail#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 812,
+     "y": 825,
+     "width": 240,
+     "height": 25
+    },
+    {
+     "target": "mail#18",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 812,
+     "y": 862,
+     "width": 80,
+     "height": 25
+    },
+    {
+     "target": "mail#19",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 812,
+     "y": 899,
+     "width": 143,
+     "height": 25
+    },
+    {
+     "target": "mail#20",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 962,
+     "y": 899,
+     "width": 306,
+     "height": 25
+    },
+    {
+     "target": "mail#20",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 812,
+     "y": 937,
+     "width": 374,
+     "height": 24
+    },
+    {
+     "target": "mail#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 865,
+     "y": 974,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "mail#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 812,
+     "y": 1011,
+     "width": 286,
+     "height": 25
+    },
+    {
+     "target": "mail#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1463,
+     "y": 1064,
+     "width": 406,
+     "height": 29
+    },
+    {
+     "target": "mail#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1020,
+     "y": 1103,
+     "width": 203,
+     "height": 29
+    },
+    {
+     "target": "mail#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1307,
+     "y": 1142,
+     "width": 261,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "settings.fhd.light.png",
+   "page": "settings.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "settings#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1732,
+     "y": 15,
+     "width": 168,
+     "height": 15
+    },
+    {
+     "target": "settings#01",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 144,
+     "width": 271,
+     "height": 17
+    },
+    {
+     "target": "settings#02",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 177,
+     "width": 290,
+     "height": 15
+    },
+    {
+     "target": "settings#03",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 210,
+     "width": 338,
+     "height": 17
+    },
+    {
+     "target": "settings#04",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 242,
+     "width": 405,
+     "height": 15
+    },
+    {
+     "target": "settings#05",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 275,
+     "width": 181,
+     "height": 19
+    },
+    {
+     "target": "settings#06",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 309,
+     "width": 330,
+     "height": 17
+    },
+    {
+     "target": "settings#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 379,
+     "y": 406,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "settings#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 379,
+     "y": 432,
+     "width": 338,
+     "height": 17
+    },
+    {
+     "target": "settings#09",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 610,
+     "y": 458,
+     "width": 203,
+     "height": 15
+    },
+    {
+     "target": "settings#10",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 463,
+     "y": 483,
+     "width": 94,
+     "height": 17
+    },
+    {
+     "target": "settings#11",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 379,
+     "y": 510,
+     "width": 184,
+     "height": 23
+    },
+    {
+     "target": "settings#12",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1463,
+     "y": 406,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "settings#13",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1225,
+     "y": 432,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "settings#14",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1486,
+     "y": 458,
+     "width": 161,
+     "height": 17
+    },
+    {
+     "target": "settings#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1225,
+     "y": 484,
+     "width": 104,
+     "height": 15
+    },
+    {
+     "target": "settings#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1333,
+     "y": 484,
+     "width": 112,
+     "height": 15
+    },
+    {
+     "target": "settings#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 379,
+     "y": 608,
+     "width": 172,
+     "height": 19
+    },
+    {
+     "target": "settings#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 379,
+     "y": 635,
+     "width": 123,
+     "height": 15
+    },
+    {
+     "target": "settings#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 414,
+     "y": 664,
+     "width": 69,
+     "height": 16
+    },
+    {
+     "target": "settings#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 444,
+     "y": 691,
+     "width": 79,
+     "height": 16
+    },
+    {
+     "target": "settings#21",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1225,
+     "y": 608,
+     "width": 73,
+     "height": 15
+    },
+    {
+     "target": "settings#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1225,
+     "y": 630,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "settings#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1485,
+     "y": 653,
+     "width": 196,
+     "height": 15
+    },
+    {
+     "target": "settings#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1225,
+     "y": 676,
+     "width": 217,
+     "height": 14
+    }
+   ]
+  },
+  {
+   "file": "settings.fhd.dark.png",
+   "page": "settings.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "settings#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1732,
+     "y": 15,
+     "width": 168,
+     "height": 15
+    },
+    {
+     "target": "settings#01",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 144,
+     "width": 271,
+     "height": 17
+    },
+    {
+     "target": "settings#02",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 177,
+     "width": 290,
+     "height": 15
+    },
+    {
+     "target": "settings#03",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 210,
+     "width": 338,
+     "height": 17
+    },
+    {
+     "target": "settings#04",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 242,
+     "width": 405,
+     "height": 15
+    },
+    {
+     "target": "settings#05",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 275,
+     "width": 181,
+     "height": 19
+    },
+    {
+     "target": "settings#06",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 486,
+     "y": 309,
+     "width": 330,
+     "height": 17
+    },
+    {
+     "target": "settings#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 379,
+     "y": 406,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "settings#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 379,
+     "y": 432,
+     "width": 338,
+     "height": 17
+    },
+    {
+     "target": "settings#09",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 610,
+     "y": 458,
+     "width": 203,
+     "height": 15
+    },
+    {
+     "target": "settings#10",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 463,
+     "y": 483,
+     "width": 94,
+     "height": 17
+    },
+    {
+     "target": "settings#11",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 379,
+     "y": 510,
+     "width": 184,
+     "height": 23
+    },
+    {
+     "target": "settings#12",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1463,
+     "y": 406,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "settings#13",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1225,
+     "y": 432,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "settings#14",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1486,
+     "y": 458,
+     "width": 161,
+     "height": 17
+    },
+    {
+     "target": "settings#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1225,
+     "y": 484,
+     "width": 104,
+     "height": 15
+    },
+    {
+     "target": "settings#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1333,
+     "y": 484,
+     "width": 112,
+     "height": 15
+    },
+    {
+     "target": "settings#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 379,
+     "y": 608,
+     "width": 172,
+     "height": 19
+    },
+    {
+     "target": "settings#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 379,
+     "y": 635,
+     "width": 123,
+     "height": 15
+    },
+    {
+     "target": "settings#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 414,
+     "y": 664,
+     "width": 69,
+     "height": 16
+    },
+    {
+     "target": "settings#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 444,
+     "y": 691,
+     "width": 79,
+     "height": 16
+    },
+    {
+     "target": "settings#21",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1225,
+     "y": 608,
+     "width": 73,
+     "height": 15
+    },
+    {
+     "target": "settings#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1225,
+     "y": 630,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "settings#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1485,
+     "y": 653,
+     "width": 196,
+     "height": 15
+    },
+    {
+     "target": "settings#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1225,
+     "y": 676,
+     "width": 217,
+     "height": 14
+    }
+   ]
+  },
+  {
+   "file": "settings.retina.light.png",
+   "page": "settings.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "settings#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2504,
+     "y": 31,
+     "width": 336,
+     "height": 29
+    },
+    {
+     "target": "settings#01",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 289,
+     "width": 540,
+     "height": 33
+    },
+    {
+     "target": "settings#02",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 355,
+     "width": 579,
+     "height": 29
+    },
+    {
+     "target": "settings#03",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 420,
+     "width": 675,
+     "height": 33
+    },
+    {
+     "target": "settings#04",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 485,
+     "width": 810,
+     "height": 29
+    },
+    {
+     "target": "settings#05",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 551,
+     "width": 362,
+     "height": 37
+    },
+    {
+     "target": "settings#06",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 619,
+     "width": 658,
+     "height": 33
+    },
+    {
+     "target": "settings#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 758,
+     "y": 813,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "settings#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 758,
+     "y": 864,
+     "width": 675,
+     "height": 33
+    },
+    {
+     "target": "settings#09",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1220,
+     "y": 916,
+     "width": 405,
+     "height": 29
+    },
+    {
+     "target": "settings#10",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 926,
+     "y": 967,
+     "width": 187,
+     "height": 33
+    },
+    {
+     "target": "settings#11",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 758,
+     "y": 1021,
+     "width": 367,
+     "height": 45
+    },
+    {
+     "target": "settings#12",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2477,
+     "y": 813,
+     "width": 276,
+     "height": 29
+    },
+    {
+     "target": "settings#13",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2000,
+     "y": 864,
+     "width": 348,
+     "height": 29
+    },
+    {
+     "target": "settings#14",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2523,
+     "y": 916,
+     "width": 321,
+     "height": 33
+    },
+    {
+     "target": "settings#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2000,
+     "y": 969,
+     "width": 209,
+     "height": 29
+    },
+    {
+     "target": "settings#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2218,
+     "y": 969,
+     "width": 223,
+     "height": 29
+    },
+    {
+     "target": "settings#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 758,
+     "y": 1216,
+     "width": 344,
+     "height": 37
+    },
+    {
+     "target": "settings#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 758,
+     "y": 1270,
+     "width": 246,
+     "height": 29
+    },
+    {
+     "target": "settings#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 828,
+     "y": 1329,
+     "width": 138,
+     "height": 31
+    },
+    {
+     "target": "settings#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 888,
+     "y": 1383,
+     "width": 158,
+     "height": 31
+    },
+    {
+     "target": "settings#21",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1895,
+     "y": 1216,
+     "width": 146,
+     "height": 29
+    },
+    {
+     "target": "settings#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1895,
+     "y": 1261,
+     "width": 261,
+     "height": 29
+    },
+    {
+     "target": "settings#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2415,
+     "y": 1306,
+     "width": 391,
+     "height": 29
+    },
+    {
+     "target": "settings#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1895,
+     "y": 1352,
+     "width": 435,
+     "height": 28
+    }
+   ]
+  },
+  {
+   "file": "settings.retina.dark.png",
+   "page": "settings.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "settings#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2504,
+     "y": 31,
+     "width": 336,
+     "height": 29
+    },
+    {
+     "target": "settings#01",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 289,
+     "width": 540,
+     "height": 33
+    },
+    {
+     "target": "settings#02",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 355,
+     "width": 579,
+     "height": 29
+    },
+    {
+     "target": "settings#03",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 420,
+     "width": 675,
+     "height": 33
+    },
+    {
+     "target": "settings#04",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 485,
+     "width": 810,
+     "height": 29
+    },
+    {
+     "target": "settings#05",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 551,
+     "width": 362,
+     "height": 37
+    },
+    {
+     "target": "settings#06",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 833,
+     "y": 619,
+     "width": 658,
+     "height": 33
+    },
+    {
+     "target": "settings#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 758,
+     "y": 813,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "settings#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 758,
+     "y": 864,
+     "width": 675,
+     "height": 33
+    },
+    {
+     "target": "settings#09",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1220,
+     "y": 916,
+     "width": 405,
+     "height": 29
+    },
+    {
+     "target": "settings#10",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 926,
+     "y": 967,
+     "width": 187,
+     "height": 33
+    },
+    {
+     "target": "settings#11",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 758,
+     "y": 1021,
+     "width": 367,
+     "height": 45
+    },
+    {
+     "target": "settings#12",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2477,
+     "y": 813,
+     "width": 276,
+     "height": 29
+    },
+    {
+     "target": "settings#13",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2000,
+     "y": 864,
+     "width": 348,
+     "height": 29
+    },
+    {
+     "target": "settings#14",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2523,
+     "y": 916,
+     "width": 321,
+     "height": 33
+    },
+    {
+     "target": "settings#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2000,
+     "y": 969,
+     "width": 209,
+     "height": 29
+    },
+    {
+     "target": "settings#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2218,
+     "y": 969,
+     "width": 223,
+     "height": 29
+    },
+    {
+     "target": "settings#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 758,
+     "y": 1216,
+     "width": 344,
+     "height": 37
+    },
+    {
+     "target": "settings#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 758,
+     "y": 1270,
+     "width": 246,
+     "height": 29
+    },
+    {
+     "target": "settings#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 828,
+     "y": 1329,
+     "width": 138,
+     "height": 31
+    },
+    {
+     "target": "settings#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 888,
+     "y": 1383,
+     "width": 158,
+     "height": 31
+    },
+    {
+     "target": "settings#21",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1895,
+     "y": 1216,
+     "width": 146,
+     "height": 29
+    },
+    {
+     "target": "settings#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1895,
+     "y": 1261,
+     "width": 261,
+     "height": 29
+    },
+    {
+     "target": "settings#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2415,
+     "y": 1306,
+     "width": 391,
+     "height": 29
+    },
+    {
+     "target": "settings#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1895,
+     "y": 1352,
+     "width": 435,
+     "height": 28
+    }
+   ]
+  },
+  {
+   "file": "terminal.fhd.light.png",
+   "page": "terminal.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "terminal#00",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 101,
+     "y": 142,
+     "width": 126,
+     "height": 16
+    },
+    {
+     "target": "terminal#01",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 132,
+     "y": 162,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "terminal#02",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 156,
+     "y": 181,
+     "width": 157,
+     "height": 16
+    },
+    {
+     "target": "terminal#03",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 156,
+     "y": 201,
+     "width": 314,
+     "height": 16
+    },
+    {
+     "target": "terminal#04",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 109,
+     "y": 220,
+     "width": 314,
+     "height": 16
+    },
+    {
+     "target": "terminal#05",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 132,
+     "y": 240,
+     "width": 440,
+     "height": 16
+    },
+    {
+     "target": "terminal#06",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 195,
+     "y": 259,
+     "width": 111,
+     "height": 16
+    },
+    {
+     "target": "terminal#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 375,
+     "y": 279,
+     "width": 197,
+     "height": 16
+    },
+    {
+     "target": "terminal#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 195,
+     "y": 298,
+     "width": 251,
+     "height": 16
+    },
+    {
+     "target": "terminal#09",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 344,
+     "y": 318,
+     "width": 142,
+     "height": 16
+    },
+    {
+     "target": "terminal#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1048,
+     "y": 123,
+     "width": 111,
+     "height": 16
+    },
+    {
+     "target": "terminal#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1173,
+     "y": 123,
+     "width": 205,
+     "height": 16
+    },
+    {
+     "target": "terminal#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1048,
+     "y": 142,
+     "width": 119,
+     "height": 16
+    },
+    {
+     "target": "terminal#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1181,
+     "y": 142,
+     "width": 166,
+     "height": 16
+    },
+    {
+     "target": "terminal#14",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1259,
+     "y": 240,
+     "width": 315,
+     "height": 16
+    },
+    {
+     "target": "terminal#15",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1079,
+     "y": 279,
+     "width": 158,
+     "height": 16
+    },
+    {
+     "target": "terminal#16",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1079,
+     "y": 298,
+     "width": 314,
+     "height": 16
+    },
+    {
+     "target": "terminal#17",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 297,
+     "y": 423,
+     "width": 204,
+     "height": 16
+    },
+    {
+     "target": "terminal#18",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 336,
+     "y": 443,
+     "width": 212,
+     "height": 16
+    },
+    {
+     "target": "terminal#19",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 328,
+     "y": 462,
+     "width": 252,
+     "height": 16
+    },
+    {
+     "target": "terminal#20",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 305,
+     "y": 482,
+     "width": 376,
+     "height": 16
+    },
+    {
+     "target": "terminal#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 305,
+     "y": 501,
+     "width": 165,
+     "height": 16
+    },
+    {
+     "target": "terminal#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1064,
+     "y": 443,
+     "width": 79,
+     "height": 16
+    },
+    {
+     "target": "terminal#23",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1056,
+     "y": 462,
+     "width": 103,
+     "height": 16
+    }
+   ]
+  },
+  {
+   "file": "terminal.fhd.dark.png",
+   "page": "terminal.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "terminal#00",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 101,
+     "y": 142,
+     "width": 126,
+     "height": 16
+    },
+    {
+     "target": "terminal#01",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 132,
+     "y": 162,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "terminal#02",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 156,
+     "y": 181,
+     "width": 157,
+     "height": 16
+    },
+    {
+     "target": "terminal#03",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 156,
+     "y": 201,
+     "width": 314,
+     "height": 16
+    },
+    {
+     "target": "terminal#04",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 109,
+     "y": 220,
+     "width": 314,
+     "height": 16
+    },
+    {
+     "target": "terminal#05",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 132,
+     "y": 240,
+     "width": 440,
+     "height": 16
+    },
+    {
+     "target": "terminal#06",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 195,
+     "y": 259,
+     "width": 111,
+     "height": 16
+    },
+    {
+     "target": "terminal#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 375,
+     "y": 279,
+     "width": 197,
+     "height": 16
+    },
+    {
+     "target": "terminal#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 195,
+     "y": 298,
+     "width": 251,
+     "height": 16
+    },
+    {
+     "target": "terminal#09",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 344,
+     "y": 318,
+     "width": 142,
+     "height": 16
+    },
+    {
+     "target": "terminal#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1048,
+     "y": 123,
+     "width": 111,
+     "height": 16
+    },
+    {
+     "target": "terminal#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1173,
+     "y": 123,
+     "width": 205,
+     "height": 16
+    },
+    {
+     "target": "terminal#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1048,
+     "y": 142,
+     "width": 119,
+     "height": 16
+    },
+    {
+     "target": "terminal#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1181,
+     "y": 142,
+     "width": 166,
+     "height": 16
+    },
+    {
+     "target": "terminal#14",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1259,
+     "y": 240,
+     "width": 315,
+     "height": 16
+    },
+    {
+     "target": "terminal#15",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1079,
+     "y": 279,
+     "width": 158,
+     "height": 16
+    },
+    {
+     "target": "terminal#16",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1079,
+     "y": 298,
+     "width": 314,
+     "height": 16
+    },
+    {
+     "target": "terminal#17",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 297,
+     "y": 423,
+     "width": 204,
+     "height": 16
+    },
+    {
+     "target": "terminal#18",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 336,
+     "y": 443,
+     "width": 212,
+     "height": 16
+    },
+    {
+     "target": "terminal#19",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 328,
+     "y": 462,
+     "width": 252,
+     "height": 16
+    },
+    {
+     "target": "terminal#20",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 305,
+     "y": 482,
+     "width": 376,
+     "height": 16
+    },
+    {
+     "target": "terminal#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 305,
+     "y": 501,
+     "width": 165,
+     "height": 16
+    },
+    {
+     "target": "terminal#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1064,
+     "y": 443,
+     "width": 79,
+     "height": 16
+    },
+    {
+     "target": "terminal#23",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1056,
+     "y": 462,
+     "width": 103,
+     "height": 16
+    }
+   ]
+  },
+  {
+   "file": "terminal.retina.light.png",
+   "page": "terminal.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "terminal#00",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 203,
+     "y": 285,
+     "width": 251,
+     "height": 31
+    },
+    {
+     "target": "terminal#01",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 265,
+     "y": 324,
+     "width": 189,
+     "height": 31
+    },
+    {
+     "target": "terminal#02",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 312,
+     "y": 363,
+     "width": 314,
+     "height": 31
+    },
+    {
+     "target": "terminal#03",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 312,
+     "y": 402,
+     "width": 627,
+     "height": 31
+    },
+    {
+     "target": "terminal#04",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 218,
+     "y": 441,
+     "width": 628,
+     "height": 31
+    },
+    {
+     "target": "terminal#05",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 265,
+     "y": 480,
+     "width": 878,
+     "height": 31
+    },
+    {
+     "target": "terminal#06",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 391,
+     "y": 519,
+     "width": 220,
+     "height": 31
+    },
+    {
+     "target": "terminal#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 751,
+     "y": 558,
+     "width": 392,
+     "height": 31
+    },
+    {
+     "target": "terminal#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 391,
+     "y": 597,
+     "width": 501,
+     "height": 31
+    },
+    {
+     "target": "terminal#09",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 688,
+     "y": 636,
+     "width": 283,
+     "height": 31
+    },
+    {
+     "target": "terminal#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1617,
+     "y": 246,
+     "width": 220,
+     "height": 31
+    },
+    {
+     "target": "terminal#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1867,
+     "y": 246,
+     "width": 408,
+     "height": 31
+    },
+    {
+     "target": "terminal#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1617,
+     "y": 285,
+     "width": 236,
+     "height": 31
+    },
+    {
+     "target": "terminal#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1883,
+     "y": 285,
+     "width": 330,
+     "height": 31
+    },
+    {
+     "target": "terminal#14",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2039,
+     "y": 480,
+     "width": 628,
+     "height": 31
+    },
+    {
+     "target": "terminal#15",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1679,
+     "y": 558,
+     "width": 314,
+     "height": 31
+    },
+    {
+     "target": "terminal#16",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1679,
+     "y": 597,
+     "width": 627,
+     "height": 31
+    },
+    {
+     "target": "terminal#17",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 594,
+     "y": 847,
+     "width": 408,
+     "height": 31
+    },
+    {
+     "target": "terminal#18",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 672,
+     "y": 886,
+     "width": 424,
+     "height": 31
+    },
+    {
+     "target": "terminal#19",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 657,
+     "y": 925,
+     "width": 502,
+     "height": 31
+    },
+    {
+     "target": "terminal#20",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 610,
+     "y": 964,
+     "width": 752,
+     "height": 31
+    },
+    {
+     "target": "terminal#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 610,
+     "y": 1003,
+     "width": 329,
+     "height": 31
+    },
+    {
+     "target": "terminal#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1648,
+     "y": 886,
+     "width": 158,
+     "height": 31
+    },
+    {
+     "target": "terminal#23",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1632,
+     "y": 925,
+     "width": 205,
+     "height": 31
+    }
+   ]
+  },
+  {
+   "file": "terminal.retina.dark.png",
+   "page": "terminal.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "terminal#00",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 203,
+     "y": 285,
+     "width": 251,
+     "height": 31
+    },
+    {
+     "target": "terminal#01",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 265,
+     "y": 324,
+     "width": 189,
+     "height": 31
+    },
+    {
+     "target": "terminal#02",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 312,
+     "y": 363,
+     "width": 314,
+     "height": 31
+    },
+    {
+     "target": "terminal#03",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 312,
+     "y": 402,
+     "width": 627,
+     "height": 31
+    },
+    {
+     "target": "terminal#04",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 218,
+     "y": 441,
+     "width": 628,
+     "height": 31
+    },
+    {
+     "target": "terminal#05",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 265,
+     "y": 480,
+     "width": 878,
+     "height": 31
+    },
+    {
+     "target": "terminal#06",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 391,
+     "y": 519,
+     "width": 220,
+     "height": 31
+    },
+    {
+     "target": "terminal#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 751,
+     "y": 558,
+     "width": 392,
+     "height": 31
+    },
+    {
+     "target": "terminal#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 391,
+     "y": 597,
+     "width": 501,
+     "height": 31
+    },
+    {
+     "target": "terminal#09",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 688,
+     "y": 636,
+     "width": 283,
+     "height": 31
+    },
+    {
+     "target": "terminal#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1617,
+     "y": 246,
+     "width": 220,
+     "height": 31
+    },
+    {
+     "target": "terminal#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1867,
+     "y": 246,
+     "width": 408,
+     "height": 31
+    },
+    {
+     "target": "terminal#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1617,
+     "y": 285,
+     "width": 236,
+     "height": 31
+    },
+    {
+     "target": "terminal#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1883,
+     "y": 285,
+     "width": 330,
+     "height": 31
+    },
+    {
+     "target": "terminal#14",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2039,
+     "y": 480,
+     "width": 628,
+     "height": 31
+    },
+    {
+     "target": "terminal#15",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1679,
+     "y": 558,
+     "width": 314,
+     "height": 31
+    },
+    {
+     "target": "terminal#16",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1679,
+     "y": 597,
+     "width": 627,
+     "height": 31
+    },
+    {
+     "target": "terminal#17",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 594,
+     "y": 847,
+     "width": 408,
+     "height": 31
+    },
+    {
+     "target": "terminal#18",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 672,
+     "y": 886,
+     "width": 424,
+     "height": 31
+    },
+    {
+     "target": "terminal#19",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 657,
+     "y": 925,
+     "width": 502,
+     "height": 31
+    },
+    {
+     "target": "terminal#20",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 610,
+     "y": 964,
+     "width": 752,
+     "height": 31
+    },
+    {
+     "target": "terminal#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 610,
+     "y": 1003,
+     "width": 329,
+     "height": 31
+    },
+    {
+     "target": "terminal#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1648,
+     "y": 886,
+     "width": 158,
+     "height": 31
+    },
+    {
+     "target": "terminal#23",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1632,
+     "y": 925,
+     "width": 205,
+     "height": 31
+    }
+   ]
+  },
+  {
+   "file": "transfer.fhd.light.png",
+   "page": "transfer.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "transfer#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1806,
+     "y": 15,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "transfer#01",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 429,
+     "y": 111,
+     "width": 66,
+     "height": 15
+    },
+    {
+     "target": "transfer#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 397,
+     "y": 139,
+     "width": 140,
+     "height": 15
+    },
+    {
+     "target": "transfer#03",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 432,
+     "y": 169,
+     "width": 70,
+     "height": 16
+    },
+    {
+     "target": "transfer#04",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 397,
+     "y": 200,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "transfer#05",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 397,
+     "y": 230,
+     "width": 117,
+     "height": 25
+    },
+    {
+     "target": "transfer#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 397,
+     "y": 271,
+     "width": 42,
+     "height": 15
+    },
+    {
+     "target": "transfer#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 469,
+     "y": 299,
+     "width": 69,
+     "height": 17
+    },
+    {
+     "target": "transfer#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 433,
+     "y": 329,
+     "width": 87,
+     "height": 15
+    },
+    {
+     "target": "transfer#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1243,
+     "y": 111,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "transfer#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1243,
+     "y": 141,
+     "width": 60,
+     "height": 13
+    },
+    {
+     "target": "transfer#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1243,
+     "y": 170,
+     "width": 102,
+     "height": 20
+    },
+    {
+     "target": "transfer#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1243,
+     "y": 205,
+     "width": 126,
+     "height": 15
+    },
+    {
+     "target": "transfer#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1243,
+     "y": 233,
+     "width": 84,
+     "height": 15
+    },
+    {
+     "target": "transfer#14",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1243,
+     "y": 262,
+     "width": 201,
+     "height": 15
+    },
+    {
+     "target": "transfer#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1243,
+     "y": 291,
+     "width": 112,
+     "height": 15
+    },
+    {
+     "target": "transfer#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1243,
+     "y": 319,
+     "width": 173,
+     "height": 15
+    },
+    {
+     "target": "transfer#17",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1243,
+     "y": 348,
+     "width": 144,
+     "height": 15
+    },
+    {
+     "target": "transfer#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 445,
+     "width": 172,
+     "height": 19
+    },
+    {
+     "target": "transfer#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 468,
+     "width": 161,
+     "height": 17
+    },
+    {
+     "target": "transfer#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 490,
+     "width": 109,
+     "height": 15
+    },
+    {
+     "target": "transfer#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1125,
+     "y": 446,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "transfer#22",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1198,
+     "y": 446,
+     "width": 133,
+     "height": 13
+    },
+    {
+     "target": "transfer#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1083,
+     "y": 465,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "transfer#24",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1158,
+     "y": 465,
+     "width": 153,
+     "height": 13
+    },
+    {
+     "target": "transfer#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1402,
+     "y": 483,
+     "width": 167,
+     "height": 15
+    },
+    {
+     "target": "transfer#26",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1137,
+     "y": 503,
+     "width": 175,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "transfer.fhd.dark.png",
+   "page": "transfer.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "transfer#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1806,
+     "y": 15,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "transfer#01",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 429,
+     "y": 111,
+     "width": 66,
+     "height": 15
+    },
+    {
+     "target": "transfer#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 397,
+     "y": 139,
+     "width": 140,
+     "height": 15
+    },
+    {
+     "target": "transfer#03",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 432,
+     "y": 169,
+     "width": 70,
+     "height": 16
+    },
+    {
+     "target": "transfer#04",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 397,
+     "y": 200,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "transfer#05",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 397,
+     "y": 230,
+     "width": 117,
+     "height": 25
+    },
+    {
+     "target": "transfer#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 397,
+     "y": 271,
+     "width": 42,
+     "height": 15
+    },
+    {
+     "target": "transfer#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 469,
+     "y": 299,
+     "width": 69,
+     "height": 17
+    },
+    {
+     "target": "transfer#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 433,
+     "y": 329,
+     "width": 87,
+     "height": 15
+    },
+    {
+     "target": "transfer#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1243,
+     "y": 111,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "transfer#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1243,
+     "y": 141,
+     "width": 60,
+     "height": 13
+    },
+    {
+     "target": "transfer#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1243,
+     "y": 170,
+     "width": 102,
+     "height": 20
+    },
+    {
+     "target": "transfer#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1243,
+     "y": 205,
+     "width": 126,
+     "height": 15
+    },
+    {
+     "target": "transfer#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1243,
+     "y": 233,
+     "width": 84,
+     "height": 15
+    },
+    {
+     "target": "transfer#14",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1243,
+     "y": 262,
+     "width": 201,
+     "height": 15
+    },
+    {
+     "target": "transfer#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1243,
+     "y": 291,
+     "width": 112,
+     "height": 15
+    },
+    {
+     "target": "transfer#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1243,
+     "y": 319,
+     "width": 173,
+     "height": 15
+    },
+    {
+     "target": "transfer#17",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1243,
+     "y": 348,
+     "width": 144,
+     "height": 15
+    },
+    {
+     "target": "transfer#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 445,
+     "width": 172,
+     "height": 19
+    },
+    {
+     "target": "transfer#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 468,
+     "width": 161,
+     "height": 17
+    },
+    {
+     "target": "transfer#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 237,
+     "y": 490,
+     "width": 109,
+     "height": 15
+    },
+    {
+     "target": "transfer#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1125,
+     "y": 446,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "transfer#22",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1198,
+     "y": 446,
+     "width": 133,
+     "height": 13
+    },
+    {
+     "target": "transfer#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1083,
+     "y": 465,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "transfer#24",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1158,
+     "y": 465,
+     "width": 153,
+     "height": 13
+    },
+    {
+     "target": "transfer#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1402,
+     "y": 483,
+     "width": 167,
+     "height": 15
+    },
+    {
+     "target": "transfer#26",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1137,
+     "y": 503,
+     "width": 175,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "transfer.retina.light.png",
+   "page": "transfer.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "transfer#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2653,
+     "y": 31,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "transfer#01",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 859,
+     "y": 222,
+     "width": 130,
+     "height": 29
+    },
+    {
+     "target": "transfer#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 794,
+     "y": 279,
+     "width": 280,
+     "height": 29
+    },
+    {
+     "target": "transfer#03",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 864,
+     "y": 339,
+     "width": 139,
+     "height": 31
+    },
+    {
+     "target": "transfer#04",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 794,
+     "y": 400,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "transfer#05",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 794,
+     "y": 461,
+     "width": 234,
+     "height": 49
+    },
+    {
+     "target": "transfer#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 794,
+     "y": 543,
+     "width": 84,
+     "height": 29
+    },
+    {
+     "target": "transfer#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 939,
+     "y": 598,
+     "width": 136,
+     "height": 33
+    },
+    {
+     "target": "transfer#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 866,
+     "y": 659,
+     "width": 174,
+     "height": 29
+    },
+    {
+     "target": "transfer#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2006,
+     "y": 222,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "transfer#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2006,
+     "y": 282,
+     "width": 119,
+     "height": 25
+    },
+    {
+     "target": "transfer#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2006,
+     "y": 341,
+     "width": 203,
+     "height": 39
+    },
+    {
+     "target": "transfer#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2006,
+     "y": 410,
+     "width": 251,
+     "height": 29
+    },
+    {
+     "target": "transfer#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 2006,
+     "y": 467,
+     "width": 167,
+     "height": 29
+    },
+    {
+     "target": "transfer#14",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 2006,
+     "y": 524,
+     "width": 402,
+     "height": 29
+    },
+    {
+     "target": "transfer#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2006,
+     "y": 582,
+     "width": 223,
+     "height": 29
+    },
+    {
+     "target": "transfer#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2006,
+     "y": 639,
+     "width": 345,
+     "height": 29
+    },
+    {
+     "target": "transfer#17",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2006,
+     "y": 697,
+     "width": 288,
+     "height": 28
+    },
+    {
+     "target": "transfer#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 890,
+     "width": 344,
+     "height": 37
+    },
+    {
+     "target": "transfer#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 937,
+     "width": 321,
+     "height": 33
+    },
+    {
+     "target": "transfer#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 980,
+     "width": 217,
+     "height": 29
+    },
+    {
+     "target": "transfer#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1771,
+     "y": 892,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "transfer#22",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1916,
+     "y": 892,
+     "width": 265,
+     "height": 25
+    },
+    {
+     "target": "transfer#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1686,
+     "y": 930,
+     "width": 143,
+     "height": 25
+    },
+    {
+     "target": "transfer#24",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1836,
+     "y": 930,
+     "width": 306,
+     "height": 25
+    },
+    {
+     "target": "transfer#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2325,
+     "y": 967,
+     "width": 333,
+     "height": 29
+    },
+    {
+     "target": "transfer#26",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1795,
+     "y": 1006,
+     "width": 348,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "transfer.retina.dark.png",
+   "page": "transfer.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "transfer#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2653,
+     "y": 31,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "transfer#01",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 859,
+     "y": 222,
+     "width": 130,
+     "height": 29
+    },
+    {
+     "target": "transfer#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 794,
+     "y": 279,
+     "width": 280,
+     "height": 29
+    },
+    {
+     "target": "transfer#03",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 864,
+     "y": 339,
+     "width": 139,
+     "height": 31
+    },
+    {
+     "target": "transfer#04",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 794,
+     "y": 400,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "transfer#05",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 794,
+     "y": 461,
+     "width": 234,
+     "height": 49
+    },
+    {
+     "target": "transfer#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 794,
+     "y": 543,
+     "width": 84,
+     "height": 29
+    },
+    {
+     "target": "transfer#07",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 939,
+     "y": 598,
+     "width": 136,
+     "height": 33
+    },
+    {
+     "target": "transfer#08",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 866,
+     "y": 659,
+     "width": 174,
+     "height": 29
+    },
+    {
+     "target": "transfer#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2006,
+     "y": 222,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "transfer#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2006,
+     "y": 282,
+     "width": 119,
+     "height": 25
+    },
+    {
+     "target": "transfer#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2006,
+     "y": 341,
+     "width": 203,
+     "height": 39
+    },
+    {
+     "target": "transfer#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2006,
+     "y": 410,
+     "width": 251,
+     "height": 29
+    },
+    {
+     "target": "transfer#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 2006,
+     "y": 467,
+     "width": 167,
+     "height": 29
+    },
+    {
+     "target": "transfer#14",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 2006,
+     "y": 524,
+     "width": 402,
+     "height": 29
+    },
+    {
+     "target": "transfer#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2006,
+     "y": 582,
+     "width": 223,
+     "height": 29
+    },
+    {
+     "target": "transfer#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2006,
+     "y": 639,
+     "width": 345,
+     "height": 29
+    },
+    {
+     "target": "transfer#17",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2006,
+     "y": 697,
+     "width": 288,
+     "height": 28
+    },
+    {
+     "target": "transfer#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 890,
+     "width": 344,
+     "height": 37
+    },
+    {
+     "target": "transfer#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 937,
+     "width": 321,
+     "height": 33
+    },
+    {
+     "target": "transfer#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 474,
+     "y": 980,
+     "width": 217,
+     "height": 29
+    },
+    {
+     "target": "transfer#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1771,
+     "y": 892,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "transfer#22",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1916,
+     "y": 892,
+     "width": 265,
+     "height": 25
+    },
+    {
+     "target": "transfer#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1686,
+     "y": 930,
+     "width": 143,
+     "height": 25
+    },
+    {
+     "target": "transfer#24",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1836,
+     "y": 930,
+     "width": 306,
+     "height": 25
+    },
+    {
+     "target": "transfer#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2325,
+     "y": 967,
+     "width": 333,
+     "height": 29
+    },
+    {
+     "target": "transfer#26",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1795,
+     "y": 1006,
+     "width": 348,
+     "height": 29
+    }
+   ]
+  }
+ ]
+}

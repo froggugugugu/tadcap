@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>振込・登録(架空)</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .form .row { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; margin-bottom: 7px; }
+  .form .row > div:first-child { color: var(--muted); }
+</style>
+</head>
+<body>
+<!-- 架空データのみ -->
+<div class="topbar"><span class="brand">ネットバンキング</span><span class="muted">振込 / 確認</span><span class="muted" style="margin-left:auto">ようこそ <span data-mask="identifier/person_ja">松本 拓海</span> さん</span></div>
+<div class="layout">
+  <div class="side"><div>残高</div><div class="on">振込</div><div>明細</div><div>カード</div><div>登録情報</div></div>
+  <div class="main">
+    <div class="grid2">
+      <div class="card form">
+        <h2>振込内容の確認</h2>
+        <div class="row"><div>出金口座</div><div>普通 <span data-mask="financial/account">7012384</span></div></div>
+        <div class="row"><div>振込先</div><div><span data-mask="identifier/company">株式会社ルリカケ商会</span></div></div>
+        <div class="row"><div>振込先口座</div><div class="m">当座 <span data-mask="financial/account">0047719</span></div></div>
+        <div class="row"><div>口座番号(控え)</div><div class="s"><span data-mask="financial/account">8830216</span></div></div>
+        <div class="row"><div>金額</div><div class="xl"><span data-mask="financial/amount">¥320,000</span></div></div>
+        <div class="row"><div>手数料</div><div><span data-mask="financial/amount">440円</span></div></div>
+        <div class="row"><div>暗証番号</div><div class="mono">暗証番号: <span data-mask="credential/cue_value" data-gen="secret" data-len="8"></span></div></div>
+        <div class="row"><div>確認用</div><div class="mono s">pass <span data-mask="credential/cue_value" data-gen="secret" data-len="12"></span></div></div>
+      </div>
+      <div class="card form">
+        <h2>登録情報</h2>
+        <div class="row"><div>お客様番号</div><div><span data-mask="identifier/cued_number">00-4418-2207</span></div></div>
+        <div class="row"><div>社員番号</div><div class="s"><span data-mask="identifier/cued_number">E-551902</span></div></div>
+        <div class="row"><div>氏名</div><div class="l"><span data-mask="identifier/person_ja">栃久保 柚葉</span></div></div>
+        <div class="row"><div>Name</div><div><span data-mask="identifier/person_en">Yuzuha Tochikubo</span></div></div>
+        <div class="row"><div>郵便番号</div><div><span data-mask="contact/address">〒260-0000</span></div></div>
+        <div class="row"><div>住所</div><div><span data-mask="contact/address">千葉県うみなり市幕張西1-10-4</span></div></div>
+        <div class="row"><div>電話</div><div><span data-mask="contact/phone">070-0000-8824</span></div></div>
+        <div class="row"><div>携帯(全角)</div><div><span data-mask="contact/phone">０９０−００００−６１３５</span></div></div>
+        <div class="row"><div>メール</div><div><span data-mask="contact/email">yuzuha.t@example.jp</span></div></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>カード</h2>
+        <div class="mono m"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></div>
+        <div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep="-"></span></div>
+        <div class="mono s"><span data-mask="financial/card" data-gen="card" data-group="4-4-5" data-sep=" "></span></div>
+      </div>
+      <div class="card">
+        <h2>ご利用履歴の送付先</h2>
+        <div class="s">送付先: <span data-mask="identifier/person_ja">鈴木 陽向</span> 様(<span data-mask="identifier/company">株式会社カザミドリ設計</span>)</div>
+        <div class="s"><span data-mask="contact/address">〒330-0000</span> <span data-mask="contact/address">埼玉県さくら坂市本郷6-2-9</span></div>
+        <div class="s">明細リンク: <span class="mono">https://bank.example.com/statements<span data-mask="credential/url_query">?acct=7012384&amp;m=2026-09</span></span></div>
+        <div class="s">受付番号: <span class="mono" data-mask="credential/random_string" data-gen="random" data-len="24"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="fixture.js"></script>
+</body>
+</html>

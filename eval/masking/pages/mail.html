@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>メール(架空)</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .list { width: 380px; flex: none; border-right: 1px solid var(--border); background: var(--panel); overflow: hidden; }
+  .item { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  .item.on { background: var(--panel-2); }
+  .item .from { font-weight: 600; }
+  .read { flex: 1; padding: 18px 26px; background: var(--panel); overflow: hidden; }
+  .hdr { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 10px; }
+  .sig { border-top: 1px dashed var(--border); margin-top: 10px; padding-top: 8px; }
+</style>
+</head>
+<body>
+<!-- 架空データのみ -->
+<div class="topbar"><span class="brand">メール</span><span class="muted">受信トレイ(3)</span><span class="muted" style="margin-left:auto"><span data-mask="contact/email">h.tachibana@example.com</span></span></div>
+<div class="layout">
+  <div class="list">
+    <div class="item on"><div class="from"><span data-mask="identifier/person_ja">鰐淵 遥</span></div><div class="s muted">ご請求金額のご案内(10月分)</div></div>
+    <div class="item"><div class="from"><span data-mask="identifier/person_en">Marcus Fenwick</span></div><div class="s muted"><span data-mask="contact/email">marcus.fenwick@example.net</span></div></div>
+    <div class="item"><div class="from"><span data-mask="identifier/company">有限会社ほしまち製作所</span></div><div class="s muted">納品日程について</div></div>
+    <div class="item"><div class="from l"><span data-mask="identifier/person_ja">吉田 芽衣</span></div><div class="s muted">議事録を共有します</div></div>
+    <div class="item"><div class="from"><span data-mask="identifier/person_en">Priya Raman</span></div><div class="s muted">Re: onboarding checklist</div></div>
+    <div class="item"><div class="from">通知</div><div class="s muted">ログイン用ワンタイムリンク</div></div>
+  </div>
+  <div class="read">
+    <div class="hdr">
+      <div class="l" style="font-weight:700">ご請求金額のご案内(10月分)</div>
+      <div class="s muted">差出人: <span data-mask="contact/email">billing@mail.example.jp</span> / 宛先: <span data-mask="contact/email">sora.t@example.org</span></div>
+    </div>
+    <div class="m">
+      <p><span data-mask="identifier/person_ja">立花 蒼空</span> 様</p>
+      <p>いつもお世話になっております。10月分のご請求金額は <span data-mask="financial/amount">¥86,240</span>(税込)です。<br>
+      お振込先は 口座番号 <span data-mask="financial/account">2208813</span> です。前月の未払い分 <span data-mask="financial/amount">3,300円</span> と合わせてお支払いください。</p>
+      <p>明細は次のリンクからご確認いただけます。<br>
+      <span class="mono s">https://billing.example.com/invoices/2026-10<span data-mask="credential/url_query">?ref=mail&amp;sig=Qm83Xa1Lr0</span></span></p>
+      <p>Dear Mr. <span data-mask="identifier/person_en">Lucas Whitford</span>, the English version is attached.</p>
+      <p class="s">共有用トークン(期限 24 時間): <span class="mono" data-mask="credential/prefixed_token" data-gen="token" data-prefix="5" data-len="20"></span></p>
+      <p class="s">お問い合わせ番号: <span class="mono" data-mask="credential/random_string" data-gen="random" data-len="28"></span></p>
+    </div>
+    <div class="sig s">
+      <div><span data-mask="identifier/company">株式会社トキワグラフ</span> 経理部</div>
+      <div><span data-mask="identifier/person_ja">鰐淵 遥</span>(わにぶち はるか)</div>
+      <div class="narrow"><span data-mask="contact/address">〒530-0000</span> <span data-mask="contact/address">大阪府なにわ台市本町1-22-7 なにわ台ビルディング南館 12階</span></div>
+      <div>TEL <span data-mask="contact/phone">06-0000-2218</span> / FAX 06-0000-2219</div>
+      <div><span data-mask="contact/email">h.wanibuchi@example.jp</span></div>
+    </div>
+    <div class="s muted" style="margin-top:8px">ワンタイムリンク: <span class="mono">https://login.example.org/magic<span data-mask="credential/url_query">?t=8fK2pLx7Q4&amp;exp=1730000000</span></span></div>
+    <div class="s muted">社内向け: secret= <span class="mono" data-mask="credential/cue_value" data-gen="secret" data-len="14"></span></div>
+    <div class="s muted">参考: <span class="mono">https://docs.example.com/guide<span data-mask="credential/url_query">?lang=ja&amp;user=8812</span></span></div>
+  </div>
+</div>
+<script src="fixture.js"></script>
+</body>
+</html>

@@ -16,6 +16,7 @@
     "dist:mac": "bash scripts/package-mac.sh",
     "licenses": "node scripts/gen-third-party-licenses.mjs",
     "licenses:check": "node scripts/gen-third-party-licenses.mjs --check",
+    "mask:fixtures": "node scripts/mask-eval-fixtures.mjs",
     "latency:summary": "node scripts/latency-summary.mjs"
   },
   "dependencies": {

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>社員名簿(架空)</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<!-- 架空データのみ。メールは予約済みドメイン、電話は 0000 の局番を使った架空番号 -->
+<div class="topbar"><span class="brand">ポータル</span><span class="muted">人事 / 社員名簿</span><span class="muted" style="margin-left:auto">ログイン中: <span data-mask="identifier/person_ja">楢葉 晴臣</span></span></div>
+<div class="layout">
+  <div class="side"><div>ホーム</div><div class="on">社員名簿</div><div>勤怠</div><div>経費</div><div>設定</div></div>
+  <div class="main">
+    <div class="card">
+      <h2>社員一覧</h2>
+      <table>
+        <tr><th>社員番号</th><th>氏名</th><th>英字表記</th><th>メール</th><th>内線・電話</th></tr>
+        <tr><td>社員番号 <span data-mask="identifier/cued_number">E-204871</span></td><td><span data-mask="identifier/person_ja">佐藤 美緒</span></td><td><span data-mask="identifier/person_en">Mio Sato</span></td><td><span data-mask="contact/email">mio.sato@example.jp</span></td><td><span data-mask="contact/phone">03-0000-4821</span></td></tr>
+        <tr><td>社員ID <span data-mask="identifier/cued_number">K1093357</span></td><td><span data-mask="identifier/person_ja">鶉野 結子</span></td><td><span data-mask="identifier/person_en">Kenji Moriwaki</span></td><td class="s"><span data-mask="contact/email">k-moriwaki@mail.example.jp</span></td><td class="s"><span data-mask="contact/phone">090-0000-7713</span></td></tr>
+        <tr><td>社員番号 <span data-mask="identifier/cued_number">E-318820</span></td><td class="l"><span data-mask="identifier/person_ja">高橋 悠真</span></td><td><span data-mask="identifier/person_en">Olivia Brandt</span></td><td><span data-mask="contact/email">o.brandt@example.org</span></td><td><span data-mask="contact/phone">(03) 0000-5096</span></td></tr>
+        <tr><td>社員番号 <span data-mask="identifier/cued_number">E-400152</span></td><td><span data-mask="identifier/person_ja">汐見坂 伊織</span></td><td class="muted">—</td><td class="muted">未登録</td><td class="muted">内線 4410</td></tr>
+      </table>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>選択中の社員</h2>
+        <div class="kv m">
+          <div>氏名</div><div><span data-mask="identifier/person_ja">中村 千尋</span></div>
+          <div>Name</div><div><span data-mask="identifier/person_en">Chihiro Nakamura</span></div>
+          <div>出向先</div><div><span data-mask="identifier/company">株式会社ソラノワ技研</span></div>
+          <div>自宅住所</div><div><span data-mask="contact/address">〒150-0000</span><br><span data-mask="contact/address">東京都みどり野区青葉台2-8-14</span></div>
+          <div>緊急連絡先</div><div><span data-mask="contact/phone">080-0000-3152</span></div>
+          <div>給与振込口座</div><div>普通 <span data-mask="financial/account">5519024</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>アカウント</h2>
+        <div class="kv">
+          <div>ログイン ID</div><div>User ID: <span data-mask="identifier/cued_number">u_48213</span></div>
+          <div>初期パスワード</div><div class="mono">パスワード: <span data-mask="credential/cue_value" data-gen="secret" data-len="12"></span></div>
+          <div>招待リンク</div><div class="mono s">https://portal.example.com/invite<span data-mask="credential/url_query">?code=7Hq2xV9m&amp;uid=48213</span></div>
+          <div>状態</div><div>有効</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="fixture.js"></script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>請求書(架空)</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .doc { max-width: 1180px; }
+  .total { font-size: 22px; font-weight: 700; }
+  td.num, th.num { text-align: right; }
+</style>
+</head>
+<body>
+<!-- 架空データのみ。カード番号は fixture.js が Luhn を満たす乱数で埋め込む -->
+<div class="topbar"><span class="brand">請求管理</span><span class="muted">請求書 / INV-2026-1043</span><span style="margin-left:auto" class="btn">PDF を出力</span></div>
+<div class="layout">
+  <div class="side"><div>ダッシュボード</div><div class="on">請求書</div><div>入金</div><div>取引先</div><div>レポート</div></div>
+  <div class="main">
+    <div class="doc">
+      <div class="grid2">
+        <div class="card">
+          <h2>請求先</h2>
+          <div class="m"><span data-mask="identifier/company">株式会社ユズリハ物産</span> 御中</div>
+          <div>ご担当: <span data-mask="identifier/person_ja">樫ノ木 蒼</span> 様</div>
+          <div class="s"><span data-mask="contact/address">〒460-0000</span></div>
+          <div class="s"><span data-mask="contact/address">愛知県ひがしの市栄町4-9-1 ユズリハビル3F</span></div>
+          <div class="s">顧客番号: <span data-mask="identifier/cued_number">C-00918273</span></div>
+        </div>
+        <div class="card">
+          <h2>請求元</h2>
+          <div class="m"><span data-mask="identifier/company">Hollowpine Co., Ltd.</span></div>
+          <div>Contact: <span data-mask="identifier/person_en">Noah Penrose</span></div>
+          <div class="s"><span data-mask="contact/email">ar@example.com</span> / <span data-mask="contact/phone">0120-000-418</span></div>
+          <div class="s">お客様番号 <span data-mask="identifier/cued_number">7730-1182</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>明細</h2>
+        <table>
+          <tr><th>品目</th><th class="num">数量</th><th class="num">単価</th><th class="num">金額</th></tr>
+          <tr><td>クラウド利用料(10月)</td><td class="num">1</td><td class="num">—</td><td class="num"><span data-mask="financial/amount">¥48,000</span></td></tr>
+          <tr><td>サポート追加枠</td><td class="num">3</td><td class="num">—</td><td class="num"><span data-mask="financial/amount">12,600円</span></td></tr>
+          <tr><td>海外リージョン転送量</td><td class="num">1</td><td class="num">—</td><td class="num"><span data-mask="financial/amount">$1,249.99</span></td></tr>
+          <tr><td>為替調整</td><td class="num">1</td><td class="num">—</td><td class="num s"><span data-mask="financial/amount">JPY 2,150</span></td></tr>
+          <tr><td colspan="3" style="text-align:right">合計(税込)</td><td class="num total"><span data-mask="financial/amount">￥254,980</span></td></tr>
+        </table>
+      </div>
+      <div class="grid3">
+        <div class="card">
+          <h2>お支払い(カード)</h2>
+          <div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep="-"></span></div>
+          <div class="mono l"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></div>
+          <div class="mono s"><span data-mask="financial/card" data-gen="card" data-group="16" data-sep=""></span></div>
+          <div class="mono s"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-2" data-sep=" "></span></div>
+        </div>
+        <div class="card">
+          <h2>お振込先</h2>
+          <div class="kv s">
+            <div>銀行</div><div>みなと台銀行 本店営業部</div>
+            <div>口座</div><div>普通 <span data-mask="financial/account">1234508</span></div>
+            <div>別口座</div><div>当座 <span data-mask="financial/account">0582201</span></div>
+            <div>口座番号</div><div><span data-mask="financial/account">4471029</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>オンライン明細</h2>
+          <div class="mono s">https://pay.example.com/i/1043<span data-mask="credential/url_query">?c=C00918273&amp;h=9fa1</span></div>
+          <div class="mono s">照会キー <span data-mask="credential/random_string" data-gen="random" data-len="22"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="fixture.js"></script>
+</body>
+</html>

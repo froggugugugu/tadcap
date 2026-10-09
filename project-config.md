@@ -127,6 +127,7 @@ npm run tauri              # Tauri CLI（dev/build 等）
 npm run test               # Vitest（watch、T01 で追加）
 npm run test:run           # Vitest 一回実行（T01 で追加）
 npm run latency:summary -- <ログファイル>  # NFR-001計測ログ(標準エラー)を集計（T11 で追加、依存追加なし）
+npm run mask:fixtures      # 自動マスキングの評価用画像と正解(eval/masking/)を作り直す（scripts/mask-eval-fixtures.mjs、既存の Playwright のみ・通信なし）
 npm run licenses           # THIRD_PARTY_LICENSES.md を依存から作り直す（scripts/gen-third-party-licenses.mjs、依存追加なし）。`npm run licenses:check` で照合（release.yml で実行）
 npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip を作る（scripts/package-mac.sh。APPLE_SIGNING_IDENTITY・APPLE_API_ISSUER・APPLE_API_KEY・APPLE_API_KEY_PATH があれば Developer ID 署名 + 公証、無ければアドホック署名。リリースは v<版> タグの push で .github/workflows/release.yml が Environment `release` の Secrets を使って作る）
 cargo test --manifest-path src-tauri/Cargo.toml               # Rust ユニットテスト（T01 で確定）
