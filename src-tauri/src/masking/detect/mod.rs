@@ -55,8 +55,7 @@ type Detector = fn(&dyn RecognizedPage, &[Line]) -> Vec<Match>;
 /// 未実装の検出器は `not_yet_implemented` を置き、実装するタスクで差し替える。
 const DETECTORS: [Detector; 4] = [
     contact::detect,
-    // ②認証情報: AM-T14 で `credential::detect` に差し替える
-    not_yet_implemented,
+    credential::detect,
     // ③識別子: AM-T16・AM-T21・AM-T22 で `identifier::detect` に差し替える
     not_yet_implemented,
     // ④金額・口座: AM-T16 で `financial::detect` に差し替える
@@ -241,10 +240,20 @@ mod tests {
     }
 
     #[test]
+    fn 認証情報の検出器を登録している() {
+        let query = "?code=7Hq2&uid=48213";
+        let line = format!("https://portal.example.com/invite{query}");
+        let page = FakePage::new(&[&line]);
+        let matches = run(&page);
+        assert_eq!(matches, vec![Match::new(0, span(&line, query), MatchDetail::UrlQuery)]);
+        assert!(matches.iter().all(|m| m.kind == MaskKind::Credential));
+    }
+
+    #[test]
     fn 未実装の検出器は空を返す() {
         let page = FakePage::new(&["password: abc123"]);
         let lines = [Line::new(0, page.line_text(0))];
-        for detector in &DETECTORS[1..] {
+        for detector in &DETECTORS[2..] {
             assert!(detector(&page, &lines).is_empty());
         }
     }
