@@ -16,7 +16,11 @@
 //! DOM生成・購読を伴うため、Vitestの既定環境(Node、DOM API無し)では自動テスト対象外と
 //! する(project-config.md §11。`permissionBanner.ts`と同じ方針)。ツール状態の切替ロジック
 //! 自体は `canvas/canvasState.ts` の `toggleTool()`/`toggleActiveTool()` が純粋関数として
-//! 担い、そちらをユニットテストする。
+//! 担い、そちらをユニットテストする。ボタンの押下・無効の判定は純粋関数 `toolButtonState()` に
+//! 切り出してユニットテストする(AM-T13)。
+//!
+//! AM-T13: 自動マスキングの確認中(`maskSession` が `review`)は全ツールボタンを無効にする
+//! (ARCH_auto-masking §15 #4 A 案「確認モード」、FR-012)。
 
 import {
   getCanvasState,
@@ -24,6 +28,7 @@ import {
   toggleActiveTool,
   type ToolId,
 } from "../canvas/canvasState";
+import { getMaskSession, subscribeMaskSession } from "../canvas/maskSession";
 
 interface ToolDefinition {
   id: ToolId;
@@ -79,10 +84,30 @@ const TOOLS: ToolDefinition[] = [
   },
 ];
 
+export interface ToolButtonContext {
+  activeTool: ToolId | null;
+  isDrawing: boolean;
+  /** 自動マスキングの確認中(`maskSession` が `review`)。 */
+  isReviewing: boolean;
+}
+
+/**
+ * ツールボタン 1 つの押下・無効。描画中は選択中以外を、確認中は選択中も含めて全ボタンを無効に
+ * する(確認中は押下状態を変えず、確認が終われば同じツールのまま続けられる)。
+ */
+export function toolButtonState(
+  id: ToolId,
+  context: ToolButtonContext,
+): { pressed: boolean; disabled: boolean } {
+  const pressed = context.activeTool === id;
+  return { pressed, disabled: context.isReviewing || (context.isDrawing && !pressed) };
+}
+
 /**
  * ツール切替UIを `mount` 配下に構築し、`canvasState` と結線する(Container相当)。
  * ボタンクリックで `toggleActiveTool()` を呼び、状態変化を購読して押下状態(`aria-pressed`)に
  * 反映する。描画中(`isDrawing`)は非アクティブなボタンを無効化し、ドラッグ中のツール切替を防ぐ。
+ * 自動マスキングの確認中は全ボタンを無効化する(`maskSession` も購読する、AM-T13)。
  */
 export function initToolbar(mount: HTMLElement): void {
   const buttons = new Map<ToolId, HTMLButtonElement>();
@@ -104,14 +129,16 @@ export function initToolbar(mount: HTMLElement): void {
 
   const render = (): void => {
     const { activeTool, isDrawing } = getCanvasState();
+    const isReviewing = getMaskSession().status === "review";
     for (const [id, button] of buttons) {
-      const active = activeTool === id;
-      button.setAttribute("aria-pressed", String(active));
-      button.classList.toggle("tool-toolbar__button--active", active);
-      button.disabled = isDrawing && !active;
+      const { pressed, disabled } = toolButtonState(id, { activeTool, isDrawing, isReviewing });
+      button.setAttribute("aria-pressed", String(pressed));
+      button.classList.toggle("tool-toolbar__button--active", pressed);
+      button.disabled = disabled;
     }
   };
 
   subscribeCanvasState(render);
+  subscribeMaskSession(render);
   render();
 }

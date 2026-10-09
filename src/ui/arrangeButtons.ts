@@ -9,9 +9,13 @@
 //! ボタンは選択中のみ有効。ツールバーの`data-preserve-selection`(`index.html`)で、押しても
 //! `shapeTools.ts`の「Canvas外クリックで選択解除」が働かないようにしている。テキスト入力欄に
 //! フォーカスがあるとき・ドラッグ中はキーを奪わない/実行しない。
+//!
+//! AM-T13: 自動マスキングの確認中(`maskSession` が `review`)はボタンを無効にし、⇧⌘F・⇧⌘B でも
+//! 何もしない(ARCH_auto-masking §15 #4 A 案)。有効/無効は純粋関数 `arrangeEnabled()` で判定する。
 
 import { getCanvasState, subscribeCanvasState } from "../canvas/canvasState";
 import { arrangeSelected, getDocumentState, subscribeDocument } from "../canvas/documentState";
+import { getMaskSession, subscribeMaskSession } from "../canvas/maskSession";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
 
 export type ArrangeCommand = "front" | "back";
@@ -36,6 +40,18 @@ export function arrangeShortcutCommand(
   return key === "f" ? "front" : key === "b" ? "back" : null;
 }
 
+export interface ArrangeContext {
+  hasSelection: boolean;
+  isDrawing: boolean;
+  /** 自動マスキングの確認中(`maskSession` が `review`、AM-T13)。 */
+  isReviewing: boolean;
+}
+
+/** 重ね順を変えられるか: 選択中で、ドラッグ中でも自動マスキングの確認中でもないとき。 */
+export function arrangeEnabled(context: ArrangeContext): boolean {
+  return context.hasSelection && !context.isDrawing && !context.isReviewing;
+}
+
 export interface ArrangeButtonElements {
   front: HTMLButtonElement;
   back: HTMLButtonElement;
@@ -44,7 +60,11 @@ export interface ArrangeButtonElements {
 /** ボタンとショートカットを結線する。戻り値は解除関数。 */
 export function initArrangeButtons(elements: ArrangeButtonElements): () => void {
   const enabled = (): boolean =>
-    getDocumentState().selectedId !== null && !getCanvasState().isDrawing;
+    arrangeEnabled({
+      hasSelection: getDocumentState().selectedId !== null,
+      isDrawing: getCanvasState().isDrawing,
+      isReviewing: getMaskSession().status === "review",
+    });
 
   const run = (command: ArrangeCommand): void => {
     if (enabled()) {
@@ -71,7 +91,11 @@ export function initArrangeButtons(elements: ArrangeButtonElements): () => void 
   };
   window.addEventListener("keydown", handleKeydown);
 
-  const unsubscribers = [subscribeDocument(render), subscribeCanvasState(render)];
+  const unsubscribers = [
+    subscribeDocument(render),
+    subscribeCanvasState(render),
+    subscribeMaskSession(render),
+  ];
   render();
 
   return () => {

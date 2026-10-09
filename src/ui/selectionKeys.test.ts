@@ -35,3 +35,22 @@ describe("selectionKeyAction", () => {
     expect(selectionKeyAction({ ...plain, key: "a" }, true, null)).toBeNull();
   });
 });
+
+// AM-T13: 自動マスキングの確認中(maskSession が `review`)は選択中のオブジェクトの削除・
+// 選択解除を止める(ARCH_auto-masking §15 #4 A 案)。Esc は「やめる」(`ui/autoMask.ts`)に任せる。
+describe("selectionKeyAction(確認中)", () => {
+  it("確認中は Delete・Backspace で削除しない", () => {
+    expect(selectionKeyAction({ ...plain, key: "Delete" }, true, null, true)).toBeNull();
+    expect(selectionKeyAction({ ...plain, key: "Backspace" }, true, null, true)).toBeNull();
+  });
+
+  it("確認中は Enter・Esc で選択解除しない(Esc は「やめる」に任せる)", () => {
+    expect(selectionKeyAction({ ...plain, key: "Enter" }, true, null, true)).toBeNull();
+    expect(selectionKeyAction({ ...plain, key: "Escape" }, true, null, true)).toBeNull();
+  });
+
+  it("確認が終わる(false)と元どおり", () => {
+    expect(selectionKeyAction({ ...plain, key: "Delete" }, true, null, false)).toBe("delete");
+    expect(selectionKeyAction({ ...plain, key: "Escape" }, true, null, false)).toBe("deselect");
+  });
+});

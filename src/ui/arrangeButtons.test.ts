@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { arrangeShortcutCommand } from "./arrangeButtons";
+import { arrangeEnabled, arrangeShortcutCommand } from "./arrangeButtons";
 
 const key = (k: string, mods: Partial<{ metaKey: boolean; shiftKey: boolean; ctrlKey: boolean; altKey: boolean }> = {}) => ({
   key: k,
@@ -27,5 +27,25 @@ describe("arrangeShortcutCommand(Keynote・Pages・フリーボードと同じ �
 
   it("テキスト入力欄にフォーカスがあるときは奪わない", () => {
     expect(arrangeShortcutCommand(key("F", { metaKey: true, shiftKey: true }), { tagName: "INPUT" })).toBeNull();
+  });
+});
+
+// AM-T13: 自動マスキングの確認中(maskSession が `review`)は重ね順の変更を止める
+// (ARCH_auto-masking §15 #4 A 案)。ボタンと ⇧⌘F / ⇧⌘B の両方がこの判定に従う。
+describe("arrangeEnabled", () => {
+  const base = { hasSelection: true, isDrawing: false, isReviewing: false };
+
+  it("選択中でドラッグ中でも確認中でもなければ有効", () => {
+    expect(arrangeEnabled(base)).toBe(true);
+  });
+
+  it("選択が無い・ドラッグ中は無効(既存どおり)", () => {
+    expect(arrangeEnabled({ ...base, hasSelection: false })).toBe(false);
+    expect(arrangeEnabled({ ...base, isDrawing: true })).toBe(false);
+  });
+
+  it("確認中は無効、確認が終わると元どおり", () => {
+    expect(arrangeEnabled({ ...base, isReviewing: true })).toBe(false);
+    expect(arrangeEnabled({ ...base, isReviewing: false })).toBe(true);
   });
 });

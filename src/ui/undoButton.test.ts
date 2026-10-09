@@ -77,3 +77,25 @@ describe("resolveUndoCommand", () => {
     expect(resolveUndoCommand("redo", { ...idle, canRedo: true, isDrawing: true })).toBeNull();
   });
 });
+
+// AM-T13: 自動マスキングの確認中(maskSession が `review`)は取り消し・やり直しを止める
+// (ARCH_auto-masking §15 #4 A 案、FR-012)。⌘Z の判定自体は変えず(WebView 既定へ流さない)、
+// 実行する操作を `null` にする。
+describe("確認中(isReviewing)の取り消し・やり直し", () => {
+  const ready: UndoContext = { canUndo: true, canRedo: true, isDrawing: false };
+
+  it("確認中は Cmd+Z・Cmd+Shift+Z で何もしない", () => {
+    expect(resolveUndoCommand("undo", { ...ready, isReviewing: true })).toBeNull();
+    expect(resolveUndoCommand("redo", { ...ready, isReviewing: true })).toBeNull();
+  });
+
+  it("確認中はボタンを両方無効にする", () => {
+    expect(undoAvailability({ ...ready, isReviewing: true })).toEqual({ undo: false, redo: false });
+  });
+
+  it("確認が終わる(isReviewing: false)と元どおり", () => {
+    expect(resolveUndoCommand("undo", { ...ready, isReviewing: false })).toBe("undo");
+    expect(resolveUndoCommand("redo", { ...ready, isReviewing: false })).toBe("redo");
+    expect(undoAvailability({ ...ready, isReviewing: false })).toEqual({ undo: true, redo: true });
+  });
+});

@@ -13,10 +13,15 @@
 //! テキスト入力欄にフォーカスがあるとき(`shortcutGuards.ts::isEditableTarget()`)はキーを奪わず
 //! 入力欄自身の取り消しに任せる。ドラッグ中(`canvasState.isDrawing`)はボタン・キーとも無効。
 //!
+//! AM-T13: 自動マスキングの確認中(`maskSession` が `review`)はボタンを無効にし、⌘Z・⇧⌘Z でも
+//! 何もしない(ARCH_auto-masking §15 #4 A 案、FR-012)。キーの判定(`undoShortcutCommand`)は
+//! 変えないため、確認中の ⌘Z も WebView 既定の取り消しへは流さない。
+//!
 //! 判定は純粋関数としてユニットテストし、DOM/Canvas結線(`initUndoButtons`)はE2Eで検証する。
 
 import { getCanvasState, subscribeCanvasState } from "../canvas/canvasState";
 import { redoDocument, undoDocument } from "../canvas/documentState";
+import { getMaskSession, subscribeMaskSession } from "../canvas/maskSession";
 import { canRedo, canUndo, subscribeUndoStack } from "../canvas/undoStack";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
 
@@ -51,14 +56,19 @@ export interface UndoContext {
   canUndo: boolean;
   canRedo: boolean;
   isDrawing: boolean;
+  /** 自動マスキングの確認中(`maskSession` が `review`、AM-T13)。省略時は `false`。 */
+  isReviewing?: boolean;
 }
 
-/** 取り消し・やり直しで実際に行う操作。できなければ `null`(ドラッグ中は両方できない)。 */
+/**
+ * 取り消し・やり直しで実際に行う操作。できなければ `null`
+ * (ドラッグ中・自動マスキングの確認中は両方できない)。
+ */
 export function resolveUndoCommand(
   command: UndoShortcutCommand,
   context: UndoContext,
 ): UndoShortcutCommand | null {
-  if (context.isDrawing) {
+  if (context.isDrawing || context.isReviewing === true) {
     return null;
   }
   const available = command === "undo" ? context.canUndo : context.canRedo;
@@ -74,7 +84,12 @@ export function undoAvailability(context: UndoContext): { undo: boolean; redo: b
 }
 
 function currentContext(): UndoContext {
-  return { canUndo: canUndo(), canRedo: canRedo(), isDrawing: getCanvasState().isDrawing };
+  return {
+    canUndo: canUndo(),
+    canRedo: canRedo(),
+    isDrawing: getCanvasState().isDrawing,
+    isReviewing: getMaskSession().status === "review",
+  };
 }
 
 function runCommand(command: UndoShortcutCommand): void {
@@ -116,6 +131,7 @@ export function initUndoButtons(elements: UndoButtonElements): () => void {
   const unsubscribers = [
     subscribeUndoStack(render),
     subscribeCanvasState(render),
+    subscribeMaskSession(render),
   ];
   render();
 

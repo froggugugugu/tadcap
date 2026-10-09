@@ -8,10 +8,15 @@
 //!
 //! T34【改訂 2026-09-25】: Delete/Backspaceで選択中のオブジェクトを削除する。
 //!
+//! AM-T13: 自動マスキングの確認中(`maskSession` が `review`)は Enter・Esc・Delete・Backspace を
+//! すべて扱わない(ARCH_auto-masking §15 #4 A 案)。削除を止め、Esc は「やめる」(`ui/autoMask.ts`)に
+//! 任せる(`preventDefault()` もしない)。
+//!
 //! 判定は純粋関数(`selectionKeyAction`)、`window`への結線は`bindSelectionKeys`。
 //! テキスト入力中・IME変換中・修飾キー付きの入力は奪わない(`shortcutGuards.ts`と同じ方針)。
 
 import { getDocumentState, removeShapeObject, selectObject } from "../canvas/documentState";
+import { getMaskSession } from "../canvas/maskSession";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
 
 export interface SelectionKeyEvent {
@@ -25,12 +30,17 @@ export interface SelectionKeyEvent {
 
 export type SelectionKeyAction = "deselect" | "delete" | null;
 
+/**
+ * 選択中のオブジェクトに対するキー操作の判定。`isReviewing`(自動マスキングの確認中、AM-T13)が
+ * `true` のときはどのキーも扱わない。
+ */
 export function selectionKeyAction(
   event: SelectionKeyEvent,
   hasSelection: boolean,
   target: EditableTargetLike | null,
+  isReviewing = false,
 ): SelectionKeyAction {
-  if (!hasSelection || event.isComposing || event.metaKey || event.ctrlKey || event.altKey) {
+  if (isReviewing || !hasSelection || event.isComposing || event.metaKey || event.ctrlKey || event.altKey) {
     return null;
   }
   if (isEditableTarget(target)) {
@@ -52,6 +62,7 @@ export function bindSelectionKeys(): () => void {
       event,
       getDocumentState().selectedId !== null,
       event.target as EditableTargetLike | null,
+      getMaskSession().status === "review",
     );
     if (!action) {
       return;
