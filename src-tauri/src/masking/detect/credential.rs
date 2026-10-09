@@ -25,7 +25,8 @@ use super::super::layout::{near_right_neighbor, next_line_below};
 use super::super::text::{normalize, SensitiveText};
 use super::super::{Match, MatchDetail, RecognizedPage};
 use super::lexicon::{
-    API_KEY_CUE_PATTERN, CREDENTIAL_CUES_ASCII, CREDENTIAL_CUES_JA, CREDENTIAL_WORD_CUES_ASCII, CUE_PARTICLES, TOKEN_PREFIXES,
+    API_KEY_CUE_PATTERN, CODE_CUE_PATTERN, CREDENTIAL_CUES_ASCII, CREDENTIAL_CUES_JA, CREDENTIAL_WORD_CUES_ASCII,
+    CUE_PARTICLES, TOKEN_PREFIXES,
 };
 use super::{column_cells, Line};
 
@@ -62,16 +63,26 @@ static CHUNK: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[A-Za-z0-9_\-]+[\]|]?").expect("固定の正規表現が不正"));
 
 /// 接頭辞付きトークン(1 番目のグループが接頭辞、2 番目が本体)。接頭辞の前は英数字でないこと。
+/// 区切り(`_`・`-`)を含む接頭辞(`sk_live_`・`glpat-` など)は、読み取りの大文字・小文字の誤り(`sk_Live_`)を許す。
+/// 区切りの無い接頭辞(`AKIA`・`AIza`・`SG.`)は大文字・小文字を区別する(普通の語と紛れないように)。
 static PREFIXED: LazyLock<Regex> = LazyLock::new(|| {
     let mut prefixes: Vec<&str> = TOKEN_PREFIXES.to_vec();
     // 長い接頭辞を先に試す(左優先の選択で短い接頭辞に先に一致しないように)
     prefixes.sort_by_key(|p| std::cmp::Reverse(p.len()));
-    let alternatives: Vec<String> = prefixes.iter().map(|p| regex::escape(p)).collect();
+    let alternatives: Vec<String> = prefixes
+        .iter()
+        .map(|p| if p.contains(['_', '-']) { format!("(?i:{})", regex::escape(p)) } else { regex::escape(p) })
+        .collect();
     Regex::new(&format!(
         r"(?:^|[^A-Za-z0-9])({})([A-Za-z0-9_\-]+(?:\.[A-Za-z0-9_\-]+)*)",
         alternatives.join("|")
     ))
     .expect("固定の正規表現が不正")
+});
+
+/// 接続文字列・URL の利用者情報の中のパスワード(`scheme://user:password@host` の `password`)。
+static USERINFO_PASSWORD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)[a-z][a-z0-9+.\-]*://[^\x20/:@]+:(?P<password>[^\x20/@]+)@[a-z0-9]").expect("固定の正規表現が不正")
 });
 
 /// 日本語の手がかり語を、行と同じ規則で正規化したもの(長音 `ー` は `-` になる)。
@@ -91,7 +102,7 @@ fn ja_cue_pattern() -> String {
 /// 正規表現の断片。独立した語の前後は、使う側の正規表現の区切り(語頭・`:`・空白など)で区切られる。
 fn ascii_key_pattern() -> String {
     format!(
-        r"(?:[a-z0-9_.\-]*(?:{}|{API_KEY_CUE_PATTERN})[a-z0-9_.\-]*|{})",
+        r"(?:[a-z0-9_.\-]*(?:{}|{API_KEY_CUE_PATTERN}|{CODE_CUE_PATTERN})[a-z0-9_.\-]*|{})",
         CREDENTIAL_CUES_ASCII.join("|"),
         CREDENTIAL_WORD_CUES_ASCII.join("|")
     )
@@ -111,7 +122,7 @@ static LABELED: LazyLock<Regex> = LazyLock::new(|| {
 /// 英字の手がかり語そのもの(キーの一部ではない)。空白だけの区切りを許すかの判定に使う。
 static EXACT_ASCII_CUE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"(?i)^(?:{}|{API_KEY_CUE_PATTERN}|{})$",
+        r"(?i)^(?:{}|{API_KEY_CUE_PATTERN}|{CODE_CUE_PATTERN}|{})$",
         CREDENTIAL_CUES_ASCII.join("|"),
         CREDENTIAL_WORD_CUES_ASCII.join("|")
     ))
@@ -141,7 +152,12 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
         let tokens = find_prefixed_tokens(text, &urls);
         let excluded: Vec<Range<usize>> = urls.iter().chain(&tokens).cloned().collect();
         let randoms = find_random_strings(text, &excluded);
-        let labeled = find_labeled_values(text);
+        let mut labeled = find_labeled_values(text);
+        for password in find_userinfo_passwords(text) {
+            if !overlaps_any(&password, &labeled) {
+                labeled.push(password);
+            }
+        }
         has_own_value.push(!labeled.is_empty());
 
         let found = queries
@@ -302,7 +318,9 @@ fn find_prefixed_tokens(text: &str, urls: &[Range<usize>]) -> Vec<Range<usize>> 
             end += 1;
         }
         let body_text = &text[body.start()..end];
-        if non_space_len(body_text) >= MIN_PREFIXED_BODY_LEN && is_token_like(body_text) {
+        // 本体は英字と数字を含むか、英字だけでも大文字・小文字の切り替わりが多いこと(数字の無いランダムな本体)
+        let random_body = is_token_like(body_text) || class_changes(body_text) >= MIN_CLASS_CHANGES;
+        if non_space_len(body_text) >= MIN_PREFIXED_BODY_LEN && random_body {
             found.push(start..end);
         }
     }
@@ -360,8 +378,18 @@ fn find_labeled_values(text: &str) -> Vec<Range<usize>> {
             if !accepted {
                 return None;
             }
-            // 値の途中に読み取りで入った空白: 続く塊が英数字と英字以外(数字・記号)を含み、次のキーでない
+            // `key=value;key=value` の形(接続文字列)では `;` の手前で値を終える
             let mut end = value.end();
+            if sep.as_str().contains('=') {
+                if let Some(semicolon) = value.as_str().find(';') {
+                    end = value.start() + semicolon;
+                    if end == value.start() {
+                        return None;
+                    }
+                    return Some(value.start()..end);
+                }
+            }
+            // 値の途中に読み取りで入った空白: 続く塊が英数字と英字以外(数字・記号)を含み、次のキーでない
             while text.as_bytes().get(end) == Some(&b' ') {
                 let next = &text[end + 1..end + 1 + ascii_chunk_len(&text[end + 1..])];
                 let continues = next.bytes().any(|b| b.is_ascii_alphanumeric())
@@ -372,9 +400,16 @@ fn find_labeled_values(text: &str) -> Vec<Range<usize>> {
                 }
                 end += 1 + next.len();
             }
-            Some(value.start()..end)
+            // 末尾の開き括弧(続く日本語の注記の始まり。「604918(毎月…」)は値に含めない
+            let end = value.start() + text[value.start()..end].trim_end_matches(['(', '[', '{', '<']).len();
+            (end > value.start()).then_some(value.start()..end)
         })
         .collect()
+}
+
+/// 接続文字列・URL の利用者情報の中のパスワード(バイト範囲)。
+fn find_userinfo_passwords(text: &str) -> Vec<Range<usize>> {
+    USERINFO_PASSWORD.captures_iter(text).filter_map(|caps| caps.name("password").map(|m| m.range())).collect()
 }
 
 /// 観測全体が手がかり語のラベル(「管理者パスワード」「Webhook secret」「API_KEY:」など)か。
@@ -593,6 +628,32 @@ mod tests {
         }
     }
 
+    /// 英小文字・英大文字だけが混ざった決定論的な列(数字を含まない)。
+    fn letters(seed: usize, len: usize) -> String {
+        (0..len).map(|i| char::from(ALPHABET[(seed + i * 7) % 52])).collect()
+    }
+
+    #[test]
+    fn 本体が英字だけでも大文字小文字の切り替わりが多ければ接頭辞付きトークンとする() {
+        let body = letters(3, 24);
+        for prefix in ["rk_live_", "sk_test_", "ghp_"] {
+            let line = format!("{prefix}{body}");
+            assert_eq!(prefixed(&line), vec![whole(&line)], "case {}", prefix.len());
+        }
+    }
+
+    #[test]
+    fn 区切りのある接頭辞は大文字小文字の誤読を許す() {
+        // 「sk_live_」が「sk_Live_」と読まれた形(区切り `_`・`-` を含む接頭辞だけ。AKIA などは区別する)
+        let body = mixed(5, 24);
+        for prefix in ["sk_Live_", "RK_LIVE_", "Glpat-"] {
+            let line = format!("{prefix}{body}");
+            assert_eq!(prefixed(&line), vec![whole(&line)], "case {}", prefix.len());
+        }
+        let line = format!("akia{}", mixed(5, 16).to_uppercase());
+        assert!(prefixed(&line).is_empty());
+    }
+
     // ---- 長いランダム列 ----
 
     #[test]
@@ -766,6 +827,68 @@ mod tests {
         let value = secret_value();
         for line in [format!("暗証番号は {value} です"), format!("パスワードは{value}"), format!("認証コードが {value}")] {
             assert_eq!(labeled(&line), vec![span(&line, &value)], "case {}", line.len());
+        }
+    }
+
+    #[test]
+    fn 復旧コードやワンタイムコードなどの手がかり語の後の値を検出する() {
+        let value = secret_value();
+        for key in [
+            "Recovery code",
+            "Backup code",
+            "Verification code",
+            "One-time code",
+            "Auth code",
+            "Activation code",
+            "Invite code",
+            "Temp password",
+            "SMTP password",
+            "passcode",
+        ] {
+            let line = format!("{key}: {value}");
+            assert_eq!(labeled(&line), vec![span(&line, &value)], "case {}", key.len());
+            let line = format!("{key} {value}");
+            assert_eq!(labeled(&line), vec![span(&line, &value)], "case {}", key.len());
+        }
+        for key in ["解錠コード", "解除コード", "招待コード", "復旧コード", "リカバリーコード", "バックアップコード", "承認コード", "認証番号", "確認番号", "ワンタイムパスワード"] {
+            let line = format!("{key}は{value}です");
+            assert_eq!(labeled(&line), vec![span(&line, &value)], "case {}", key.len());
+        }
+        let line = "5 階会議室の解錠コードは604918(毎月1日に変更)";
+        assert_eq!(labeled(line), vec![span(line, "604918")]);
+    }
+
+    #[test]
+    fn パスワードの半濁点が濁点に読まれた見出しの列の値を検出する() {
+        // 「パ」→「バ」の誤読(半濁点・濁点の取り違えは読み取りで一般的)
+        let values = [mixed(3, 12), secret_value()];
+        let refs: Vec<&str> = values.iter().map(String::as_str).collect();
+        let page = header_table(["サービス", "バスワード", "備考"], &refs);
+        assert_eq!(detect_page(&page, MatchDetail::LabeledSecret).len(), 2);
+    }
+
+    #[test]
+    fn 接続文字列の中のパスワードを検出する() {
+        let pw = secret_value().replace('#', "!");
+        let cases = [
+            format!("postgres://app:{pw}@db.example.com:5432/app"),
+            format!("DATABASE_URL=mysql://root:{pw}@localhost/main"),
+            format!("Server=db.example.com;User Id=sa;Password={pw};Encrypt=true"),
+            format!("host=db.example.com user=app password={pw} sslmode=require"),
+        ];
+        for line in &cases {
+            assert!(labeled(line).contains(&span(line, &pw)), "case {}", line.len());
+        }
+        // 利用者名だけで `:` の後が無い・`@` が無いものは対象外
+        for line in ["https://user@example.com/path", "ssh://git.example.com:22/repo"] {
+            assert!(labeled(line).is_empty(), "case {}", line.len());
+        }
+    }
+
+    #[test]
+    fn 一般化したコードの手がかり語でも値でないものは対象外() {
+        for line in ["Postal code 123-4567", "QR code 2", "Source code 2024", "Recovery code sent", "Promo code"] {
+            assert!(labeled(line).is_empty(), "case {}", line.len());
         }
     }
 

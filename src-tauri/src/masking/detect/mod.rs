@@ -81,17 +81,28 @@ const MIN_HEADER_ROW_CELLS: usize = 3;
 /// 表の見出しとみなす観測の文字数の上限(手がかり語だけの観測の上限と同じ)。
 const MAX_HEADER_CELL_CHARS: usize = 20;
 
-/// `lines[pos]` が表の見出しの行にあるか。同じ行に 3 つ以上の観測があり、そのすべてが短く(20 字以下)
-/// 数字を含まないとき(値が同じ行に並ぶフォームは、値が数字を含むので除かれる)。
+/// `lines[pos]` が表の見出しの行にあるか。同じ行で `lines[pos]` を含む、左右に隣り合う見出しらしい観測
+/// (短く(20 字以下)数字を含まない)の連なりが 3 つ以上のとき。値が同じ行に並ぶフォームは、値が数字を含むので
+/// 連なりが切れて除かれる。連なりは左右の隣で数える(2026-10-09 の一般化: 隣の枠に同じ高さで並ぶ値の観測が
+/// 行全体の判定を壊さないように)。
 fn in_header_row(page: &dyn RecognizedPage, lines: &[Line], pos: usize) -> bool {
-    let row = same_row(page, lines[pos].index);
-    row.len() >= MIN_HEADER_ROW_CELLS
-        && row.iter().all(|&index| {
-            lines.iter().find(|l| l.index == index).is_some_and(|l| {
-                let text = l.as_str().trim();
-                !text.is_empty() && text.chars().count() <= MAX_HEADER_CELL_CHARS && !text.bytes().any(|b| b.is_ascii_digit())
-            })
+    let header_like = |index: usize| {
+        lines.iter().find(|l| l.index == index).is_some_and(|l| {
+            let text = l.as_str().trim();
+            !text.is_empty() && text.chars().count() <= MAX_HEADER_CELL_CHARS && !text.bytes().any(|b| b.is_ascii_digit())
         })
+    };
+    let mut row = same_row(page, lines[pos].index);
+    row.sort_by(|&a, &b| page.line_box(a).x.total_cmp(&page.line_box(b).x).then(a.cmp(&b)));
+    let Some(at) = row.iter().position(|&i| i == lines[pos].index) else {
+        return false;
+    };
+    if !header_like(row[at]) {
+        return false;
+    }
+    let left = row[..at].iter().rev().take_while(|&&i| header_like(i)).count();
+    let right = row[at + 1..].iter().take_while(|&&i| header_like(i)).count();
+    1 + left + right >= MIN_HEADER_ROW_CELLS
 }
 
 /// 表の見出し `lines[pos]` の列の下に並ぶ観測(`lines` の位置。上から順)。見出しの行でなければ空。

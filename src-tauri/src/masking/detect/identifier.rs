@@ -44,7 +44,7 @@ use super::super::layout::{near_right_neighbor, next_line_below, right_neighbor}
 use super::super::text::{normalize, SensitiveText};
 use super::super::{Match, MatchDetail, NormalizedRect, RecognizedPage};
 use super::lexicon::{
-    COMPANY_LABELS_ASCII, COMPANY_LABELS_JA, COMPANY_NAME_PARTICLES, COMPANY_SUFFIXES_ASCII, COMPANY_TYPES_JA,
+    COLUMN_NUMBER_WORDS_ASCII, COMPANY_LABELS_ASCII, COMPANY_LABELS_JA, COMPANY_NAME_PARTICLES, COMPANY_SUFFIXES_ASCII, COMPANY_TYPES_JA,
     CUED_NUMBER_CUES_ASCII, CUED_NUMBER_KINDS_ASCII, CUED_NUMBER_KINDS_JA, CUED_NUMBER_SUBJECTS_ASCII,
     CUED_NUMBER_SUBJECTS_JA, CUE_PARTICLES, ENGLISH_NAME_GREETINGS, ENGLISH_NAME_TITLES, GIVEN_NAMES_ROMAJI, HONORIFICS,
     HONORIFIC_NON_NAMES, PERSON_COLUMN_LABELS_JA, PERSON_LABELS_ASCII, PERSON_LABELS_JA, SURNAMES_JA, SURNAMES_ROMAJI,
@@ -99,6 +99,25 @@ static LABEL: LazyLock<Regex> = LazyLock::new(|| {
     .expect("固定の正規表現が不正")
 });
 
+/// 表の見出しの行で、それだけで列の値を番号とする見出し(番号の語だけ、または対象だけ。末尾の `:` を許す)。
+/// 前後の空白を除いた文字列に当てる(2026-10-09 の書式の拡張)。
+static COLUMN_HEADER_WORD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"(?i)^(?:{}|{}|{}|{})\x20?:?$",
+        COLUMN_NUMBER_WORDS_ASCII.join("|"),
+        CUED_NUMBER_SUBJECTS_ASCII.join("|"),
+        normalized_alternatives(&CUED_NUMBER_KINDS_JA),
+        normalized_alternatives(&CUED_NUMBER_SUBJECTS_JA),
+    ))
+    .expect("固定の正規表現が不正")
+});
+
+/// 番号の語・対象だけの見出しの列の値とみなす長さの下限(英数字の数)。行番号(「1」「12」)を除く。
+const MIN_HEADER_WORD_VALUE_CHARS: usize = 4;
+
+/// 番号の後に空白 1 つずつで続けて含める数字の組の桁数(VAT 番号「GB 000 4417 26」・4 桁区切りの番号など)。
+const SPACED_GROUP_DIGITS: std::ops::RangeInclusive<usize> = 2..=6;
+
 /// 観測の先頭の値。前後の空白を除いた文字列に当てる。
 static LEADING_VALUE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(&format!(r"(?i)^{VALUE_PATTERN}")).expect("固定の正規表現が不正"));
@@ -112,6 +131,15 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
         let found = find_cued_numbers(line.as_str());
         has_own_value.push(!found.is_empty());
         matches.extend(found.into_iter().filter_map(|r| line.to_match(r, MatchDetail::LabeledNumber)));
+    }
+
+    // 番号の語・対象だけの見出し(「No.」「Invoice」「注文」)は、表の見出しの行のときだけ列の値を番号とする
+    for (pos, _) in lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| !is_label_only(line.as_str()) && COLUMN_HEADER_WORD.is_match(line.as_str().trim()))
+    {
+        matches.extend(header_word_column_numbers(lines, &column_cells(page, lines, pos), &has_own_value));
     }
 
     for (pos, line) in lines.iter().enumerate().filter(|(_, line)| is_label_only(line.as_str())) {
@@ -167,6 +195,30 @@ fn column_numbers(lines: &[Line], cells: &[usize], has_own_value: &[bool]) -> Ve
         let start = text.len() - text.trim_start().len();
         let value = text.trim();
         let is_number = is_column_identifier(value) && !has_own_value[pos] && !is_label_only(value);
+        if !is_number {
+            break;
+        }
+        if let Some(m) = lines[pos].to_match(start..start + value.len(), MatchDetail::LabeledNumber) {
+            found.push(m);
+        }
+    }
+    found
+}
+
+/// 番号の語・対象だけの見出しの列の観測を上から順に番号とする。観測全体(前後の空白を除く)が番号の形
+/// (`is_column_identifier`)で、数字を含み英数字が 4 つ以上の間だけ続ける(行番号・状態の語で終わる)。
+fn header_word_column_numbers(lines: &[Line], cells: &[usize], has_own_value: &[bool]) -> Vec<Match> {
+    let mut found = Vec::new();
+    for &pos in cells {
+        let text = lines[pos].as_str();
+        let start = text.len() - text.trim_start().len();
+        let value = text.trim();
+        let alnum = value.bytes().filter(u8::is_ascii_alphanumeric).count();
+        let is_number = is_column_identifier(value)
+            && !value.contains(' ')
+            && value.bytes().any(|b| b.is_ascii_digit())
+            && alnum >= MIN_HEADER_WORD_VALUE_CHARS
+            && !has_own_value[pos];
         if !is_number {
             break;
         }
@@ -965,9 +1017,31 @@ fn find_cued_numbers(text: &str) -> Vec<Range<usize>> {
             if en_needs_separator && sep.as_str().is_empty() {
                 return None;
             }
-            number_range(text, value.range())
+            number_range(text, extend_spaced_groups(text, value.range()))
         })
         .collect()
+}
+
+/// 値が数字だけ、または大文字 2 字(国コード)なら、空白 1 つずつで続く 2〜6 桁の数字の組を値に含める
+/// (VAT 番号の「GB 000 4417 26」・4 桁区切りの番号。2026-10-09 の書式の拡張)。組は数字だけで、後が英数字でないこと。
+fn extend_spaced_groups(text: &str, value: Range<usize>) -> Range<usize> {
+    let token = &text[value.clone()];
+    let extendable = token.bytes().all(|b| b.is_ascii_digit())
+        || (token.len() == 2 && token.bytes().all(|b| b.is_ascii_uppercase()));
+    if !extendable {
+        return value;
+    }
+    let bytes = text.as_bytes();
+    let mut end = value.end;
+    while bytes.get(end) == Some(&b' ') {
+        let digits = bytes[end + 1..].iter().take_while(|b| b.is_ascii_digit()).count();
+        let after = bytes.get(end + 1 + digits);
+        if !SPACED_GROUP_DIGITS.contains(&digits) || after.is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_') {
+            break;
+        }
+        end += 1 + digits;
+    }
+    value.start..end
 }
 
 /// 値の末尾の `-`・`_` を除き、数字を含むときだけ範囲を返す。
@@ -990,7 +1064,7 @@ fn is_label_only(text: &str) -> bool {
 fn leading_value(text: &str) -> Option<Range<usize>> {
     let offset = text.len() - text.trim_start().len();
     let value = LEADING_VALUE.find(text.trim())?;
-    number_range(text, offset + value.start()..offset + value.end())
+    number_range(text, extend_spaced_groups(text, offset + value.start()..offset + value.end()))
 }
 
 #[cfg(test)]
@@ -1150,6 +1224,87 @@ mod tests {
     }
 
     #[test]
+    fn 業務画面のid系の英字の手がかり語を検出する() {
+        // 対象(テナント・組織・税・発注・問い合わせ・参照など)+ ID/No./#/Number/Code(カテゴリ単位)
+        let cases = [
+            ("Tenant ID T-88410293", "T-88410293"),
+            ("Org ID: 4410-22", "4410-22"),
+            ("Organization ID org_88213", "org_88213"),
+            ("Workspace ID ws-77120", "ws-77120"),
+            ("Project No. PRJ-0042", "PRJ-0042"),
+            ("VAT ID GB123456789", "GB123456789"),
+            ("VATID DE998877665", "DE998877665"),
+            ("Tax ID: 12-3456789", "12-3456789"),
+            ("PO number 4500012874", "4500012874"),
+            ("PO# 77120", "77120"),
+            ("Purchase Order No. PO-30018", "PO-30018"),
+            ("Request ID REQ-2210", "REQ-2210"),
+            ("Ref No. R-2201", "R-2201"),
+            ("Ref #99812", "99812"),
+            ("Transaction ID TX88213", "TX88213"),
+            ("Tracking number 1Z999AA1012", "1Z999AA1012"),
+            ("Employee code E-1029", "E-1029"),
+            ("Policy number PL-55102", "PL-55102"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(cued(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn 業務画面のid系の日本語の手がかり語を検出する() {
+        let cases = [
+            ("稟議番号 RG-26-0418", "RG-26-0418"),
+            ("稟議No. 2210", "2210"),
+            ("申請番号: AP-7710", "AP-7710"),
+            ("経費精算No. EX-1029", "EX-1029"),
+            ("出張申請番号 TR-2026-01", "TR-2026-01"),
+            ("伝票番号 DN-004", "DN-004"),
+            ("追跡番号 4410-2290-1182", "4410-2290-1182"),
+            ("法人番号 1234567890123", "1234567890123"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(cued(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+    }
+
+    #[test]
+    fn 空白で区切った数字の組の番号は全体を返す() {
+        // 国コード(大文字 2 字)や数字の組の後に、空白 1 つずつで 2〜6 桁の数字の組が続く形(VAT 番号など)
+        let cases = [
+            ("VAT ID: GB 000 4417 26", "GB 000 4417 26"),
+            ("社員番号 1234 5678", "1234 5678"),
+            ("Order No. 4821 10 items", "4821 10"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(cued(line), vec![span(line, expected)], "case {}", expected.len());
+        }
+        // 英字の語・1 桁の数字は続けない
+        let line = "Order No. 58821 shipped";
+        assert_eq!(cued(line), vec![span(line, "58821")]);
+        let line = "Invoice #4821 3 items";
+        assert_eq!(cued(line), vec![span(line, "4821")]);
+        let page = GridPage::new(&[("VAT ID", LEFT_CELL), ("GB 000 4417 26", RIGHT_CELL)]);
+        assert_eq!(detect_page(&page), vec![Match::new(1, 0..14, MatchDetail::LabeledNumber)]);
+    }
+
+    #[test]
+    fn 一般化したid系の手がかり語でも番号でないものは対象外() {
+        let cases = [
+            "Project notes 2024", // 番号の語が無い
+            "Tax included",       // 番号の語が無い
+            "PO box",             // 番号の語が無い
+            "Request access",     // 番号の語が無い
+            "Repo 2026",          // 語の一部
+            "Reference guide",    // 番号の語が無い
+            "VAT ID pending",     // 数字を含まない
+        ];
+        for line in cases {
+            assert!(cued(line).is_empty(), "case {}", line.len());
+        }
+    }
+
+    #[test]
     fn 手がかり語と番号の間の助詞を許す() {
         let cases = [
             ("会員番号は HX-71020 です。", "HX-71020"),
@@ -1221,6 +1376,44 @@ mod tests {
         // 見出しの行でない(右隣に値がある)ラベルは従来どおり右隣を値とする
         let page = GridPage::new(&[("契約番号", LEFT_CELL), ("CB-240117", RIGHT_CELL)]);
         assert_eq!(detect_page(&page), vec![Match::new(1, 0..9, MatchDetail::LabeledNumber)]);
+    }
+
+    #[test]
+    fn 隣の枠に同じ高さで数字を含む観測があっても見出しの行とみなす() {
+        let values = ["0412873", "0398120"];
+        let mut page = header_table(["氏名", "社員コード", "内線"], &values);
+        // 右の別の枠(見出しの行から離れた所)に、同じ高さで数字を含む値が並ぶ
+        page.texts.push(SensitiveText::new("10180-35781291".to_string()));
+        page.boxes.push(NormalizedRect { x: 0.9, y: 0.8, width: 0.08, height: 0.03 });
+        let expected: Vec<Match> = values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| Match::new(3 + i, 0..v.len(), MatchDetail::LabeledNumber))
+            .collect();
+        assert_eq!(detect_page(&page), expected);
+    }
+
+    #[test]
+    fn 番号の語や対象だけの表の見出しの列の値を番号とする() {
+        // 「No.」「#」「番号」だけの見出し、「Invoice」「注文」など対象だけの見出し(表の見出しの行のときだけ)
+        let values = ["RG-26-0418", "INV-2026-00377", "CN-2026-0007"];
+        for header in ["No.", "#", "番号", "Invoice", "Ticket", "注文", "稟議"] {
+            let page = header_table(["日付", header, "金額"], &values);
+            let expected: Vec<Match> = values
+                .iter()
+                .enumerate()
+                .map(|(i, v)| Match::new(3 + i, 0..v.len(), MatchDetail::LabeledNumber))
+                .collect();
+            assert_eq!(detect_page(&page), expected, "header {}", header.len());
+        }
+        // 行番号(4 文字未満)・数字を含まない値は番号にしない
+        let page = header_table(["日付", "No.", "金額"], &["1", "2", "3"]);
+        assert!(detect_page(&page).is_empty());
+        let page = header_table(["日付", "Order", "金額"], &["Pending", "Shipped"]);
+        assert!(detect_page(&page).is_empty());
+        // 表の見出しの行でない(右隣に値がある)なら対象だけの語は手がかりにしない
+        let page = GridPage::new(&[("Invoice", LEFT_CELL), ("INV-2026-00377", RIGHT_CELL)]);
+        assert!(detect_page(&page).is_empty());
     }
 
     #[test]

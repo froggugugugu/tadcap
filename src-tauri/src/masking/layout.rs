@@ -46,8 +46,9 @@ const MAX_OVERLAP_RATIO: f64 = 0.25;
 
 /// `line` の直下の行で、左端が `line` の左端に最も近い観測。
 ///
-/// 縦の中心が `line` の下端より下にある観測のうち、上端が最も高いもの(最も近い行)を基準に、
-/// その行(縦の中心が基準の高さの範囲に入る観測)の中から左端の差が最も小さいものを選ぶ。
+/// 縦の中心が `line` の下端より下にあり、横の範囲が `line` と重なる観測のうち、上端が最も高いもの
+/// (最も近い行)を基準に、その行(縦の中心が基準の高さの範囲に入る観測)の中から左端の差が最も小さいものを選ぶ。
+/// 横に重ならない観測(隣の枠・列の行)は、高さがわずかに下でも直下の行の基準にしない(2026-10-09 の一般化)。
 /// 差が等しければ番号の小さい方。見つからなければ `None`。
 pub(super) fn next_line_below<P: RecognizedPage + ?Sized>(page: &P, line: usize) -> Option<usize> {
     let label = page.line_box(line);
@@ -55,7 +56,7 @@ pub(super) fn next_line_below<P: RecognizedPage + ?Sized>(page: &P, line: usize)
     let below: Vec<(usize, NormalizedRect)> = (0..page.line_count())
         .filter(|&i| i != line)
         .map(|i| (i, page.line_box(i)))
-        .filter(|(_, rect)| center_y(rect) < label.y)
+        .filter(|(_, rect)| center_y(rect) < label.y && overlaps_horizontally(rect, &label))
         .collect();
     // 上端(y + 高さ)が最も高い観測 = ラベルに最も近い行の基準
     let (_, row) = below
@@ -80,8 +81,9 @@ pub(super) fn same_row<P: RecognizedPage + ?Sized>(page: &P, line: usize) -> Vec
 const MAX_COLUMN_ROWS: usize = 50;
 
 /// 列の続きとみなす、前の観測との縦の間隔の上限(前の観測の高さに対する倍率)。
-/// 表の行の間隔(セルの上下の余白)は文字の高さより狭いのが一般的なので、1.5 倍を超えたら別の塊とみなす。
-const MAX_COLUMN_GAP_RATIO: f64 = 1.5;
+/// 表の行の間隔(セルの上下の余白)は文字の高さより狭いのが一般的だが、隣の列のセルが 2 行(「件名 / 取引先」)だと
+/// 1 行分 + 余白(高さの約 2 倍)空く。2.5 倍を超えたら別の塊とみなす(2026-10-09 の書式の拡張で 1.5 から変更)。
+const MAX_COLUMN_GAP_RATIO: f64 = 2.5;
 
 /// 列の見出し `header` の下に並ぶ観測の番号(上から順)。
 ///
@@ -122,6 +124,11 @@ fn center_y(rect: &NormalizedRect) -> f64 {
 
 fn top_of(rect: &NormalizedRect) -> f64 {
     rect.y + rect.height
+}
+
+/// 横の範囲が重なる(接するだけは重ならない)。
+fn overlaps_horizontally(rect: &NormalizedRect, other: &NormalizedRect) -> bool {
+    rect.x < other.x + other.width - EPSILON && other.x < rect.x + rect.width - EPSILON
 }
 
 /// `rect` の縦の中心が `row` の高さの範囲(端を含む)に入る。
@@ -297,6 +304,19 @@ mod tests {
         assert_eq!(next_line_below(&BoxesPage::new(&[LABEL]), 0), None);
     }
 
+    #[test]
+    fn 横に重ならない別の枠の観測は直下の行にしない() {
+        // 1: 別の枠の観測。ラベルの下端よりわずかに下だが横に重ならない(最も高いが基準にしない)
+        let page = BoxesPage::new(&[
+            LABEL,
+            (0.5, 0.48, 0.3, 0.05),  // 1: 上端 0.53・右の枠
+            (0.1, 0.43, 0.15, 0.05), // 2: ラベルの下(横に重なる)
+        ]);
+        assert_eq!(next_line_below(&page, 0), Some(2));
+        let page = BoxesPage::new(&[LABEL, (0.5, 0.43, 0.3, 0.05)]);
+        assert_eq!(next_line_below(&page, 0), None);
+    }
+
     // ---- near_right_neighbor ----
 
     #[test]
@@ -344,6 +364,19 @@ mod tests {
         ]);
         assert_eq!(column_below(&page, 0), vec![1]);
         assert!(column_below(&BoxesPage::new(&[LABEL, (0.1, 0.2, 0.2, 0.05)]), 0).is_empty());
+    }
+
+    #[test]
+    fn 隣の列が複数行のセルで行の間隔が広い表でも列をたどる() {
+        // 値の高さ 0.03。行の間隔 0.06(高さの 2 倍。隣の列が 2 行のセル)
+        let page = BoxesPage::new(&[
+            (0.1, 0.8, 0.1, 0.03),
+            (0.1, 0.74, 0.15, 0.03), // 1: 上端 0.77
+            (0.1, 0.65, 0.15, 0.03), // 2: 上端 0.68(1 の下端 0.74 から 0.06)
+            (0.1, 0.56, 0.15, 0.03), // 3
+            (0.1, 0.30, 0.15, 0.03), // 4: 大きく離れている(別の塊)
+        ]);
+        assert_eq!(column_below(&page, 0), vec![1, 2, 3]);
     }
 
     #[test]

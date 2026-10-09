@@ -27,12 +27,19 @@ pub(super) const TOKEN_PREFIXES: [&str; 21] = [
 
 /// ②認証情報: 英字の手がかり語(大文字・小文字を区別しない)。`KEY=VALUE` のキーに含まれる場合も手がかりとする
 /// (`DB_PASSWORD`・`client_secret` など)。部分一致で別の語に当たらない語だけを置く。
-/// 「passphrase」「passcode」は `pass` に含まれる。「credential」は 2026-10-09 の一般化で追加。
-pub(super) const CREDENTIAL_CUES_ASCII: [&str; 6] = ["password", "pass", "pwd", "secret", "token", "credential"];
+/// 「passphrase」「passcode」は `pass` に含まれるが、語そのもの(空白だけの区切りを許す判定)として 2026-10-09 の書式の拡張で置く。
+/// 「credential」は 2026-10-09 の一般化で追加。
+pub(super) const CREDENTIAL_CUES_ASCII: [&str; 8] =
+    ["password", "passphrase", "passcode", "pass", "pwd", "secret", "token", "credential"];
 
 /// ②認証情報: 「〜 key」の形の手がかり(正規表現の断片)。間の空白・`_`・`-` の有無を許す。
 /// 「api key」に加え、鍵の種類として一般的な access・private・secret・signing・license を置く(2026-10-09 の一般化)。
 pub(super) const API_KEY_CUE_PATTERN: &str = r"(?:api|access|private|secret|signing|license)[\x20_\-]?key";
+
+/// ②認証情報: 「〜 code」の形の手がかり(正規表現の断片)。認証・復旧に使う一時的なコードの一般的な呼び名
+/// (recovery・backup・verification・one-time・activation・invite など)。間の空白・`_`・`-` の有無を許す
+/// (2026-10-09 の書式の拡張)。「postal code」「QR code」「source code」のような認証でないコードは置かない。
+pub(super) const CODE_CUE_PATTERN: &str = r"(?:recovery|backup|verification|verify|security|auth|authentication|authori[sz]ation|activation|access|invite|invitation|reset|one[\x20_\-]?time|2fa|mfa|otp|sms|login|pairing|unlock)[\x20_\-]?code";
 
 /// ②認証情報: 語として独立しているときだけ手がかりにする英字の語(大文字・小文字を区別しない)。
 /// 部分一致にすると別の語(`shipping` の `pin` など)に当たるため、キーの一部としては扱わない(2026-10-09 の一般化)。
@@ -40,8 +47,11 @@ pub(super) const CREDENTIAL_WORD_CUES_ASCII: [&str; 4] = ["pin", "otp", "bearer"
 
 /// ②認証情報: 日本語の手がかり語。比較前に行と同じ `normalize` を通す(長音 `ー` は `-` になる)。
 /// 認証に使う値の一般的な呼び名を体系的に置く(2026-10-09 の一般化。評価画像の語を足したものではない)。
-pub(super) const CREDENTIAL_CUES_JA: [&str; 16] = [
+/// 2026-10-09 の書式の拡張で、解錠・解除・招待・復旧などの「〜コード」と「認証番号」「確認番号」、
+/// 読み取りで「パ」が「バ」になった「バスワード」(半濁点・濁点の取り違えは一般的な誤読)を足した。
+pub(super) const CREDENTIAL_CUES_JA: [&str; 29] = [
     "パスワード",
+    "バスワード",
     "暗証番号",
     "パスコード",
     "パスフレーズ",
@@ -57,20 +67,37 @@ pub(super) const CREDENTIAL_CUES_JA: [&str; 16] = [
     "認証キー",
     "トークン",
     "合言葉",
+    "解錠コード",
+    "開錠コード",
+    "解除コード",
+    "暗証コード",
+    "招待コード",
+    "復旧コード",
+    "リカバリーコード",
+    "リカバリコード",
+    "バックアップコード",
+    "承認コード",
+    "認証番号",
+    "確認番号",
 ];
 
 /// ②・③: 手がかり語と値の間に入る助詞(「会員番号は 12345」「暗証番号が …」)。
 pub(super) const CUE_PARTICLES: [&str; 3] = ["は", "が", "も"];
 
 /// ③識別子: 手がかり語付きの番号の日本語の手がかり語は「対象 + 番号の語」の組み合わせで作る(2026-10-09 の一般化)。
-/// 対象は業務画面で番号が振られる一般的なもの(取引・契約・人・受付)。比較前に行と同じ `normalize` を通す。
-pub(super) const CUED_NUMBER_SUBJECTS_JA: [&str; 31] = [
+/// 対象は業務画面で番号が振られる一般的なもの(取引・契約・人・受付・社内の申請・物流・公的な番号)。
+/// 比較前に行と同じ `normalize` を通す。
+pub(super) const CUED_NUMBER_SUBJECTS_JA: [&str; 50] = [
     // 取引
-    "注文", "受注", "発注", "契約", "請求", "請求書", "見積", "伝票", "取引", "案件",
+    "注文", "受注", "発注", "契約", "請求", "請求書", "見積", "見積書", "伝票", "取引", "案件", "納品", "納品書", "領収書",
     // 問い合わせ・受付
     "問い合わせ", "問合せ", "問合わせ", "お問い合わせ", "受付", "予約", "申込", "申し込み", "管理", "整理",
     // 人・組織
-    "会員", "登録", "取引先", "顧客", "お客様", "患者", "社員", "職員", "従業員", "利用者", "ユーザー",
+    "会員", "登録", "取引先", "顧客", "お客様", "患者", "社員", "職員", "従業員", "利用者", "ユーザー", "加入者", "組合員",
+    // 社内の申請・決裁(2026-10-09 の書式の拡張)
+    "稟議", "申請", "経費", "精算", "経費精算", "出張", "出張申請",
+    // 物流・保険・公的な番号(2026-10-09 の書式の拡張)
+    "追跡", "配送", "出荷", "証券", "保険証券", "法人",
 ];
 
 /// ③識別子: 日本語の対象の後に付く番号の語。対象との間の空白 1 つを許し、大文字・小文字を区別しない。
@@ -78,35 +105,87 @@ pub(super) const CUED_NUMBER_SUBJECTS_JA: [&str; 31] = [
 pub(super) const CUED_NUMBER_KINDS_JA: [&str; 7] = ["番号", "No.", "No", "ID", "コード", "CD", "#"];
 
 /// ③識別子: 英字の対象(正規表現の断片・大文字小文字を区別しない)。後に番号の語(`CUED_NUMBER_KINDS_ASCII`)が要る。
-pub(super) const CUED_NUMBER_SUBJECTS_ASCII: [&str; 18] = [
+/// 2026-10-09 の書式の拡張で、SaaS の管理画面・請求・問い合わせで一般的な対象(テナント・組織・税・発注・
+/// 依頼・参照・取引・追跡・保険など)を足した。語の間は空白・`_`・`-` の有無を許す。
+pub(super) const CUED_NUMBER_SUBJECTS_ASCII: [&str; 37] = [
     "order", "invoice", "account", "acct", "customer", "client", "member", "membership", "employee", "staff",
     "ticket", "case", "contract", "booking", "reservation", "reference", "patient", "registration",
+    // 2026-10-09 の書式の拡張
+    "tenant", "org", "organi[sz]ation", "workspace", "project", "vat", "tax", "po", r"purchase[\x20_\-]?order",
+    "request", "req", "ref", "transaction", "txn", "tracking", "shipment", "policy", "claim", "incident",
 ];
 
 /// ③識別子: 英字の対象の後に付く番号の語(正規表現の断片)。間の空白・`_`・`-` の有無を許す。
-pub(super) const CUED_NUMBER_KINDS_ASCII: &str = r"(?:[\x20_\-]?(?:number|num|no\.|no|id)|\x20?#)";
+/// 「code」は 2026-10-09 の書式の拡張(「Employee code」など)。
+pub(super) const CUED_NUMBER_KINDS_ASCII: &str = r"(?:[\x20_\-]?(?:number|num|no\.|no|id|code)|\x20?#)";
+
+/// ③識別子: 表の見出しの行で、それだけで列の値を番号とする英字の番号の語(大文字・小文字を区別しない)。
+/// 「No.」「#」「Number」「Ref」など。対象だけの見出し(「Invoice」「注文」)は `CUED_NUMBER_SUBJECTS_*` を使う。
+pub(super) const COLUMN_NUMBER_WORDS_ASCII: [&str; 6] = [r"no\.?", "#", "number", "num", "ref", "code"];
 
 /// ③識別子: 対象の無い英字の手がかり(正規表現の断片・大文字小文字を区別しない)。
 /// 「User ID」は間の空白・`_`・`-` の有無を許す。長いものを先に書く。
 pub(super) const CUED_NUMBER_CUES_ASCII: [&str; 2] = [r"user[\x20_\-]?id", "id"];
 
 /// ④金額・口座: 口座番号の手がかり語。比較前に行と同じ `normalize` を通す。
-pub(super) const ACCOUNT_CUES: [&str; 4] = ["口座番号", "口座", "普通", "当座"];
+/// 預金の種類の略記(「(普)」「(当)」「(貯)」)と「貯蓄」は 2026-10-09 の書式の拡張。
+pub(super) const ACCOUNT_CUES: [&str; 10] =
+    ["口座番号", "口座", "普通", "当座", "貯蓄", "(普通)", "(当座)", "(普)", "(当)", "(貯)"];
 
 /// ④金額・口座: 口座番号の前に付く預金の種類(「普通」「普通預金」など)。比較前に `normalize` を通す。
-pub(super) const ACCOUNT_TYPES: [&str; 2] = ["普通", "当座"];
+pub(super) const ACCOUNT_TYPES: [&str; 3] = ["普通", "当座", "貯蓄"];
 
 /// ④金額・口座: 預金の種類の後に続く語(「普通預金」)。
 pub(super) const ACCOUNT_TYPE_SUFFIX: &str = "預金";
 
-/// ④金額・口座: 数値の前に付く通貨記号・単位。全角の `￥` `＄` は `normalize` で `¥`(U+00A5)・`$` になる。
-pub(super) const CURRENCY_PREFIXES: [&str; 4] = ["\u{a5}", "$", "USD", "JPY"];
+/// ④金額・口座: 英字の口座の手がかり語(正規表現の断片・大文字小文字を区別しない。2026-10-09 の書式の拡張)。
+/// 口座(Account・Acct・A/C・Bank account)、米国の ACH・Routing(ABA)、英国の Sort code、豪州の BSB、
+/// 口座の種類(Checking・Savings)。語の間は空白・`_`・`-` の有無を許す。
+pub(super) const ACCOUNT_CUES_ASCII: [&str; 11] = [
+    r"bank[\x20_\-]?account", "account", "acct", "a/c", "ach", "routing", "aba", r"sort[\x20_\-]?code", "bsb", "checking",
+    "savings",
+];
 
-/// ④金額・口座: 数値の後に付く通貨の単位。「円」の前の「万」「億」「千」は金額の一部とする。
-pub(super) const CURRENCY_SUFFIXES: [&str; 3] = ["円", "USD", "JPY"];
+/// ④金額・口座: IBAN の国コードと桁数(国コード・チェックディジットを含む英数字の数。ISO 13616 の登録簿より)。
+/// 欧州と、IBAN を使う中東・その他の主な国を置く(2026-10-09 の書式の拡張)。
+pub(super) const IBAN_LENGTHS: [(&str, usize); 50] = [
+    ("AD", 24), ("AE", 23), ("AL", 28), ("AT", 20), ("AZ", 28), ("BA", 20), ("BE", 16), ("BG", 22), ("BH", 22),
+    ("BR", 29), ("CH", 21), ("CR", 22), ("CY", 28), ("CZ", 24), ("DE", 22), ("DK", 18), ("DO", 28), ("EE", 20),
+    ("EG", 29), ("ES", 24), ("FI", 18), ("FO", 18), ("FR", 27), ("GB", 22), ("GE", 22), ("GI", 23), ("GL", 18),
+    ("GR", 27), ("HR", 21), ("HU", 28), ("IE", 22), ("IL", 23), ("IS", 26), ("IT", 27), ("JO", 30), ("KW", 30),
+    ("KZ", 20), ("LB", 28), ("LI", 21), ("LT", 20), ("LU", 20), ("LV", 21), ("MC", 27), ("MT", 31), ("NL", 18),
+    ("NO", 15), ("PL", 28), ("PT", 25), ("SA", 24), ("SE", 24),
+];
 
-/// ④金額・口座: 「円」の前に付く数の単位。
-pub(super) const YEN_MULTIPLIERS: [&str; 3] = ["千", "万", "億"];
+/// ④金額・口座: IBAN の手がかり語(同じ行・同じ高さの観測にあれば、チェックディジットが合わなくても IBAN とする)。
+pub(super) const IBAN_CUE: &str = "iban";
+
+/// ④金額・口座: 数値の前に付く通貨記号(英字を含まないもの)。全角の `￥` `＄` は `normalize` で `¥`(U+00A5)・`$` になる。
+/// 主要通貨の記号を置く(2026-10-09 の書式の拡張: € £ ₩ ₹ など)。
+pub(super) const CURRENCY_SYMBOLS: [&str; 13] =
+    ["\u{a5}", "$", "\u{20ac}", "\u{a3}", "\u{ffe1}", "\u{20a9}", "\u{20b9}", "\u{20bd}", "\u{20ba}", "\u{20ab}", "\u{e3f}", "\u{20b1}", "\u{20aa}"];
+
+/// ④金額・口座: 英字 + `$` のドルの記号(豪・加・NZ・香港・シンガポール・米・台湾・ブラジル・メキシコ)。前が英字でないこと。
+pub(super) const CURRENCY_DOLLAR_PREFIXES: [&str; 9] = ["A$", "C$", "NZ$", "HK$", "S$", "US$", "NT$", "R$", "MX$"];
+
+/// ④金額・口座: ISO 4217 の通貨コード(大文字だけ。数値の前・後に付く)。主要通貨を置き、
+/// 一般的な語・略語と紛れるもの(PHP・TRY など)は置かない(2026-10-09 の書式の拡張)。
+pub(super) const CURRENCY_CODES: [&str; 28] = [
+    "USD", "EUR", "JPY", "GBP", "CHF", "AUD", "CAD", "NZD", "HKD", "SGD", "CNY", "RMB", "KRW", "INR", "TWD", "THB",
+    "SEK", "NOK", "DKK", "PLN", "CZK", "MXN", "BRL", "ZAR", "IDR", "MYR", "VND", "AED",
+];
+
+/// ④金額・口座: 数値の後に付く通貨記号(欧州の後置の €)。
+pub(super) const CURRENCY_SUFFIX_SYMBOLS: [&str; 1] = ["\u{20ac}"];
+
+/// ④金額・口座: 数値の後に付く日本語の通貨の単位。前に「万」「億」などの数の単位を挟んでよい。
+pub(super) const CURRENCY_UNITS_JA: [&str; 8] = ["円", "ドル", "ユーロ", "ポンド", "元", "ウォン", "ルピー", "フラン"];
+
+/// ④金額・口座: 日本語の通貨の単位の前の数の単位(「32万4,000円」「1億2,000万円」の組み合わせを許す)。
+pub(super) const AMOUNT_MULTIPLIERS: [&str; 4] = ["千", "万", "億", "兆"];
+
+/// ④金額・口座: 金額の前に付く負の印(`-` は `−` などの正規化後の形を含む。△・▲ は会計の表記)。
+pub(super) const NEGATIVE_MARKS: [&str; 3] = ["-", "\u{25b3}", "\u{25b2}"];
 
 /// ③識別子(人名): 名前の後に付く敬称。直前のかな漢字列を人名とする。
 pub(super) const HONORIFICS: [&str; 4] = ["様", "さん", "氏", "殿"];
@@ -187,6 +266,21 @@ pub(super) const STREET_SUFFIXES: [&str; 30] = [
     "Place", "Pl", "Square", "Sq", "Parkway", "Pkwy", "Highway", "Hwy", "Terrace", "Ter", "Circle", "Cir", "Trail",
     "Crescent", "Plaza",
 ];
+
+/// ①連絡先(英語の住所): 番地の前に付く部屋・区画の種類(正規表現の断片・大文字小文字を区別する)。
+/// 「Unit 12, 48 Fernhollow Road」のように、続く番地 + 通りの住所と合わせて住所とする(2026-10-09 の書式の拡張)。
+pub(super) const UNIT_DESIGNATORS: [&str; 10] =
+    ["Unit", "Suite", r"Ste\.?", r"Apt\.?", "Apartment", "Flat", "Room", r"Rm\.?", "Floor", r"Bldg\.?"];
+
+/// ①連絡先(ローマ字の日本の住所): 市区町村の種類の接尾辞(「Sazanami-shi」「Chiyoda-ku」)。
+pub(super) const JP_ROMAJI_ADMIN_SUFFIXES: [&str; 8] = ["shi", "ku", "cho", "machi", "mura", "son", "gun", "ken"];
+
+/// ①連絡先(日本語の住所): 市区町村の種類(丁目・番地の前の市区町村名の終わり)。
+pub(super) const JP_MUNICIPALITY_SUFFIXES: [char; 5] = ['市', '区', '町', '村', '郡'];
+
+/// ①連絡先(電話): 内線の手がかり(正規表現の断片・大文字小文字を区別しない・長いものを先に書く)。
+/// 電話番号の後に続く内線の番号を電話に含める(2026-10-09 の書式の拡張)。
+pub(super) const PHONE_EXTENSION_CUES: [&str; 5] = ["extension", r"ext\.?", "内線", "内", "x"];
 
 /// ①連絡先(英語の住所): 米国の州・特別区の 2 文字の略称(「市, 州 郵便番号」の行の判定に使う)。
 pub(super) const US_STATE_CODES: [&str; 51] = [
