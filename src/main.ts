@@ -18,6 +18,7 @@ import {
   snapshotDocument,
 } from "./canvas/documentState";
 import { createDocumentSurface } from "./canvas/documentSurface";
+import { discardMaskSession } from "./canvas/maskSession";
 import { bindMosaicTool } from "./canvas/tools/mosaicTool";
 import { bindShapeTools } from "./canvas/tools/shapeTools";
 import { bindTextTool, commitPendingText } from "./canvas/tools/textTool";
@@ -73,6 +74,8 @@ import { initSettingsDialog } from "./ui/settingsDialog";
 import { initToolbar } from "./ui/toolbar";
 import { initUndoButtons } from "./ui/undoButton";
 import { initArrangeButtons } from "./ui/arrangeButtons";
+import { initAutoMask } from "./ui/autoMask";
+import { initMaskOverlay } from "./ui/maskOverlay";
 import { clearToast, showToast } from "./ui/toast";
 
 let canvasEl: HTMLCanvasElement | null = null;
@@ -146,6 +149,9 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
   }
   let objectUrl: string | null = null;
   try {
+    // AM-T15: 画像を差し替える前に自動マスキングの候補を捨てる(処理中の結果も、token の照合で
+    // 捨てられる。ARCH_auto-masking §7.1 手順11)。
+    discardMaskSession();
     // T27: 差し替え前に入力中のテキストを確定し、下の履歴保存に含める(T32: 図形は
     // オブジェクトとして常に表示canvasへ合成済みのため確定は不要)。
     commitPendingText();
@@ -267,6 +273,8 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
   // 表示中の項目を削除した後の読込では保存点を経ないため、入力中のテキストをここで閉じる
   // (項目クリックの経路では`captureCurrentHistoryAssets`で確定済みなので何もしない)。
   commitPendingText();
+  // AM-T15: 画像を差し替える前に自動マスキングの候補を捨てる(ARCH_auto-masking §7.1 手順11)。
+  discardMaskSession();
   try {
     // T34: 退避したドキュメントがあれば、ベース・オブジェクト・取り消しスタックごと戻す
     // (戻った後もオブジェクトを再調整・取り消しできる)。
@@ -309,6 +317,8 @@ function clearEditor(): void {
     return;
   }
   commitPendingText();
+  // AM-T15: 画像を消す前に自動マスキングの候補を捨てる(ARCH_auto-masking §7.1 手順11)。
+  discardMaskSession();
   canvasEl.width = 0;
   canvasEl.height = 0;
   resetDocument();
@@ -352,6 +362,14 @@ window.addEventListener("DOMContentLoaded", () => {
     // T27: テキストツール(クリック位置に入力欄を重ね、Enter/blurで確定・Escで取消)。
     // v0.2.2: 入力欄のフォーカスでアプリのアクティブ化を要求する(日本語IMEが効くように)。
     bindTextTool(canvasEl, { onEditorFocus: () => requestAppActivation() });
+    // AM-T15: 自動マスキング(実行ボタン・⌘⇧M・結果バー・Esc)と候補の印(AM-T12)。Esc を
+    // `selectionKeys` より先に受けて`preventDefault()`するため、`bindSelectionKeys()`より前に登録する。
+    const toolbarHeaderEl = document.querySelector<HTMLElement>("header.toolbar");
+    const copyButtonEl = document.querySelector<HTMLElement>("#clipboard-copy-button");
+    if (toolbarHeaderEl && copyButtonEl && statusEl) {
+      initAutoMask({ toolbar: toolbarHeaderEl, copyButton: copyButtonEl, canvas: canvasEl, status: statusEl });
+    }
+    initMaskOverlay(canvasEl);
     bindSelectionKeys();
     // T29: 取り消し・やり直し(ボタン + Cmd+Z/Cmd+Shift+Z)。Undo/Redoスタックのクリアは
     // 画像差し替え完了後の`resetDocument()`(`handleCaptureCompleted`/`reloadHistoryItemIntoCanvas`)。
