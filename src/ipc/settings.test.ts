@@ -14,11 +14,14 @@ vi.mock("@tauri-apps/api/event", () => ({
 import {
   DEFAULT_CAPTURE_ACCELERATOR,
   SETTINGS_OPEN_EVENT,
+  ShrinkCopyError,
   getCaptureShortcut,
+  getShrinkCopy,
   onSettingsOpen,
   resetCaptureShortcut,
   setCaptureShortcut,
   setShortcutRecording,
+  setShrinkCopy,
 } from "./settings";
 
 const info = { accelerator: "alt+super+KeyK", isDefault: false, registered: true };
@@ -83,5 +86,61 @@ describe("キャプチャのショートカットのコマンド", () => {
     const callback = listenMock.mock.calls[0]![1] as () => void;
     callback();
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("縮めてコピーの設定のコマンド(QE-T07)", () => {
+  beforeEach(() => {
+    invokeMock.mockReset();
+  });
+
+  it.each([true, false])("getShrinkCopyはget_shrink_copyを呼び、%sをそのまま返す", async (value) => {
+    invokeMock.mockResolvedValue(value);
+
+    await expect(getShrinkCopy()).resolves.toBe(value);
+    expect(invokeMock).toHaveBeenCalledWith("get_shrink_copy");
+  });
+
+  it.each([null, undefined, "true", 1, {}])("get_shrink_copyが真偽値以外(%j)を返したらfalse", async (value) => {
+    invokeMock.mockResolvedValue(value);
+
+    await expect(getShrinkCopy()).resolves.toBe(false);
+  });
+
+  it("get_shrink_copyの失敗(コマンドが無い環境を含む)はfalse", async () => {
+    invokeMock.mockRejectedValue("command get_shrink_copy not found");
+
+    await expect(getShrinkCopy()).resolves.toBe(false);
+  });
+
+  it.each([true, false])("setShrinkCopy(%s)は{ enabled }を渡してset_shrink_copyを呼び、保存後の値を返す", async (enabled) => {
+    invokeMock.mockResolvedValue(enabled);
+
+    await expect(setShrinkCopy(enabled)).resolves.toBe(enabled);
+    expect(invokeMock).toHaveBeenCalledWith("set_shrink_copy", { enabled });
+  });
+
+  it("保存の失敗(settings_save_failed)はcode=save_failedのShrinkCopyErrorでrejectする", async () => {
+    invokeMock.mockRejectedValue("settings_save_failed");
+
+    const error = await setShrinkCopy(true).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ShrinkCopyError);
+    expect(error).toMatchObject({ code: "save_failed" });
+  });
+
+  it("それ以外のrejectはcode=failedのShrinkCopyErrorでrejectする", async () => {
+    invokeMock.mockRejectedValue("command set_shrink_copy not found");
+
+    const error = await setShrinkCopy(true).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ShrinkCopyError);
+    expect(error).toMatchObject({ code: "failed" });
+  });
+
+  it.each([null, "true", 1])("set_shrink_copyが真偽値以外(%j)を返したらcode=invalid_responseのShrinkCopyErrorでrejectする", async (value) => {
+    invokeMock.mockResolvedValue(value);
+
+    const error = await setShrinkCopy(true).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ShrinkCopyError);
+    expect(error).toMatchObject({ code: "invalid_response" });
   });
 });

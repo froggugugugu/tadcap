@@ -17,6 +17,7 @@ vi.mock("@tauri-apps/api/event", () => ({
 import {
   CAPTURE_COMPLETED_EVENT,
   CAPTURE_ERROR_EVENT,
+  normalizePixelRatio,
   onCaptureCompleted,
   onCaptureError,
   readCaptureImage,
@@ -29,7 +30,33 @@ const sampleResult: CaptureResult = {
   sourcePath: "/tmp/tadcap-captures/capture-1.png",
   kind: "range",
   createdAt: "2024-01-01T00:00:00.000Z",
+  pixelRatio: 2,
 };
+
+/** 倍率の欠落した古い形の応答(QE-T07 以前の Rust)。 */
+const legacyResult = {
+  id: "capture-1",
+  sourcePath: "/tmp/tadcap-captures/capture-1.png",
+  kind: "range",
+  createdAt: "2024-01-01T00:00:00.000Z",
+};
+
+describe("normalizePixelRatio(QE-T07: 1 | 2 | null 以外は不明 = null)", () => {
+  it.each([
+    [1, 1],
+    [2, 2],
+    [null, null],
+    [undefined, null],
+    [3, null],
+    [1.5, null],
+    ["2", null],
+    [0, null],
+    [Number.NaN, null],
+    [true, null],
+  ])("%j は %j", (input, expected) => {
+    expect(normalizePixelRatio(input)).toBe(expected);
+  });
+});
 
 describe("startCapture", () => {
   beforeEach(() => {
@@ -41,6 +68,25 @@ describe("startCapture", () => {
 
     await expect(startCapture()).resolves.toEqual(sampleResult);
     expect(invokeMock).toHaveBeenCalledWith("capture_screen");
+  });
+
+  it.each([
+    [1, 1],
+    [2, 2],
+    [null, null],
+    [3, null],
+    [1.5, null],
+    ["2", null],
+  ])("撮影結果の倍率 %j は %j として返す", async (raw, expected) => {
+    invokeMock.mockResolvedValue({ ...legacyResult, pixelRatio: raw });
+
+    await expect(startCapture()).resolves.toEqual({ ...legacyResult, pixelRatio: expected });
+  });
+
+  it("倍率の欠落した応答(後方互換)は倍率不明(null)として返す", async () => {
+    invokeMock.mockResolvedValue(legacyResult);
+
+    await expect(startCapture()).resolves.toEqual({ ...legacyResult, pixelRatio: null });
   });
 
   it("Escキャンセル時(戻り値null)はnullを返す", async () => {
@@ -78,6 +124,22 @@ describe("onCaptureCompleted", () => {
     registeredCallback({ payload: sampleResult });
 
     expect(handler).toHaveBeenCalledWith(sampleResult);
+  });
+
+  it.each([
+    [undefined, null],
+    [3, null],
+    ["2", null],
+    [1, 1],
+  ])("イベントの倍率 %j は %j としてハンドラへ渡す(欠落は後方互換で不明)", async (raw, expected) => {
+    listenMock.mockResolvedValue(() => {});
+    const handler = vi.fn();
+
+    await onCaptureCompleted(handler);
+    const registeredCallback = listenMock.mock.calls[0]?.[1] as (event: { payload: unknown }) => void;
+    registeredCallback({ payload: raw === undefined ? legacyResult : { ...legacyResult, pixelRatio: raw } });
+
+    expect(handler).toHaveBeenCalledWith({ ...legacyResult, pixelRatio: expected });
   });
 });
 

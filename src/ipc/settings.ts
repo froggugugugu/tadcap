@@ -1,7 +1,7 @@
-//! キャプチャのショートカット設定のコマンド・イベントの薄いラッパー(KS-T3)。
+//! キャプチャのショートカット設定(KS-T3)と縮めてコピーの設定(QE-T07)のコマンド・イベントの薄いラッパー。
 //!
 //! `src/ipc/` は Tauri API(`@tauri-apps/api`)以外に依存しない(ARCH §3.2 依存方向ルール)。
-//! 失敗は Rust の `AppError` の固定文字列(`shortcut_invalid` など)のまま reject する。
+//! ショートカットの失敗は Rust の `AppError` の固定文字列(`shortcut_invalid` など)のまま reject する(縮めてコピーは `ShrinkCopyError`)。
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -51,4 +51,50 @@ export async function onSettingsOpen(handler: () => void): Promise<UnlistenFn> {
   return listen(SETTINGS_OPEN_EVENT, () => {
     handler();
   });
+}
+
+/**
+ * 縮めてコピーの設定の保存の失敗の種類(QE-T07、ARCH_quick-edits §5.5)。
+ * - `save_failed`: 設定ファイルの保存の失敗(Rust の固定文字列 `settings_save_failed`。設定は元のまま)
+ * - `failed`: それ以外の reject(コマンドが無い・通信の例外など)
+ * - `invalid_response`: 応答が真偽値でない
+ */
+export type ShrinkCopyErrorCode = "save_failed" | "failed" | "invalid_response";
+
+/** {@link setShrinkCopy} が reject する例外。 */
+export class ShrinkCopyError extends Error {
+  constructor(public readonly code: ShrinkCopyErrorCode) {
+    super(`縮めてコピーの設定を保存できませんでした(${code})`);
+    this.name = "ShrinkCopyError";
+  }
+}
+
+const SETTINGS_SAVE_FAILED = "settings_save_failed";
+
+/**
+ * 縮めてコピーの設定を読む。コマンドが無い環境・失敗・真偽値以外の応答はオフ(`false`)として扱う。
+ */
+export async function getShrinkCopy(): Promise<boolean> {
+  try {
+    return (await invoke<unknown>("get_shrink_copy")) === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 縮めてコピーの設定を変えて保存し、保存後の値を返す。
+ * 失敗は {@link ShrinkCopyError} で reject する(`code` で保存の失敗を区別する)。
+ */
+export async function setShrinkCopy(enabled: boolean): Promise<boolean> {
+  let response: unknown;
+  try {
+    response = await invoke<unknown>("set_shrink_copy", { enabled });
+  } catch (error) {
+    throw new ShrinkCopyError(error === SETTINGS_SAVE_FAILED ? "save_failed" : "failed");
+  }
+  if (typeof response !== "boolean") {
+    throw new ShrinkCopyError("invalid_response");
+  }
+  return response;
 }

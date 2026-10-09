@@ -16,6 +16,9 @@ export const CAPTURE_COMPLETED_EVENT = "capture://completed";
 /** PRD §5 `Capture.kind`。MVPでは常に `"range"`(ARCH §15 要確認#2 決定A案)。 */
 export type CaptureKind = "range";
 
+/** 撮った画面の倍率(ARCH_quick-edits §5.5)。Rust は 1 / 2 / `None` しか返さない。 */
+export type PixelRatio = 1 | 2;
+
 /** `capture_screen` コマンドの成功結果(Rust `CaptureResult` の camelCase JSON表現)。 */
 export interface CaptureResult {
   id: string;
@@ -23,6 +26,25 @@ export interface CaptureResult {
   kind: CaptureKind;
   /** ISO8601(UTC)文字列。例: `2024-01-01T00:00:00.000Z` */
   createdAt: string;
+  /**
+   * 撮った画面の倍率(QE-T07)。`null` は不明(縮めない)。このモジュールの関数が返す値には
+   * 必ず入っている。省略可能なのは倍率を持たない既存の値(テストの固定値など)との後方互換のため
+   * で、欠落も不明(`null`)と同じ意味。
+   */
+  pixelRatio?: PixelRatio | null;
+}
+
+/**
+ * 応答の倍率を `1 | 2 | null` に正規化する。それ以外(3・1.5・文字列・欠落など)は
+ * 壊れた値で縮めないよう不明(`null`)として扱う(ARCH_quick-edits §11)。
+ */
+export function normalizePixelRatio(value: unknown): PixelRatio | null {
+  return value === 1 || value === 2 ? value : null;
+}
+
+/** Rust の撮影結果の倍率を正規化する(倍率の無い古い形の応答も受け付ける)。 */
+function withPixelRatio(result: CaptureResult): CaptureResult {
+  return { ...result, pixelRatio: normalizePixelRatio(result.pixelRatio) };
 }
 
 /**
@@ -35,10 +57,11 @@ export interface CaptureResult {
  * Escキャンセル時は画像が生成されないため `null` を返す(エラー扱いしない、
  * Rust側 `commands::capture_screen` の仕様)。失敗時は文字列のまま reject する
  * (`AppError` は文字列としてシリアライズされる。固定文字列
- * `"permission_denied"` は画面収録権限未許可)。
+ * `"permission_denied"` は画面収録権限未許可)。倍率は {@link normalizePixelRatio} で正規化する。
  */
 export async function startCapture(): Promise<CaptureResult | null> {
-  return invoke<CaptureResult | null>("capture_screen");
+  const result = await invoke<CaptureResult | null>("capture_screen");
+  return result === null ? null : withPixelRatio(result);
 }
 
 /** キャプチャ画像のバイト列を返すRustコマンド名(`commands::read_capture_image`)。 */
@@ -71,7 +94,7 @@ export async function onCaptureCompleted(
   handler: (result: CaptureResult) => void,
 ): Promise<UnlistenFn> {
   return listen<CaptureResult>(CAPTURE_COMPLETED_EVENT, (event) => {
-    handler(event.payload);
+    handler(withPixelRatio(event.payload));
   });
 }
 
