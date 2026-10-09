@@ -43,6 +43,8 @@ enum EvalSet {
     Holdout,
     /// 規則の一般化の後に初めて測る 2 つ目のホールドアウト(`eval/masking/holdout2/`)
     Holdout2,
+    /// 書式の対応を広げた後に初めて測る最終確認用(`eval/masking/holdout3/`)
+    Holdout3,
 }
 
 impl EvalSet {
@@ -52,6 +54,7 @@ impl EvalSet {
             None | Some("" | "default") => Some(Self::Default),
             Some("holdout") => Some(Self::Holdout),
             Some("holdout2") => Some(Self::Holdout2),
+            Some("holdout3") => Some(Self::Holdout3),
             Some(_) => None,
         }
     }
@@ -62,6 +65,7 @@ impl EvalSet {
             Self::Default => "eval/masking",
             Self::Holdout => "eval/masking/holdout",
             Self::Holdout2 => "eval/masking/holdout2",
+            Self::Holdout3 => "eval/masking/holdout3",
         }
     }
 
@@ -71,6 +75,7 @@ impl EvalSet {
             Self::Default => None,
             Self::Holdout => Some("holdout".to_string()),
             Self::Holdout2 => Some("holdout2".to_string()),
+            Self::Holdout3 => Some("holdout3".to_string()),
         })
     }
 
@@ -711,6 +716,8 @@ mod tests {
         assert_eq!(EvalSet::Holdout.dir(), "eval/masking/holdout");
         assert_eq!(EvalSet::parse(Some("holdout2")), Some(EvalSet::Holdout2));
         assert_eq!(EvalSet::Holdout2.dir(), "eval/masking/holdout2");
+        assert_eq!(EvalSet::parse(Some("holdout3")), Some(EvalSet::Holdout3));
+        assert_eq!(EvalSet::Holdout3.dir(), "eval/masking/holdout3");
     }
 
     #[test]
@@ -720,6 +727,8 @@ mod tests {
         assert_eq!(EvalSet::Holdout.label(None), Some("holdout".to_string()));
         assert_eq!(EvalSet::Holdout.label(Some("holdout".into())), Some("holdout".to_string()));
         assert_eq!(EvalSet::Holdout2.label(None), Some("holdout2".to_string()));
+        assert_eq!(EvalSet::Holdout3.label(None), Some("holdout3".to_string()));
+        assert!(EvalSet::Holdout3.is_holdout());
         assert!(EvalSet::Holdout2.is_holdout() && EvalSet::Holdout.is_holdout() && !EvalSet::Default.is_holdout());
     }
 
