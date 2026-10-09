@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>サポートデスク(架空・ホールドアウト)</title>
+<link rel="stylesheet" href="../../pages/common.css">
+<style>
+  /* チケット一覧 + 会話スレッド(吹き出し) + 依頼者パネルの 3 列。本番 7 画面に無い構成 */
+  .tickets { width: 270px; flex: none; background: var(--panel-2); border-right: 1px solid var(--border); overflow: hidden; }
+  .tk { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .tk.on { background: var(--panel); border-left: 3px solid var(--accent); }
+  .tk .no { color: var(--muted); font-size: 11px; }
+  .thread { flex: 1; display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
+  .thead { padding: 10px 18px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  .msgs { flex: 1; padding: 10px 18px; overflow: hidden; }
+  .msg { display: flex; gap: 10px; margin-bottom: 9px; }
+  .msg.me { flex-direction: row-reverse; }
+  .av { width: 30px; height: 30px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border); flex: none; }
+  .bubble { max-width: 640px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 6px 12px; }
+  .msg.me .bubble { background: var(--panel-2); }
+  .who { font-size: 12px; font-weight: 600; }
+  .who .t { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .note { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border-style: dashed; }
+  /* 貼り付けたコマンド。.term は改行を保つ(URL のクエリの nowrap 規則の対象外) */
+  .term.code { font-size: 12px; padding: 6px 10px; margin-top: 4px; border-radius: 6px; }
+  .compose { padding: 8px 18px; background: var(--panel); border-top: 1px solid var(--border); color: var(--muted); }
+  .req { width: 330px; flex: none; background: var(--panel); border-left: 1px solid var(--border); padding: 12px 14px; overflow: hidden; }
+  .req h3 { font-size: 13px; margin: 10px 0 4px; color: var(--muted); }
+  .req .kv { grid-template-columns: 82px 1fr; font-size: 13px; }
+  .hist div { font-size: 12px; padding: 2px 0; border-bottom: 1px dotted var(--border); }
+</style>
+</head>
+<body>
+<!-- 架空データのみ -->
+<div class="topbar"><span class="brand">サポートデスク</span><span class="muted">未対応 12 / 対応中 5</span>
+  <span class="muted" style="margin-left:auto">担当: <span data-mask="identifier/person_ja">槙野 早苗</span></span></div>
+<div class="layout">
+  <div class="tickets">
+    <div class="tk on"><div class="no">#4821 · 10:42</div><div>二重引き落としの返金</div><div class="s muted"><span data-mask="identifier/person_ja">徳永 ひより</span></div></div>
+    <div class="tk"><div class="no">#4819 · 09:58</div><div>Invoice question</div><div class="s muted"><span data-mask="identifier/person_en">Dmitri Volkonsky</span></div></div>
+    <div class="tk"><div class="no">#4816 · 09:12</div><div>連携キーの再発行</div><div class="s muted"><span data-mask="identifier/company">合同会社しらかば計測</span></div></div>
+    <div class="tk"><div class="no">#4811 · 昨日</div><div>住所変更のお願い</div><div class="s muted"><span data-mask="identifier/person_ja">城之内 透</span></div></div>
+    <div class="tk"><div class="no">#4807 · 昨日</div><div>Login loop on SSO</div><div class="s muted"><span data-mask="identifier/person_en">Amara Okonkwo</span></div></div>
+    <div class="tk"><div class="no">#4802 · 10/06</div><div>請求書の宛名変更</div><div class="s muted"><span data-mask="identifier/company">株式会社なぎさ湾岸ロジ</span></div></div>
+    <div class="tk"><div class="no">#4799 · 10/05</div><div>領収書の再送</div><div class="s muted"><span data-mask="contact/email">rin.kogure@example.net</span></div></div>
+    <div class="tk"><div class="no">#4794 · 10/05</div><div>Refund status?</div><div class="s muted"><span data-mask="contact/email">ops-team@example.org</span></div></div>
+  </div>
+  <div class="thread">
+    <div class="thead"><span style="font-weight:700">#4821 二重引き落としの返金</span>
+      <span class="s muted" style="margin-left:12px">優先度: 高 · チャネル: チャット</span></div>
+    <div class="msgs">
+      <div class="msg"><div class="av"></div><div class="bubble">
+        <div class="who"><span data-mask="identifier/person_ja">徳永 ひより</span><span class="t">10:42</span></div>
+        先月の請求で <span data-mask="financial/amount">4,180円</span> が二回引き落とされていました。返金をお願いできますか。<br>
+        会員番号は <span data-mask="identifier/cued_number">HX-772014</span> です。
+      </div></div>
+      <div class="msg me"><div class="av"></div><div class="bubble">
+        <div class="who"><span data-mask="identifier/person_ja">槙野 早苗</span><span class="t">10:47</span></div>
+        ご連絡ありがとうございます。返金先の口座と、ご登録のカードを確認させてください。
+      </div></div>
+      <div class="msg"><div class="av"></div><div class="bubble">
+        <div class="who"><span data-mask="identifier/person_ja">徳永 ひより</span><span class="t">10:51</span></div>
+        振込先は ひなた信用金庫 北口支店 普通 <span data-mask="financial/account">3390417</span> です。<br>
+        カードはこれです <span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span>
+      </div></div>
+      <div class="msg"><div class="av"></div><div class="bubble note">
+        <div class="who">内部メモ · <span data-mask="identifier/person_en">Hannah Castellano</span><span class="t">10:55</span></div>
+        前回(#4410)の返金先は 口座番号 <span data-mask="financial/account">00627145</span>。決済照会 ID <span class="mono" data-mask="credential/random_string" data-gen="random" data-len="26"></span> で二重計上を確認。<br>
+        Refund of <span data-mask="financial/amount">USD 37.40</span> for the overseas fee is also approved. 注文番号 <span data-mask="identifier/cued_number">ORD-58201-JP</span>
+      </div></div>
+      <div class="msg"><div class="av"></div><div class="bubble note">
+        <div class="who">内部メモ · <span data-mask="identifier/person_en">Owen Pritchard</span><span class="t">10:58</span></div>
+        再現手順(テスト環境):
+        <div class="term code">$ curl -H "Authorization: Bearer <span data-mask="credential/prefixed_token" data-gen="token" data-prefix="1" data-len="36"></span>" \
+    https://api.example.com/v2/refunds<span data-mask="credential/url_query">?ticket=4821&amp;dry_run=1</span>
+refund_id=<span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="32"></span>
+client_secret: <span data-mask="credential/cue_value" data-gen="secret" data-len="15"></span></div>
+      </div></div>
+      <div class="msg me"><div class="av"></div><div class="bubble">
+        <div class="who"><span data-mask="identifier/person_ja">槙野 早苗</span><span class="t">11:03</span></div>
+        返金額は <span data-mask="financial/amount">¥4,180</span>、振込手数料 <span data-mask="financial/amount">220円</span> は当社で負担します。<br>
+        進み具合はこちらで確認できます:<br><span class="mono s">https://support.example.com/t/4821<span data-mask="credential/url_query">?view=customer&amp;key=Jd82kQ</span></span>
+      </div></div>
+      <div class="msg"><div class="av"></div><div class="bubble">
+        <div class="who"><span data-mask="identifier/person_ja">徳永 ひより</span><span class="t">11:06</span></div>
+        引っ越したので住所も直してください。<span data-mask="contact/address">〒064-0000</span> <span data-mask="contact/address">北海道すずらん市南三条西4-8-15</span><br>
+        日中は <span data-mask="contact/phone">011-000-6483</span> につながります。マイページの仮パスワード <span class="mono" data-mask="credential/cue_value" data-gen="secret" data-len="10"></span> は変更済みです。
+      </div></div>
+      <div class="msg me"><div class="av"></div><div class="bubble">
+        <div class="who"><span data-mask="identifier/person_ja">槙野 早苗</span><span class="t">11:10</span></div>
+        承知しました。住所を更新しました。経理の <span data-mask="identifier/person_ja">安曇 康平</span>(<span data-mask="contact/email">kohei.azumi@example.com</span>)から完了のご連絡をします。
+      </div></div>
+    </div>
+    <div class="compose">返信を入力… <span class="s">(Shift+Enter で改行)</span></div>
+  </div>
+  <div class="req">
+    <div style="font-weight:700" class="m"><span data-mask="identifier/person_ja">徳永 ひより</span></div>
+    <div class="s muted"><span data-mask="identifier/company">有限会社ふくろう堂印刷</span> 総務</div>
+    <h3>連絡先</h3>
+    <div class="kv">
+      <div>メール</div><div><span data-mask="contact/email">hiyori.t@example.com</span></div>
+      <div>電話</div><div><span data-mask="contact/phone">090-0000-2714</span></div>
+      <div>会員番号</div><div><span data-mask="identifier/cued_number">HX-772014</span></div>
+      <div>旧住所</div><div class="narrow"><span data-mask="contact/address">埼玉県みずほ台市本町2-3-9</span></div>
+    </div>
+    <h3>お支払い</h3>
+    <div class="kv">
+      <div>カード</div><div class="mono s"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep="-"></span></div>
+      <div>口座</div><div>当座 <span data-mask="financial/account">0718826</span></div>
+      <div>予備</div><div class="mono s"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></div>
+      <div>今月</div><div><span data-mask="financial/amount">¥8,360</span></div>
+    </div>
+    <h3>連携</h3>
+    <div class="kv s">
+      <div>連携キー</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="6" data-len="24"></span></div>
+      <div>署名</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="22"></span></div>
+      <div>旧キー</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="8" data-len="20"></span></div>
+      <div>passphrase</div><div class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="13"></span></div>
+    </div>
+    <div class="s" style="margin-top:4px">戻り先 <span class="mono">https://cb.example.org/r<span data-mask="credential/url_query">?state=x7Qp2</span></span></div>
+    <h3>過去の問い合わせ</h3>
+    <div class="hist">
+      <div>#4410 プラン変更(<span data-mask="financial/amount">1,650円</span> の差額)</div>
+      <div>#4127 担当 <span data-mask="identifier/person_en">Lena Vogtmann</span> · 返金先 普通 <span data-mask="financial/account">5260913</span></div>
+      <div>#3988 問い合わせ番号 <span data-mask="identifier/cued_number">Q-3988-0412</span></div>
+      <div>#3720 カード変更 <span class="mono" data-mask="financial/card" data-gen="card" data-group="16" data-sep=""></span></div>
+    </div>
+  </div>
+</div>
+<script src="../../pages/fixture.js"></script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>名刺管理(架空・ホールドアウト)</title>
+<link rel="stylesheet" href="../../pages/common.css">
+<style>
+  /* 名刺の格子 + 組織図 + 連携・請求の管理パネル。本番 7 画面に無い構成(表ではなく自由配置の名刺) */
+  .side { width: 150px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .bc { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 9px 13px; height: 168px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); overflow: hidden; position: relative; }
+  .bc .co { font-size: 12px; color: var(--muted); }
+  .bc .ti { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .bc .nm { font-size: 20px; letter-spacing: 0.08em; margin: 2px 0 0; }
+  .bc .en { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+  .bc .ct { font-size: 12px; margin-top: 4px; line-height: 1.45; }
+  .bc .memo { position: absolute; right: 10px; top: 8px; font-size: 11px; color: var(--warn); }
+  .bc.v { text-align: center; }
+  .right { width: 360px; flex: none; padding: 14px 14px; background: var(--panel); border-left: 1px solid var(--border); overflow: hidden; }
+  .org { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .org .row { display: flex; gap: 8px; justify-content: center; }
+  .node { border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 12px; text-align: center; background: var(--panel-2); }
+  .node .r { font-size: 10px; color: var(--muted); }
+  .admin { margin-top: 10px; }
+  .admin table { font-size: 12px; }
+  .admin td { padding: 3px 8px; }
+  .right h3 { font-size: 13px; margin: 12px 0 4px; color: var(--muted); }
+  .right .kv { grid-template-columns: 96px 1fr; font-size: 12px; }
+</style>
+</head>
+<body>
+<!-- 架空データのみ -->
+<div class="topbar"><span class="brand">名刺ボックス</span><span class="muted">すべての名刺(128)</span>
+  <span class="muted" style="margin-left:auto">管理者 <span data-mask="contact/email">admin@cards.example.net</span></span></div>
+<div class="layout">
+  <div class="side"><div class="on">名刺一覧</div><div>組織図</div><div>タグ</div><div>連携</div><div>請求</div></div>
+  <div class="main">
+    <div class="grid">
+      <div class="bc">
+        <div class="co"><span data-mask="identifier/company">株式会社あおさぎ精機</span></div>
+        <div class="ti">営業本部 第二営業部 課長</div>
+        <div class="nm"><span data-mask="identifier/person_ja">鷲尾 千景</span></div>
+        <div class="en"><span data-mask="identifier/person_en">Chikage Washio</span></div>
+        <div class="ct"><span data-mask="contact/address">〒950-0000</span> <span data-mask="contact/address">新潟県あさひ野市東中通2-11-3</span><br>
+          TEL <span data-mask="contact/phone">025-000-3381</span> / <span data-mask="contact/email">c.washio@example.com</span></div>
+      </div>
+      <div class="bc">
+        <div class="co"><span data-mask="identifier/company">Brackenfold Analytics LLC</span></div>
+        <div class="ti">Director, Data Platform</div>
+        <div class="nm"><span data-mask="identifier/person_en">Theodora Quill</span></div>
+        <div class="ct"><span data-mask="contact/address">1200 Example Ave, Suite 400, Springfield</span><br>
+          Mobile <span data-mask="contact/phone">+1 555-0142</span><br><span data-mask="contact/email">t.quill@example.org</span></div>
+      </div>
+      <div class="bc v">
+        <div class="co"><span data-mask="identifier/company">一般社団法人ひだまり地域支援機構</span></div>
+        <div class="ti">事務局長</div>
+        <div class="nm"><span data-mask="identifier/person_ja">小此木 蓮</span></div>
+        <div class="ct">携帯 <span data-mask="contact/phone">080-0000-5592</span><br><span data-mask="contact/email">ren-okonogi@example.org</span><br>
+          登録番号 <span data-mask="identifier/cued_number">T7012345678901</span></div>
+      </div>
+      <div class="bc">
+        <div class="memo">見積 <span data-mask="financial/amount">¥1,350,000</span></div>
+        <div class="co"><span data-mask="identifier/company">やまびこ醸造合資会社</span></div>
+        <div class="ti">製造部 主任</div>
+        <div class="nm"><span data-mask="identifier/person_ja">早乙女 菜々子</span></div>
+        <div class="ct"><span data-mask="contact/address">長野県みすず野市大字上原1180-4</span><br>
+          直通 <span data-mask="contact/phone">0263-00-7719</span></div>
+        <div class="ct s">振込先 普通 <span data-mask="financial/account">4402187</span></div>
+      </div>
+      <div class="bc">
+        <div class="co"><span data-mask="identifier/company">(株)ねむの木デザイン室</span></div>
+        <div class="ti">アートディレクター</div>
+        <div class="nm"><span data-mask="identifier/person_ja">宇佐美 彩</span></div>
+        <div class="en"><span data-mask="identifier/person_en">Aya Usami</span></div>
+        <div class="ct"><span data-mask="contact/email">aya@nemunoki.example.jp</span><br>取引先コード <span data-mask="identifier/cued_number">NK-0093</span></div>
+      </div>
+      <div class="bc">
+        <div class="memo">立替 <span data-mask="financial/amount">8,800円</span></div>
+        <div class="co"><span data-mask="identifier/company">ささなみ建設工業株式会社</span></div>
+        <div class="ti">工事部 部長</div>
+        <div class="nm"><span data-mask="identifier/person_ja">土門 健太郎</span></div>
+        <div class="ct"><span data-mask="contact/address">〒870-0000</span> <span data-mask="contact/address">大分県ゆのはら市中央町5-2-1</span><br>
+          TEL <span data-mask="contact/phone">097-000-2264</span></div>
+        <div class="ct s">社員番号 <span data-mask="identifier/cued_number">SZ-11084</span></div>
+      </div>
+      <div class="bc">
+        <div class="co">フリーランス 翻訳・通訳</div>
+        <div class="nm"><span data-mask="identifier/person_ja">藤ノ木 さくら</span></div>
+        <div class="en"><span data-mask="identifier/person_en">Sakura Fujinoki</span></div>
+        <div class="ct"><span data-mask="contact/phone">070-0000-4058</span><br><span data-mask="contact/email">sakura.f@example.net</span><br>
+          口座 普通 <span data-mask="financial/account">6081135</span></div>
+      </div>
+      <div class="bc">
+        <div class="co"><span data-mask="identifier/company">株式会社 Kumoyuki Systems</span></div>
+        <div class="ti">CTO</div>
+        <div class="nm"><span data-mask="identifier/person_ja">伊集院 晴</span></div>
+        <div class="en"><span data-mask="identifier/person_en">Hal Ijuin</span></div>
+        <div class="ct"><span data-mask="contact/address">東京都みなと台区芝浦9-3-12</span><br>会員No. <span data-mask="identifier/cued_number">KM-55120</span></div>
+      </div>
+      <div class="bc">
+        <div class="co"><span data-mask="identifier/company">有限会社しおさい水産</span></div>
+        <div class="ti">代表取締役</div>
+        <div class="nm"><span data-mask="identifier/person_ja">磯部 万里子</span></div>
+        <div class="ct">TEL <span data-mask="contact/phone">0120-000-731</span><br>法人カード <span class="mono" data-mask="financial/card" data-gen="card" data-group="4-6-5" data-sep=" "></span></div>
+      </div>
+    </div>
+    <div class="card admin">
+      <h2>外部連携(管理者のみ)</h2>
+      <table>
+        <tr><th>連携先</th><th>接続キー</th><th>接続 ID</th><th>署名シークレット</th></tr>
+        <tr><td>表計算</td><td class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="0" data-len="24"></span></td>
+          <td class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="20"></span></td>
+          <td class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="12"></span></td></tr>
+        <tr><td>CRM</td><td class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="9" data-len="22"></span></td>
+          <td class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="24"></span></td>
+          <td class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="14"></span></td></tr>
+        <tr><td>チャット</td><td class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="3" data-len="16"></span></td>
+          <td class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="18"></span></td>
+          <td class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="11"></span></td></tr>
+        <tr><td>ストレージ</td><td class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="4" data-len="16"></span></td>
+          <td class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="28"></span></td>
+          <td class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="13"></span></td></tr>
+      </table>
+      <div class="s" style="margin-top:6px;color:var(--muted)">通知先 URL</div>
+      <div class="grid2 s">
+        <div>表計算: <span class="mono">https://hooks.example.com/a<span data-mask="credential/url_query">?sig=Hq72Lm0Rt</span></span></div>
+        <div>CRM: <span class="mono">https://crm.example.org/in<span data-mask="credential/url_query">?token=Zp93xW1c</span></span></div>
+        <div>チャット: <span class="mono">https://chat.example.net/h<span data-mask="credential/url_query">?k=7Tq2&amp;ch=sales</span></span></div>
+        <div>ストレージ: <span class="mono">https://files.example.com/up<span data-mask="credential/url_query">?acct=4471&amp;sig=Pq0z</span></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <div style="font-weight:700">組織図 — <span data-mask="identifier/company">株式会社あおさぎ精機</span></div>
+    <div class="org" style="margin-top:8px">
+      <div class="node"><div class="r">代表取締役</div><span data-mask="identifier/person_ja">鷲尾 宗一郎</span></div>
+      <div class="row">
+        <div class="node"><div class="r">営業本部長</div><span data-mask="identifier/person_ja">真壁 由香里</span></div>
+        <div class="node"><div class="r">技術本部長</div><span data-mask="identifier/person_en">Rafael Medeiros</span></div>
+        <div class="node"><div class="r">管理部長</div><span data-mask="identifier/person_ja">東雲 修</span></div>
+      </div>
+      <div class="row">
+        <div class="node"><div class="r">第二営業部 課長</div><span data-mask="identifier/person_ja">鷲尾 千景</span></div>
+        <div class="node"><div class="r">品質保証</div><span data-mask="identifier/person_en">Ingrid Solberg</span></div>
+      </div>
+    </div>
+    <h3>共有</h3>
+    <div class="s"><span class="mono">https://cards.example.net/s<span data-mask="credential/url_query">?id=88f2&amp;pw=Kd31</span></span></div>
+    <div class="s">書き出し ID <span class="mono" data-mask="credential/random_string" data-gen="random" data-len="24"></span></div>
+    <h3>請求</h3>
+    <div class="kv">
+      <div>プラン</div><div>ビジネス <span data-mask="financial/amount">¥2,640</span>/月</div>
+      <div>次回請求額</div><div><span data-mask="financial/amount">31,680 円</span></div>
+      <div>支払カード</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></div>
+      <div>予備カード</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep="-"></span></div>
+      <div>経費カード</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></div>
+      <div>引き落とし</div><div>普通 <span data-mask="financial/account">1937720</span></div>
+      <div>返金口座</div><div>口座番号 <span data-mask="financial/account">00851264</span></div>
+      <div>契約番号</div><div><span data-mask="identifier/cued_number">CB-240117</span></div>
+      <div>API トークン</div><div class="mono s"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="7" data-len="20"></span></div>
+      <div>管理者 PIN</div><div class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="8"></span></div>
+      <div>請求先</div><div><span data-mask="contact/email">billing@kumoyuki.example.com</span></div>
+      <div>担当</div><div><span data-mask="identifier/person_en">Marta Lindqvist</span></div>
+    </div>
+  </div>
+</div>
+<script src="../../pages/fixture.js"></script>
+</body>
+</html>

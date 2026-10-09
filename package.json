@@ -17,6 +17,7 @@
     "licenses": "node scripts/gen-third-party-licenses.mjs",
     "licenses:check": "node scripts/gen-third-party-licenses.mjs --check",
     "mask:fixtures": "node scripts/mask-eval-fixtures.mjs",
+    "mask:fixtures:holdout": "node scripts/mask-eval-fixtures.mjs --set=holdout",
     "latency:summary": "node scripts/latency-summary.mjs"
   },
   "dependencies": {

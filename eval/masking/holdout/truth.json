@@ -1,0 +1,5918 @@
+{
+ "version": 1,
+ "generator": "scripts/mask-eval-fixtures.mjs",
+ "details": {
+  "contact": [
+   "email",
+   "phone",
+   "address"
+  ],
+  "credential": [
+   "prefixed_token",
+   "random_string",
+   "cue_value",
+   "url_query"
+  ],
+  "identifier": [
+   "cued_number",
+   "person_ja",
+   "person_en",
+   "company"
+  ],
+  "financial": [
+   "card",
+   "account",
+   "amount"
+  ]
+ },
+ "images": [
+  {
+   "file": "helpdesk.fhd.light.png",
+   "page": "helpdesk.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "helpdesk#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1839,
+     "y": 15,
+     "width": 61,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 15,
+     "y": 97,
+     "width": 64,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 12,
+     "y": 172,
+     "width": 100,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 12,
+     "y": 246,
+     "width": 120,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 12,
+     "y": 320,
+     "width": 52,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 12,
+     "y": 395,
+     "width": 99,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 12,
+     "y": 469,
+     "width": 132,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 12,
+     "y": 543,
+     "width": 143,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 12,
+     "y": 618,
+     "width": 140,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 341,
+     "y": 110,
+     "width": 64,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 429,
+     "y": 129,
+     "width": 55,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 415,
+     "y": 150,
+     "width": 82,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 960,
+     "y": 195,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 341,
+     "y": 258,
+     "width": 64,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 597,
+     "y": 277,
+     "width": 66,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 456,
+     "y": 299,
+     "width": 163,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#16",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 399,
+     "y": 343,
+     "width": 118,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 560,
+     "y": 362,
+     "width": 75,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#18",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 727,
+     "y": 361,
+     "width": 220,
+     "height": 17
+    },
+    {
+     "target": "helpdesk#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 415,
+     "y": 405,
+     "width": 77,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 823,
+     "y": 405,
+     "width": 106,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 399,
+     "y": 450,
+     "width": 98,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 590,
+     "y": 500,
+     "width": 290,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 626,
+     "y": 518,
+     "width": 160,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 424,
+     "y": 536,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 460,
+     "y": 554,
+     "width": 109,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1092,
+     "y": 603,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#27",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1153,
+     "y": 622,
+     "width": 51,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#28",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1291,
+     "y": 622,
+     "width": 43,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#29",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1338,
+     "y": 666,
+     "width": 181,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 341,
+     "y": 710,
+     "width": 64,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#31",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 591,
+     "y": 729,
+     "width": 85,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 679,
+     "y": 729,
+     "width": 216,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#33",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 387,
+     "y": 750,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#34",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 774,
+     "y": 749,
+     "width": 85,
+     "height": 17
+    },
+    {
+     "target": "helpdesk#35",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 905,
+     "y": 817,
+     "width": 52,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#36",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1189,
+     "y": 835,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#37",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1255,
+     "y": 835,
+     "width": 184,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#38",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1605,
+     "y": 64,
+     "width": 80,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#39",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1605,
+     "y": 86,
+     "width": 132,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#40",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1699,
+     "y": 138,
+     "width": 140,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#41",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1699,
+     "y": 163,
+     "width": 104,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1699,
+     "y": 187,
+     "width": 76,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#43",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1699,
+     "y": 211,
+     "width": 165,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#44",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1699,
+     "y": 264,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1729,
+     "y": 289,
+     "width": 61,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#46",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1699,
+     "y": 312,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#47",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1699,
+     "y": 338,
+     "width": 47,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#48",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1699,
+     "y": 391,
+     "width": 220,
+     "height": 16
+    },
+    {
+     "target": "helpdesk#49",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1699,
+     "y": 415,
+     "width": 173,
+     "height": 16
+    },
+    {
+     "target": "helpdesk#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1699,
+     "y": 439,
+     "width": 220,
+     "height": 16
+    },
+    {
+     "target": "helpdesk#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1699,
+     "y": 463,
+     "width": 102,
+     "height": 16
+    },
+    {
+     "target": "helpdesk#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1818,
+     "y": 488,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#53",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1712,
+     "y": 544,
+     "width": 48,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1676,
+     "y": 568,
+     "width": 94,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#55",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1848,
+     "y": 568,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#56",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1736,
+     "y": 591,
+     "width": 82,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#57",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1712,
+     "y": 615,
+     "width": 117,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "helpdesk.fhd.dark.png",
+   "page": "helpdesk.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "helpdesk#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1839,
+     "y": 15,
+     "width": 61,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 15,
+     "y": 97,
+     "width": 64,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 12,
+     "y": 172,
+     "width": 100,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 12,
+     "y": 246,
+     "width": 120,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 12,
+     "y": 320,
+     "width": 52,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 12,
+     "y": 395,
+     "width": 99,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 12,
+     "y": 469,
+     "width": 132,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 12,
+     "y": 543,
+     "width": 143,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 12,
+     "y": 618,
+     "width": 140,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 341,
+     "y": 110,
+     "width": 64,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 429,
+     "y": 129,
+     "width": 55,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 415,
+     "y": 150,
+     "width": 82,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 960,
+     "y": 195,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 341,
+     "y": 258,
+     "width": 64,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 597,
+     "y": 277,
+     "width": 66,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 456,
+     "y": 299,
+     "width": 163,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#16",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 399,
+     "y": 343,
+     "width": 118,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 560,
+     "y": 362,
+     "width": 75,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#18",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 727,
+     "y": 361,
+     "width": 220,
+     "height": 17
+    },
+    {
+     "target": "helpdesk#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 415,
+     "y": 405,
+     "width": 77,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 823,
+     "y": 405,
+     "width": 106,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 399,
+     "y": 450,
+     "width": 98,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 590,
+     "y": 500,
+     "width": 290,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 626,
+     "y": 518,
+     "width": 160,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 424,
+     "y": 536,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 460,
+     "y": 554,
+     "width": 109,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1092,
+     "y": 603,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#27",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1153,
+     "y": 622,
+     "width": 51,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#28",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1291,
+     "y": 622,
+     "width": 43,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#29",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1338,
+     "y": 666,
+     "width": 181,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 341,
+     "y": 710,
+     "width": 64,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#31",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 591,
+     "y": 729,
+     "width": 85,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 679,
+     "y": 729,
+     "width": 216,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#33",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 387,
+     "y": 750,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#34",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 774,
+     "y": 749,
+     "width": 85,
+     "height": 17
+    },
+    {
+     "target": "helpdesk#35",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 905,
+     "y": 817,
+     "width": 52,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#36",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1189,
+     "y": 835,
+     "width": 62,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#37",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1255,
+     "y": 835,
+     "width": 184,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#38",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1605,
+     "y": 64,
+     "width": 80,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#39",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1605,
+     "y": 86,
+     "width": 132,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#40",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1699,
+     "y": 138,
+     "width": 140,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#41",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1699,
+     "y": 163,
+     "width": 104,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1699,
+     "y": 187,
+     "width": 76,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#43",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1699,
+     "y": 211,
+     "width": 165,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#44",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1699,
+     "y": 264,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1729,
+     "y": 289,
+     "width": 61,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#46",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1699,
+     "y": 312,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#47",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1699,
+     "y": 338,
+     "width": 47,
+     "height": 14
+    },
+    {
+     "target": "helpdesk#48",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1699,
+     "y": 391,
+     "width": 220,
+     "height": 16
+    },
+    {
+     "target": "helpdesk#49",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1699,
+     "y": 415,
+     "width": 173,
+     "height": 16
+    },
+    {
+     "target": "helpdesk#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1699,
+     "y": 439,
+     "width": 220,
+     "height": 16
+    },
+    {
+     "target": "helpdesk#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1699,
+     "y": 463,
+     "width": 102,
+     "height": 16
+    },
+    {
+     "target": "helpdesk#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1818,
+     "y": 488,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "helpdesk#53",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1712,
+     "y": 544,
+     "width": 48,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1676,
+     "y": 568,
+     "width": 94,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#55",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1848,
+     "y": 568,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#56",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1736,
+     "y": 591,
+     "width": 82,
+     "height": 13
+    },
+    {
+     "target": "helpdesk#57",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1712,
+     "y": 615,
+     "width": 117,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "helpdesk.retina.light.png",
+   "page": "helpdesk.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "helpdesk#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2718,
+     "y": 31,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 30,
+     "y": 195,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 24,
+     "y": 344,
+     "width": 200,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 24,
+     "y": 492,
+     "width": 240,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 24,
+     "y": 641,
+     "width": 104,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 24,
+     "y": 790,
+     "width": 197,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 24,
+     "y": 938,
+     "width": 264,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 24,
+     "y": 1087,
+     "width": 285,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 24,
+     "y": 1236,
+     "width": 279,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 682,
+     "y": 221,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 859,
+     "y": 258,
+     "width": 109,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 831,
+     "y": 301,
+     "width": 163,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 961,
+     "y": 391,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 682,
+     "y": 517,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1195,
+     "y": 555,
+     "width": 130,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 913,
+     "y": 598,
+     "width": 324,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#16",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 799,
+     "y": 687,
+     "width": 234,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1120,
+     "y": 725,
+     "width": 149,
+     "height": 28
+    },
+    {
+     "target": "helpdesk#18",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1454,
+     "y": 723,
+     "width": 440,
+     "height": 32
+    },
+    {
+     "target": "helpdesk#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 831,
+     "y": 811,
+     "width": 152,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1647,
+     "y": 811,
+     "width": 210,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 799,
+     "y": 901,
+     "width": 195,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1180,
+     "y": 1001,
+     "width": 579,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1253,
+     "y": 1037,
+     "width": 318,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 848,
+     "y": 1073,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 920,
+     "y": 1109,
+     "width": 218,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1225,
+     "y": 1207,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#27",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1346,
+     "y": 1244,
+     "width": 101,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#28",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1623,
+     "y": 1244,
+     "width": 85,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#29",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1716,
+     "y": 1333,
+     "width": 362,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 682,
+     "y": 1421,
+     "width": 128,
+     "height": 24
+    },
+    {
+     "target": "helpdesk#31",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1183,
+     "y": 1458,
+     "width": 168,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1359,
+     "y": 1458,
+     "width": 430,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#33",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 775,
+     "y": 1501,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#34",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1548,
+     "y": 1499,
+     "width": 170,
+     "height": 33
+    },
+    {
+     "target": "helpdesk#35",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 850,
+     "y": 1634,
+     "width": 104,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#36",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1419,
+     "y": 1671,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#37",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1550,
+     "y": 1671,
+     "width": 368,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#38",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2250,
+     "y": 128,
+     "width": 160,
+     "height": 30
+    },
+    {
+     "target": "helpdesk#39",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2250,
+     "y": 172,
+     "width": 264,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#40",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2438,
+     "y": 277,
+     "width": 279,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#41",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2438,
+     "y": 326,
+     "width": 207,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2438,
+     "y": 374,
+     "width": 151,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#43",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 2438,
+     "y": 422,
+     "width": 330,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#44",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2438,
+     "y": 529,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2498,
+     "y": 579,
+     "width": 121,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#46",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2438,
+     "y": 625,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#47",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2438,
+     "y": 676,
+     "width": 93,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#48",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2438,
+     "y": 782,
+     "width": 439,
+     "height": 31
+    },
+    {
+     "target": "helpdesk#49",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2438,
+     "y": 831,
+     "width": 345,
+     "height": 31
+    },
+    {
+     "target": "helpdesk#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2438,
+     "y": 879,
+     "width": 439,
+     "height": 31
+    },
+    {
+     "target": "helpdesk#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2438,
+     "y": 927,
+     "width": 204,
+     "height": 31
+    },
+    {
+     "target": "helpdesk#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2676,
+     "y": 977,
+     "width": 175,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#53",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2465,
+     "y": 1089,
+     "width": 94,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2392,
+     "y": 1136,
+     "width": 188,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#55",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2737,
+     "y": 1136,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#56",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2512,
+     "y": 1183,
+     "width": 164,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#57",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2464,
+     "y": 1230,
+     "width": 233,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "helpdesk.retina.dark.png",
+   "page": "helpdesk.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "helpdesk#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2718,
+     "y": 31,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 30,
+     "y": 195,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 24,
+     "y": 344,
+     "width": 200,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 24,
+     "y": 492,
+     "width": 240,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 24,
+     "y": 641,
+     "width": 104,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#05",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 24,
+     "y": 790,
+     "width": 197,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#06",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 24,
+     "y": 938,
+     "width": 264,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 24,
+     "y": 1087,
+     "width": 285,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 24,
+     "y": 1236,
+     "width": 279,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 682,
+     "y": 221,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 859,
+     "y": 258,
+     "width": 109,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#11",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 831,
+     "y": 301,
+     "width": 163,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 961,
+     "y": 391,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 682,
+     "y": 517,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1195,
+     "y": 555,
+     "width": 130,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 913,
+     "y": 598,
+     "width": 324,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#16",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 799,
+     "y": 687,
+     "width": 234,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#17",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1120,
+     "y": 725,
+     "width": 149,
+     "height": 28
+    },
+    {
+     "target": "helpdesk#18",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1454,
+     "y": 723,
+     "width": 440,
+     "height": 32
+    },
+    {
+     "target": "helpdesk#19",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 831,
+     "y": 811,
+     "width": 152,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1647,
+     "y": 811,
+     "width": 210,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#21",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 799,
+     "y": 901,
+     "width": 195,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1180,
+     "y": 1001,
+     "width": 579,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1253,
+     "y": 1037,
+     "width": 318,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 848,
+     "y": 1073,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 920,
+     "y": 1109,
+     "width": 218,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1225,
+     "y": 1207,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#27",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1346,
+     "y": 1244,
+     "width": 101,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#28",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1623,
+     "y": 1244,
+     "width": 85,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#29",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1716,
+     "y": 1333,
+     "width": 362,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 682,
+     "y": 1421,
+     "width": 128,
+     "height": 24
+    },
+    {
+     "target": "helpdesk#31",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1183,
+     "y": 1458,
+     "width": 168,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1359,
+     "y": 1458,
+     "width": 430,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#33",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 775,
+     "y": 1501,
+     "width": 205,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#34",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1548,
+     "y": 1499,
+     "width": 170,
+     "height": 33
+    },
+    {
+     "target": "helpdesk#35",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 850,
+     "y": 1634,
+     "width": 104,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#36",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1419,
+     "y": 1671,
+     "width": 122,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#37",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1550,
+     "y": 1671,
+     "width": 368,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#38",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2250,
+     "y": 128,
+     "width": 160,
+     "height": 30
+    },
+    {
+     "target": "helpdesk#39",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2250,
+     "y": 172,
+     "width": 264,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#40",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2438,
+     "y": 277,
+     "width": 279,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#41",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2438,
+     "y": 326,
+     "width": 207,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2438,
+     "y": 374,
+     "width": 151,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#43",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 2438,
+     "y": 422,
+     "width": 330,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#44",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2438,
+     "y": 529,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2498,
+     "y": 579,
+     "width": 121,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#46",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2438,
+     "y": 625,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#47",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2438,
+     "y": 676,
+     "width": 93,
+     "height": 27
+    },
+    {
+     "target": "helpdesk#48",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2438,
+     "y": 782,
+     "width": 439,
+     "height": 31
+    },
+    {
+     "target": "helpdesk#49",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2438,
+     "y": 831,
+     "width": 345,
+     "height": 31
+    },
+    {
+     "target": "helpdesk#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2438,
+     "y": 879,
+     "width": 439,
+     "height": 31
+    },
+    {
+     "target": "helpdesk#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2438,
+     "y": 927,
+     "width": 204,
+     "height": 31
+    },
+    {
+     "target": "helpdesk#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2676,
+     "y": 977,
+     "width": 175,
+     "height": 29
+    },
+    {
+     "target": "helpdesk#53",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2465,
+     "y": 1089,
+     "width": 94,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2392,
+     "y": 1136,
+     "width": 188,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#55",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2737,
+     "y": 1136,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#56",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2512,
+     "y": 1183,
+     "width": 164,
+     "height": 25
+    },
+    {
+     "target": "helpdesk#57",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2464,
+     "y": 1230,
+     "width": 233,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "meishi.fhd.light.png",
+   "page": "meishi.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "meishi#00",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1720,
+     "y": 15,
+     "width": 180,
+     "height": 15
+    },
+    {
+     "target": "meishi#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 184,
+     "y": 77,
+     "width": 120,
+     "height": 12
+    },
+    {
+     "target": "meishi#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 184,
+     "y": 118,
+     "width": 95,
+     "height": 21
+    },
+    {
+     "target": "meishi#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 184,
+     "y": 147,
+     "width": 102,
+     "height": 13
+    },
+    {
+     "target": "meishi#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 184,
+     "y": 169,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "meishi#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 259,
+     "y": 169,
+     "width": 173,
+     "height": 13
+    },
+    {
+     "target": "meishi#06",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 210,
+     "y": 186,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "meishi#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 311,
+     "y": 186,
+     "width": 140,
+     "height": 13
+    },
+    {
+     "target": "meishi#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 644,
+     "y": 77,
+     "width": 158,
+     "height": 12
+    },
+    {
+     "target": "meishi#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 644,
+     "y": 118,
+     "width": 167,
+     "height": 21
+    },
+    {
+     "target": "meishi#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 644,
+     "y": 150,
+     "width": 248,
+     "height": 13
+    },
+    {
+     "target": "meishi#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 687,
+     "y": 168,
+     "width": 80,
+     "height": 13
+    },
+    {
+     "target": "meishi#12",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 644,
+     "y": 185,
+     "width": 115,
+     "height": 13
+    },
+    {
+     "target": "meishi#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1219,
+     "y": 77,
+     "width": 192,
+     "height": 12
+    },
+    {
+     "target": "meishi#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1267,
+     "y": 118,
+     "width": 96,
+     "height": 21
+    },
+    {
+     "target": "meishi#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1281,
+     "y": 150,
+     "width": 96,
+     "height": 13
+    },
+    {
+     "target": "meishi#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1237,
+     "y": 168,
+     "width": 156,
+     "height": 13
+    },
+    {
+     "target": "meishi#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1285,
+     "y": 185,
+     "width": 112,
+     "height": 13
+    },
+    {
+     "target": "meishi#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 545,
+     "y": 254,
+     "width": 64,
+     "height": 11
+    },
+    {
+     "target": "meishi#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 184,
+     "y": 255,
+     "width": 120,
+     "height": 12
+    },
+    {
+     "target": "meishi#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 184,
+     "y": 296,
+     "width": 138,
+     "height": 21
+    },
+    {
+     "target": "meishi#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 184,
+     "y": 328,
+     "width": 188,
+     "height": 13
+    },
+    {
+     "target": "meishi#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 212,
+     "y": 346,
+     "width": 88,
+     "height": 13
+    },
+    {
+     "target": "meishi#23",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 252,
+     "y": 367,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "meishi#24",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 644,
+     "y": 255,
+     "width": 128,
+     "height": 12
+    },
+    {
+     "target": "meishi#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 644,
+     "y": 296,
+     "width": 95,
+     "height": 21
+    },
+    {
+     "target": "meishi#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 644,
+     "y": 325,
+     "width": 68,
+     "height": 13
+    },
+    {
+     "target": "meishi#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 644,
+     "y": 347,
+     "width": 155,
+     "height": 13
+    },
+    {
+     "target": "meishi#28",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 720,
+     "y": 364,
+     "width": 54,
+     "height": 13
+    },
+    {
+     "target": "meishi#29",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1486,
+     "y": 254,
+     "width": 43,
+     "height": 11
+    },
+    {
+     "target": "meishi#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1104,
+     "y": 255,
+     "width": 144,
+     "height": 12
+    },
+    {
+     "target": "meishi#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1104,
+     "y": 296,
+     "width": 117,
+     "height": 21
+    },
+    {
+     "target": "meishi#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1104,
+     "y": 328,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "meishi#33",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1179,
+     "y": 328,
+     "width": 165,
+     "height": 13
+    },
+    {
+     "target": "meishi#34",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1130,
+     "y": 346,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "meishi#35",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1156,
+     "y": 367,
+     "width": 59,
+     "height": 13
+    },
+    {
+     "target": "meishi#36",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 184,
+     "y": 455,
+     "width": 138,
+     "height": 21
+    },
+    {
+     "target": "meishi#37",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 184,
+     "y": 484,
+     "width": 98,
+     "height": 13
+    },
+    {
+     "target": "meishi#38",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 184,
+     "y": 506,
+     "width": 96,
+     "height": 13
+    },
+    {
+     "target": "meishi#39",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 184,
+     "y": 523,
+     "width": 130,
+     "height": 13
+    },
+    {
+     "target": "meishi#40",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 240,
+     "y": 540,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "meishi#41",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 644,
+     "y": 433,
+     "width": 165,
+     "height": 12
+    },
+    {
+     "target": "meishi#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 644,
+     "y": 474,
+     "width": 95,
+     "height": 21
+    },
+    {
+     "target": "meishi#43",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 644,
+     "y": 503,
+     "width": 52,
+     "height": 13
+    },
+    {
+     "target": "meishi#44",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 644,
+     "y": 525,
+     "width": 161,
+     "height": 13
+    },
+    {
+     "target": "meishi#45",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 691,
+     "y": 542,
+     "width": 65,
+     "height": 13
+    },
+    {
+     "target": "meishi#46",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1104,
+     "y": 433,
+     "width": 120,
+     "height": 12
+    },
+    {
+     "target": "meishi#47",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1104,
+     "y": 474,
+     "width": 117,
+     "height": 21
+    },
+    {
+     "target": "meishi#48",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1130,
+     "y": 506,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "meishi#49",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1168,
+     "y": 524,
+     "width": 123,
+     "height": 15
+    },
+    {
+     "target": "meishi#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 326,
+     "y": 676,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "meishi#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 952,
+     "y": 676,
+     "width": 145,
+     "height": 15
+    },
+    {
+     "target": "meishi#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1328,
+     "y": 676,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "meishi#53",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 326,
+     "y": 702,
+     "width": 181,
+     "height": 15
+    },
+    {
+     "target": "meishi#54",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 952,
+     "y": 702,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "meishi#55",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1328,
+     "y": 702,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "meishi#56",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 326,
+     "y": 728,
+     "width": 347,
+     "height": 15
+    },
+    {
+     "target": "meishi#57",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 952,
+     "y": 728,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "meishi#58",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1328,
+     "y": 728,
+     "width": 81,
+     "height": 15
+    },
+    {
+     "target": "meishi#59",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 326,
+     "y": 753,
+     "width": 145,
+     "height": 15
+    },
+    {
+     "target": "meishi#60",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 952,
+     "y": 753,
+     "width": 203,
+     "height": 15
+    },
+    {
+     "target": "meishi#61",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1328,
+     "y": 753,
+     "width": 95,
+     "height": 15
+    },
+    {
+     "target": "meishi#62",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 424,
+     "y": 801,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "meishi#63",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1084,
+     "y": 801,
+     "width": 110,
+     "height": 15
+    },
+    {
+     "target": "meishi#64",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 429,
+     "y": 833,
+     "width": 117,
+     "height": 15
+    },
+    {
+     "target": "meishi#65",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1130,
+     "y": 833,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "meishi#66",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1640,
+     "y": 65,
+     "width": 141,
+     "height": 14
+    },
+    {
+     "target": "meishi#67",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1708,
+     "y": 114,
+     "width": 65,
+     "height": 13
+    },
+    {
+     "target": "meishi#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1614,
+     "y": 162,
+     "width": 65,
+     "height": 13
+    },
+    {
+     "target": "meishi#69",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1704,
+     "y": 162,
+     "width": 97,
+     "height": 13
+    },
+    {
+     "target": "meishi#70",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1826,
+     "y": 162,
+     "width": 41,
+     "height": 13
+    },
+    {
+     "target": "meishi#71",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1659,
+     "y": 210,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "meishi#72",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1748,
+     "y": 210,
+     "width": 85,
+     "height": 13
+    },
+    {
+     "target": "meishi#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1770,
+     "y": 269,
+     "width": 116,
+     "height": 15
+    },
+    {
+     "target": "meishi#74",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1643,
+     "y": 288,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "meishi#75",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1735,
+     "y": 344,
+     "width": 43,
+     "height": 13
+    },
+    {
+     "target": "meishi#76",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1683,
+     "y": 367,
+     "width": 59,
+     "height": 13
+    },
+    {
+     "target": "meishi#77",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1683,
+     "y": 388,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "meishi#78",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1683,
+     "y": 411,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "meishi#79",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1683,
+     "y": 433,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "meishi#80",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1711,
+     "y": 457,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "meishi#81",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1735,
+     "y": 480,
+     "width": 64,
+     "height": 12
+    },
+    {
+     "target": "meishi#82",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1683,
+     "y": 502,
+     "width": 70,
+     "height": 13
+    },
+    {
+     "target": "meishi#83",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1683,
+     "y": 524,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "meishi#84",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1683,
+     "y": 546,
+     "width": 58,
+     "height": 15
+    },
+    {
+     "target": "meishi#85",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1683,
+     "y": 570,
+     "width": 183,
+     "height": 13
+    },
+    {
+     "target": "meishi#86",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1683,
+     "y": 592,
+     "width": 93,
+     "height": 13
+    }
+   ]
+  },
+  {
+   "file": "meishi.fhd.dark.png",
+   "page": "meishi.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "meishi#00",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1720,
+     "y": 15,
+     "width": 180,
+     "height": 15
+    },
+    {
+     "target": "meishi#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 184,
+     "y": 77,
+     "width": 120,
+     "height": 12
+    },
+    {
+     "target": "meishi#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 184,
+     "y": 118,
+     "width": 95,
+     "height": 21
+    },
+    {
+     "target": "meishi#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 184,
+     "y": 147,
+     "width": 102,
+     "height": 13
+    },
+    {
+     "target": "meishi#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 184,
+     "y": 169,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "meishi#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 259,
+     "y": 169,
+     "width": 173,
+     "height": 13
+    },
+    {
+     "target": "meishi#06",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 210,
+     "y": 186,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "meishi#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 311,
+     "y": 186,
+     "width": 140,
+     "height": 13
+    },
+    {
+     "target": "meishi#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 644,
+     "y": 77,
+     "width": 158,
+     "height": 12
+    },
+    {
+     "target": "meishi#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 644,
+     "y": 118,
+     "width": 167,
+     "height": 21
+    },
+    {
+     "target": "meishi#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 644,
+     "y": 150,
+     "width": 248,
+     "height": 13
+    },
+    {
+     "target": "meishi#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 687,
+     "y": 168,
+     "width": 80,
+     "height": 13
+    },
+    {
+     "target": "meishi#12",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 644,
+     "y": 185,
+     "width": 115,
+     "height": 13
+    },
+    {
+     "target": "meishi#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1219,
+     "y": 77,
+     "width": 192,
+     "height": 12
+    },
+    {
+     "target": "meishi#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1267,
+     "y": 118,
+     "width": 96,
+     "height": 21
+    },
+    {
+     "target": "meishi#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1281,
+     "y": 150,
+     "width": 96,
+     "height": 13
+    },
+    {
+     "target": "meishi#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1237,
+     "y": 168,
+     "width": 156,
+     "height": 13
+    },
+    {
+     "target": "meishi#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1285,
+     "y": 185,
+     "width": 112,
+     "height": 13
+    },
+    {
+     "target": "meishi#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 545,
+     "y": 254,
+     "width": 64,
+     "height": 11
+    },
+    {
+     "target": "meishi#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 184,
+     "y": 255,
+     "width": 120,
+     "height": 12
+    },
+    {
+     "target": "meishi#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 184,
+     "y": 296,
+     "width": 138,
+     "height": 21
+    },
+    {
+     "target": "meishi#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 184,
+     "y": 328,
+     "width": 188,
+     "height": 13
+    },
+    {
+     "target": "meishi#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 212,
+     "y": 346,
+     "width": 88,
+     "height": 13
+    },
+    {
+     "target": "meishi#23",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 252,
+     "y": 367,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "meishi#24",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 644,
+     "y": 255,
+     "width": 128,
+     "height": 12
+    },
+    {
+     "target": "meishi#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 644,
+     "y": 296,
+     "width": 95,
+     "height": 21
+    },
+    {
+     "target": "meishi#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 644,
+     "y": 325,
+     "width": 68,
+     "height": 13
+    },
+    {
+     "target": "meishi#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 644,
+     "y": 347,
+     "width": 155,
+     "height": 13
+    },
+    {
+     "target": "meishi#28",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 720,
+     "y": 364,
+     "width": 54,
+     "height": 13
+    },
+    {
+     "target": "meishi#29",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1486,
+     "y": 254,
+     "width": 43,
+     "height": 11
+    },
+    {
+     "target": "meishi#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1104,
+     "y": 255,
+     "width": 144,
+     "height": 12
+    },
+    {
+     "target": "meishi#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1104,
+     "y": 296,
+     "width": 117,
+     "height": 21
+    },
+    {
+     "target": "meishi#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1104,
+     "y": 328,
+     "width": 72,
+     "height": 13
+    },
+    {
+     "target": "meishi#33",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1179,
+     "y": 328,
+     "width": 165,
+     "height": 13
+    },
+    {
+     "target": "meishi#34",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1130,
+     "y": 346,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "meishi#35",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1156,
+     "y": 367,
+     "width": 59,
+     "height": 13
+    },
+    {
+     "target": "meishi#36",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 184,
+     "y": 455,
+     "width": 138,
+     "height": 21
+    },
+    {
+     "target": "meishi#37",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 184,
+     "y": 484,
+     "width": 98,
+     "height": 13
+    },
+    {
+     "target": "meishi#38",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 184,
+     "y": 506,
+     "width": 96,
+     "height": 13
+    },
+    {
+     "target": "meishi#39",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 184,
+     "y": 523,
+     "width": 130,
+     "height": 13
+    },
+    {
+     "target": "meishi#40",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 240,
+     "y": 540,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "meishi#41",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 644,
+     "y": 433,
+     "width": 165,
+     "height": 12
+    },
+    {
+     "target": "meishi#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 644,
+     "y": 474,
+     "width": 95,
+     "height": 21
+    },
+    {
+     "target": "meishi#43",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 644,
+     "y": 503,
+     "width": 52,
+     "height": 13
+    },
+    {
+     "target": "meishi#44",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 644,
+     "y": 525,
+     "width": 161,
+     "height": 13
+    },
+    {
+     "target": "meishi#45",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 691,
+     "y": 542,
+     "width": 65,
+     "height": 13
+    },
+    {
+     "target": "meishi#46",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1104,
+     "y": 433,
+     "width": 120,
+     "height": 12
+    },
+    {
+     "target": "meishi#47",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1104,
+     "y": 474,
+     "width": 117,
+     "height": 21
+    },
+    {
+     "target": "meishi#48",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1130,
+     "y": 506,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "meishi#49",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1168,
+     "y": 524,
+     "width": 123,
+     "height": 15
+    },
+    {
+     "target": "meishi#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 326,
+     "y": 676,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "meishi#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 952,
+     "y": 676,
+     "width": 145,
+     "height": 15
+    },
+    {
+     "target": "meishi#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1328,
+     "y": 676,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "meishi#53",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 326,
+     "y": 702,
+     "width": 181,
+     "height": 15
+    },
+    {
+     "target": "meishi#54",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 952,
+     "y": 702,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "meishi#55",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1328,
+     "y": 702,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "meishi#56",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 326,
+     "y": 728,
+     "width": 347,
+     "height": 15
+    },
+    {
+     "target": "meishi#57",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 952,
+     "y": 728,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "meishi#58",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1328,
+     "y": 728,
+     "width": 81,
+     "height": 15
+    },
+    {
+     "target": "meishi#59",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 326,
+     "y": 753,
+     "width": 145,
+     "height": 15
+    },
+    {
+     "target": "meishi#60",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 952,
+     "y": 753,
+     "width": 203,
+     "height": 15
+    },
+    {
+     "target": "meishi#61",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1328,
+     "y": 753,
+     "width": 95,
+     "height": 15
+    },
+    {
+     "target": "meishi#62",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 424,
+     "y": 801,
+     "width": 103,
+     "height": 15
+    },
+    {
+     "target": "meishi#63",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1084,
+     "y": 801,
+     "width": 110,
+     "height": 15
+    },
+    {
+     "target": "meishi#64",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 429,
+     "y": 833,
+     "width": 117,
+     "height": 15
+    },
+    {
+     "target": "meishi#65",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1130,
+     "y": 833,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "meishi#66",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1640,
+     "y": 65,
+     "width": 141,
+     "height": 14
+    },
+    {
+     "target": "meishi#67",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1708,
+     "y": 114,
+     "width": 65,
+     "height": 13
+    },
+    {
+     "target": "meishi#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1614,
+     "y": 162,
+     "width": 65,
+     "height": 13
+    },
+    {
+     "target": "meishi#69",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1704,
+     "y": 162,
+     "width": 97,
+     "height": 13
+    },
+    {
+     "target": "meishi#70",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1826,
+     "y": 162,
+     "width": 41,
+     "height": 13
+    },
+    {
+     "target": "meishi#71",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1659,
+     "y": 210,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "meishi#72",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1748,
+     "y": 210,
+     "width": 85,
+     "height": 13
+    },
+    {
+     "target": "meishi#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1770,
+     "y": 269,
+     "width": 116,
+     "height": 15
+    },
+    {
+     "target": "meishi#74",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1643,
+     "y": 288,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "meishi#75",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1735,
+     "y": 344,
+     "width": 43,
+     "height": 13
+    },
+    {
+     "target": "meishi#76",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1683,
+     "y": 367,
+     "width": 59,
+     "height": 13
+    },
+    {
+     "target": "meishi#77",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1683,
+     "y": 388,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "meishi#78",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1683,
+     "y": 411,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "meishi#79",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1683,
+     "y": 433,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "meishi#80",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1711,
+     "y": 457,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "meishi#81",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1735,
+     "y": 480,
+     "width": 64,
+     "height": 12
+    },
+    {
+     "target": "meishi#82",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1683,
+     "y": 502,
+     "width": 70,
+     "height": 13
+    },
+    {
+     "target": "meishi#83",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1683,
+     "y": 524,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "meishi#84",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1683,
+     "y": 546,
+     "width": 58,
+     "height": 15
+    },
+    {
+     "target": "meishi#85",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1683,
+     "y": 570,
+     "width": 183,
+     "height": 13
+    },
+    {
+     "target": "meishi#86",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1683,
+     "y": 592,
+     "width": 93,
+     "height": 13
+    }
+   ]
+  },
+  {
+   "file": "meishi.retina.light.png",
+   "page": "meishi.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "meishi#00",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2480,
+     "y": 31,
+     "width": 360,
+     "height": 29
+    },
+    {
+     "target": "meishi#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 368,
+     "y": 154,
+     "width": 240,
+     "height": 24
+    },
+    {
+     "target": "meishi#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 368,
+     "y": 237,
+     "width": 190,
+     "height": 41
+    },
+    {
+     "target": "meishi#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 368,
+     "y": 295,
+     "width": 204,
+     "height": 25
+    },
+    {
+     "target": "meishi#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 368,
+     "y": 338,
+     "width": 143,
+     "height": 25
+    },
+    {
+     "target": "meishi#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 518,
+     "y": 338,
+     "width": 346,
+     "height": 25
+    },
+    {
+     "target": "meishi#06",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 421,
+     "y": 373,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "meishi#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 368,
+     "y": 408,
+     "width": 278,
+     "height": 25
+    },
+    {
+     "target": "meishi#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 968,
+     "y": 154,
+     "width": 315,
+     "height": 24
+    },
+    {
+     "target": "meishi#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 968,
+     "y": 237,
+     "width": 333,
+     "height": 41
+    },
+    {
+     "target": "meishi#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 968,
+     "y": 301,
+     "width": 495,
+     "height": 25
+    },
+    {
+     "target": "meishi#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1054,
+     "y": 336,
+     "width": 160,
+     "height": 25
+    },
+    {
+     "target": "meishi#12",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 968,
+     "y": 370,
+     "width": 229,
+     "height": 25
+    },
+    {
+     "target": "meishi#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1638,
+     "y": 154,
+     "width": 384,
+     "height": 24
+    },
+    {
+     "target": "meishi#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1735,
+     "y": 237,
+     "width": 190,
+     "height": 41
+    },
+    {
+     "target": "meishi#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1762,
+     "y": 301,
+     "width": 192,
+     "height": 25
+    },
+    {
+     "target": "meishi#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1675,
+     "y": 336,
+     "width": 310,
+     "height": 25
+    },
+    {
+     "target": "meishi#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1771,
+     "y": 370,
+     "width": 222,
+     "height": 25
+    },
+    {
+     "target": "meishi#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 771,
+     "y": 508,
+     "width": 127,
+     "height": 22
+    },
+    {
+     "target": "meishi#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 368,
+     "y": 510,
+     "width": 240,
+     "height": 24
+    },
+    {
+     "target": "meishi#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 368,
+     "y": 593,
+     "width": 276,
+     "height": 41
+    },
+    {
+     "target": "meishi#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 368,
+     "y": 657,
+     "width": 376,
+     "height": 25
+    },
+    {
+     "target": "meishi#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 424,
+     "y": 692,
+     "width": 175,
+     "height": 25
+    },
+    {
+     "target": "meishi#23",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 504,
+     "y": 734,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "meishi#24",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 968,
+     "y": 510,
+     "width": 256,
+     "height": 24
+    },
+    {
+     "target": "meishi#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 968,
+     "y": 593,
+     "width": 190,
+     "height": 41
+    },
+    {
+     "target": "meishi#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 968,
+     "y": 651,
+     "width": 136,
+     "height": 25
+    },
+    {
+     "target": "meishi#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 968,
+     "y": 694,
+     "width": 310,
+     "height": 25
+    },
+    {
+     "target": "meishi#28",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1120,
+     "y": 729,
+     "width": 107,
+     "height": 25
+    },
+    {
+     "target": "meishi#29",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2012,
+     "y": 508,
+     "width": 86,
+     "height": 22
+    },
+    {
+     "target": "meishi#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1568,
+     "y": 510,
+     "width": 288,
+     "height": 24
+    },
+    {
+     "target": "meishi#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1568,
+     "y": 593,
+     "width": 233,
+     "height": 41
+    },
+    {
+     "target": "meishi#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1568,
+     "y": 657,
+     "width": 143,
+     "height": 25
+    },
+    {
+     "target": "meishi#33",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1718,
+     "y": 657,
+     "width": 330,
+     "height": 25
+    },
+    {
+     "target": "meishi#34",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1621,
+     "y": 692,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "meishi#35",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1672,
+     "y": 734,
+     "width": 118,
+     "height": 25
+    },
+    {
+     "target": "meishi#36",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 368,
+     "y": 911,
+     "width": 276,
+     "height": 41
+    },
+    {
+     "target": "meishi#37",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 368,
+     "y": 969,
+     "width": 196,
+     "height": 25
+    },
+    {
+     "target": "meishi#38",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 368,
+     "y": 1012,
+     "width": 191,
+     "height": 25
+    },
+    {
+     "target": "meishi#39",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 368,
+     "y": 1047,
+     "width": 260,
+     "height": 25
+    },
+    {
+     "target": "meishi#40",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 480,
+     "y": 1081,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "meishi#41",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 968,
+     "y": 866,
+     "width": 330,
+     "height": 24
+    },
+    {
+     "target": "meishi#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 968,
+     "y": 949,
+     "width": 190,
+     "height": 41
+    },
+    {
+     "target": "meishi#43",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 968,
+     "y": 1007,
+     "width": 103,
+     "height": 25
+    },
+    {
+     "target": "meishi#44",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 968,
+     "y": 1050,
+     "width": 321,
+     "height": 25
+    },
+    {
+     "target": "meishi#45",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1063,
+     "y": 1085,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "meishi#46",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1568,
+     "y": 866,
+     "width": 240,
+     "height": 24
+    },
+    {
+     "target": "meishi#47",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1568,
+     "y": 949,
+     "width": 233,
+     "height": 41
+    },
+    {
+     "target": "meishi#48",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1621,
+     "y": 1013,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "meishi#49",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1696,
+     "y": 1048,
+     "width": 246,
+     "height": 29
+    },
+    {
+     "target": "meishi#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 558,
+     "y": 1353,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "meishi#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1360,
+     "y": 1353,
+     "width": 290,
+     "height": 29
+    },
+    {
+     "target": "meishi#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1842,
+     "y": 1353,
+     "width": 175,
+     "height": 29
+    },
+    {
+     "target": "meishi#53",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 558,
+     "y": 1404,
+     "width": 362,
+     "height": 29
+    },
+    {
+     "target": "meishi#54",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1360,
+     "y": 1404,
+     "width": 347,
+     "height": 29
+    },
+    {
+     "target": "meishi#55",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1842,
+     "y": 1404,
+     "width": 204,
+     "height": 29
+    },
+    {
+     "target": "meishi#56",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 558,
+     "y": 1456,
+     "width": 694,
+     "height": 29
+    },
+    {
+     "target": "meishi#57",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1360,
+     "y": 1456,
+     "width": 261,
+     "height": 29
+    },
+    {
+     "target": "meishi#58",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1842,
+     "y": 1456,
+     "width": 160,
+     "height": 29
+    },
+    {
+     "target": "meishi#59",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 558,
+     "y": 1507,
+     "width": 290,
+     "height": 29
+    },
+    {
+     "target": "meishi#60",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1360,
+     "y": 1507,
+     "width": 405,
+     "height": 29
+    },
+    {
+     "target": "meishi#61",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1842,
+     "y": 1507,
+     "width": 189,
+     "height": 29
+    },
+    {
+     "target": "meishi#62",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 849,
+     "y": 1603,
+     "width": 204,
+     "height": 29
+    },
+    {
+     "target": "meishi#63",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1689,
+     "y": 1603,
+     "width": 218,
+     "height": 29
+    },
+    {
+     "target": "meishi#64",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 859,
+     "y": 1666,
+     "width": 232,
+     "height": 29
+    },
+    {
+     "target": "meishi#65",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1780,
+     "y": 1666,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "meishi#66",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2320,
+     "y": 130,
+     "width": 281,
+     "height": 28
+    },
+    {
+     "target": "meishi#67",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2457,
+     "y": 228,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "meishi#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2268,
+     "y": 324,
+     "width": 129,
+     "height": 25
+    },
+    {
+     "target": "meishi#69",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2448,
+     "y": 324,
+     "width": 194,
+     "height": 25
+    },
+    {
+     "target": "meishi#70",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2693,
+     "y": 324,
+     "width": 81,
+     "height": 25
+    },
+    {
+     "target": "meishi#71",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2359,
+     "y": 420,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "meishi#72",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2536,
+     "y": 420,
+     "width": 169,
+     "height": 25
+    },
+    {
+     "target": "meishi#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2580,
+     "y": 538,
+     "width": 232,
+     "height": 29
+    },
+    {
+     "target": "meishi#74",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2326,
+     "y": 577,
+     "width": 347,
+     "height": 29
+    },
+    {
+     "target": "meishi#75",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2510,
+     "y": 688,
+     "width": 86,
+     "height": 25
+    },
+    {
+     "target": "meishi#76",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2406,
+     "y": 734,
+     "width": 117,
+     "height": 25
+    },
+    {
+     "target": "meishi#77",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2406,
+     "y": 777,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "meishi#78",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2406,
+     "y": 822,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "meishi#79",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2406,
+     "y": 867,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "meishi#80",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2462,
+     "y": 914,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "meishi#81",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2510,
+     "y": 960,
+     "width": 127,
+     "height": 24
+    },
+    {
+     "target": "meishi#82",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2406,
+     "y": 1005,
+     "width": 139,
+     "height": 25
+    },
+    {
+     "target": "meishi#83",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2406,
+     "y": 1048,
+     "width": 347,
+     "height": 29
+    },
+    {
+     "target": "meishi#84",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2406,
+     "y": 1093,
+     "width": 116,
+     "height": 29
+    },
+    {
+     "target": "meishi#85",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2406,
+     "y": 1140,
+     "width": 365,
+     "height": 25
+    },
+    {
+     "target": "meishi#86",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2406,
+     "y": 1185,
+     "width": 186,
+     "height": 25
+    }
+   ]
+  },
+  {
+   "file": "meishi.retina.dark.png",
+   "page": "meishi.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "meishi#00",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2480,
+     "y": 31,
+     "width": 360,
+     "height": 29
+    },
+    {
+     "target": "meishi#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 368,
+     "y": 154,
+     "width": 240,
+     "height": 24
+    },
+    {
+     "target": "meishi#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 368,
+     "y": 237,
+     "width": 190,
+     "height": 41
+    },
+    {
+     "target": "meishi#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 368,
+     "y": 295,
+     "width": 204,
+     "height": 25
+    },
+    {
+     "target": "meishi#04",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 368,
+     "y": 338,
+     "width": 143,
+     "height": 25
+    },
+    {
+     "target": "meishi#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 518,
+     "y": 338,
+     "width": 346,
+     "height": 25
+    },
+    {
+     "target": "meishi#06",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 421,
+     "y": 373,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "meishi#07",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 368,
+     "y": 408,
+     "width": 278,
+     "height": 25
+    },
+    {
+     "target": "meishi#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 968,
+     "y": 154,
+     "width": 315,
+     "height": 24
+    },
+    {
+     "target": "meishi#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 968,
+     "y": 237,
+     "width": 333,
+     "height": 41
+    },
+    {
+     "target": "meishi#10",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 968,
+     "y": 301,
+     "width": 495,
+     "height": 25
+    },
+    {
+     "target": "meishi#11",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1054,
+     "y": 336,
+     "width": 160,
+     "height": 25
+    },
+    {
+     "target": "meishi#12",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 968,
+     "y": 370,
+     "width": 229,
+     "height": 25
+    },
+    {
+     "target": "meishi#13",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1638,
+     "y": 154,
+     "width": 384,
+     "height": 24
+    },
+    {
+     "target": "meishi#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1735,
+     "y": 237,
+     "width": 190,
+     "height": 41
+    },
+    {
+     "target": "meishi#15",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1762,
+     "y": 301,
+     "width": 192,
+     "height": 25
+    },
+    {
+     "target": "meishi#16",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1675,
+     "y": 336,
+     "width": 310,
+     "height": 25
+    },
+    {
+     "target": "meishi#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1771,
+     "y": 370,
+     "width": 222,
+     "height": 25
+    },
+    {
+     "target": "meishi#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 771,
+     "y": 508,
+     "width": 127,
+     "height": 22
+    },
+    {
+     "target": "meishi#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 368,
+     "y": 510,
+     "width": 240,
+     "height": 24
+    },
+    {
+     "target": "meishi#20",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 368,
+     "y": 593,
+     "width": 276,
+     "height": 41
+    },
+    {
+     "target": "meishi#21",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 368,
+     "y": 657,
+     "width": 376,
+     "height": 25
+    },
+    {
+     "target": "meishi#22",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 424,
+     "y": 692,
+     "width": 175,
+     "height": 25
+    },
+    {
+     "target": "meishi#23",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 504,
+     "y": 734,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "meishi#24",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 968,
+     "y": 510,
+     "width": 256,
+     "height": 24
+    },
+    {
+     "target": "meishi#25",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 968,
+     "y": 593,
+     "width": 190,
+     "height": 41
+    },
+    {
+     "target": "meishi#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 968,
+     "y": 651,
+     "width": 136,
+     "height": 25
+    },
+    {
+     "target": "meishi#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 968,
+     "y": 694,
+     "width": 310,
+     "height": 25
+    },
+    {
+     "target": "meishi#28",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1120,
+     "y": 729,
+     "width": 107,
+     "height": 25
+    },
+    {
+     "target": "meishi#29",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2012,
+     "y": 508,
+     "width": 86,
+     "height": 22
+    },
+    {
+     "target": "meishi#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1568,
+     "y": 510,
+     "width": 288,
+     "height": 24
+    },
+    {
+     "target": "meishi#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1568,
+     "y": 593,
+     "width": 233,
+     "height": 41
+    },
+    {
+     "target": "meishi#32",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1568,
+     "y": 657,
+     "width": 143,
+     "height": 25
+    },
+    {
+     "target": "meishi#33",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1718,
+     "y": 657,
+     "width": 330,
+     "height": 25
+    },
+    {
+     "target": "meishi#34",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1621,
+     "y": 692,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "meishi#35",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1672,
+     "y": 734,
+     "width": 118,
+     "height": 25
+    },
+    {
+     "target": "meishi#36",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 368,
+     "y": 911,
+     "width": 276,
+     "height": 41
+    },
+    {
+     "target": "meishi#37",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 368,
+     "y": 969,
+     "width": 196,
+     "height": 25
+    },
+    {
+     "target": "meishi#38",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 368,
+     "y": 1012,
+     "width": 191,
+     "height": 25
+    },
+    {
+     "target": "meishi#39",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 368,
+     "y": 1047,
+     "width": 260,
+     "height": 25
+    },
+    {
+     "target": "meishi#40",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 480,
+     "y": 1081,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "meishi#41",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 968,
+     "y": 866,
+     "width": 330,
+     "height": 24
+    },
+    {
+     "target": "meishi#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 968,
+     "y": 949,
+     "width": 190,
+     "height": 41
+    },
+    {
+     "target": "meishi#43",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 968,
+     "y": 1007,
+     "width": 103,
+     "height": 25
+    },
+    {
+     "target": "meishi#44",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 968,
+     "y": 1050,
+     "width": 321,
+     "height": 25
+    },
+    {
+     "target": "meishi#45",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1063,
+     "y": 1085,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "meishi#46",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1568,
+     "y": 866,
+     "width": 240,
+     "height": 24
+    },
+    {
+     "target": "meishi#47",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1568,
+     "y": 949,
+     "width": 233,
+     "height": 41
+    },
+    {
+     "target": "meishi#48",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1621,
+     "y": 1013,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "meishi#49",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1696,
+     "y": 1048,
+     "width": 246,
+     "height": 29
+    },
+    {
+     "target": "meishi#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 558,
+     "y": 1353,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "meishi#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1360,
+     "y": 1353,
+     "width": 290,
+     "height": 29
+    },
+    {
+     "target": "meishi#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1842,
+     "y": 1353,
+     "width": 175,
+     "height": 29
+    },
+    {
+     "target": "meishi#53",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 558,
+     "y": 1404,
+     "width": 362,
+     "height": 29
+    },
+    {
+     "target": "meishi#54",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1360,
+     "y": 1404,
+     "width": 347,
+     "height": 29
+    },
+    {
+     "target": "meishi#55",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1842,
+     "y": 1404,
+     "width": 204,
+     "height": 29
+    },
+    {
+     "target": "meishi#56",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 558,
+     "y": 1456,
+     "width": 694,
+     "height": 29
+    },
+    {
+     "target": "meishi#57",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1360,
+     "y": 1456,
+     "width": 261,
+     "height": 29
+    },
+    {
+     "target": "meishi#58",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1842,
+     "y": 1456,
+     "width": 160,
+     "height": 29
+    },
+    {
+     "target": "meishi#59",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 558,
+     "y": 1507,
+     "width": 290,
+     "height": 29
+    },
+    {
+     "target": "meishi#60",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1360,
+     "y": 1507,
+     "width": 405,
+     "height": 29
+    },
+    {
+     "target": "meishi#61",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1842,
+     "y": 1507,
+     "width": 189,
+     "height": 29
+    },
+    {
+     "target": "meishi#62",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 849,
+     "y": 1603,
+     "width": 204,
+     "height": 29
+    },
+    {
+     "target": "meishi#63",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1689,
+     "y": 1603,
+     "width": 218,
+     "height": 29
+    },
+    {
+     "target": "meishi#64",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 859,
+     "y": 1666,
+     "width": 232,
+     "height": 29
+    },
+    {
+     "target": "meishi#65",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1780,
+     "y": 1666,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "meishi#66",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2320,
+     "y": 130,
+     "width": 281,
+     "height": 28
+    },
+    {
+     "target": "meishi#67",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2457,
+     "y": 228,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "meishi#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2268,
+     "y": 324,
+     "width": 129,
+     "height": 25
+    },
+    {
+     "target": "meishi#69",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2448,
+     "y": 324,
+     "width": 194,
+     "height": 25
+    },
+    {
+     "target": "meishi#70",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2693,
+     "y": 324,
+     "width": 81,
+     "height": 25
+    },
+    {
+     "target": "meishi#71",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2359,
+     "y": 420,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "meishi#72",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2536,
+     "y": 420,
+     "width": 169,
+     "height": 25
+    },
+    {
+     "target": "meishi#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2580,
+     "y": 538,
+     "width": 232,
+     "height": 29
+    },
+    {
+     "target": "meishi#74",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2326,
+     "y": 577,
+     "width": 347,
+     "height": 29
+    },
+    {
+     "target": "meishi#75",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2510,
+     "y": 688,
+     "width": 86,
+     "height": 25
+    },
+    {
+     "target": "meishi#76",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2406,
+     "y": 734,
+     "width": 117,
+     "height": 25
+    },
+    {
+     "target": "meishi#77",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2406,
+     "y": 777,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "meishi#78",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2406,
+     "y": 822,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "meishi#79",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 2406,
+     "y": 867,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "meishi#80",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2462,
+     "y": 914,
+     "width": 111,
+     "height": 25
+    },
+    {
+     "target": "meishi#81",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2510,
+     "y": 960,
+     "width": 127,
+     "height": 24
+    },
+    {
+     "target": "meishi#82",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2406,
+     "y": 1005,
+     "width": 139,
+     "height": 25
+    },
+    {
+     "target": "meishi#83",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2406,
+     "y": 1048,
+     "width": 347,
+     "height": 29
+    },
+    {
+     "target": "meishi#84",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2406,
+     "y": 1093,
+     "width": 116,
+     "height": 29
+    },
+    {
+     "target": "meishi#85",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2406,
+     "y": 1140,
+     "width": 365,
+     "height": 25
+    },
+    {
+     "target": "meishi#86",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2406,
+     "y": 1185,
+     "width": 186,
+     "height": 25
+    }
+   ]
+  }
+ ]
+}

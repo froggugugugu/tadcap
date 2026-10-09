@@ -10,6 +10,9 @@
  *   満たさなければ exit 1
  *
  * ネットワークには出ない(file:// 以外の要求はすべて中断する)。
+ *
+ * 引数 `--set=holdout` で、調整に使っていないホールドアウト(`eval/masking/holdout/` の pages / images /
+ * truth.json)を生成する。件数の規定はホールドアウト用(HOLDOUT_LIMITS)。引数なしは従来どおり(出力は変わらない)。
  */
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -17,9 +20,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const EVAL_DIR = path.join(ROOT, "eval", "masking");
-const PAGES_DIR = path.join(EVAL_DIR, "pages");
-const IMAGES_DIR = path.join(EVAL_DIR, "images");
-const TRUTH_PATH = path.join(EVAL_DIR, "truth.json");
+
+/** 評価セット。既定は調整に使う本番セット、holdout は調整に使わない確認用セット */
+export const SETS = {
+  default: { dir: EVAL_DIR },
+  holdout: { dir: path.join(EVAL_DIR, "holdout") },
+};
 
 /** 種類(IPC の `kind`)ごとの細分。ARCH §5.3 の表の順 */
 export const DETAILS = {
@@ -35,6 +41,10 @@ export const MIN_PER_IMAGE_COUNT = (detail) => (PROPER_NOUN_DETAILS.has(detail) 
 /** 決定 #3 A: 画像ごとに数えるが、細分ごとに異なる文字列(= 異なる span)を 10 件以上 */
 export const MIN_DISTINCT_TARGETS = 10;
 export const MIN_IMAGES = 20;
+/** 本番セットの規定(selfCheck の既定値) */
+export const DEFAULT_LIMITS = { minImages: MIN_IMAGES, minPerImage: MIN_PER_IMAGE_COUNT, minDistinct: MIN_DISTINCT_TARGETS };
+/** ホールドアウトの規定: 2 画面 × 4 撮影条件 = 8 枚、細分ごとに異なる正解 8 件以上(× 4 条件 = 画像ごと 32 件以上) */
+export const HOLDOUT_LIMITS = { minImages: 8, minPerImage: () => 32, minDistinct: 8 };
 
 /** 撮影条件。Retina 相当は 13 インチ級の論理解像度 1440x900 を DPR 2 で撮る(【仮定】) */
 export const VARIANTS = [
@@ -83,9 +93,11 @@ function checkKeys(obj, allowed, where, errors) {
  * @param {object} truth truth.json の内容
  * @param {{imageSizes: Map<string,{width:number,height:number}|null>, targetTexts: Map<string,string>}} ctx
  *   targetTexts は target → 正解の文字列(メモリ上だけ。異なる文字列の数と漏れの検査に使う)
+ * @param {{minImages:number, minPerImage:(detail:string)=>number, minDistinct:number}} [limits] 件数の規定
  * @returns {{errors: string[], counts: Record<string,{perImage:number, distinct:number}>}}
  */
-export function selfCheck(truth, { imageSizes, targetTexts }) {
+export function selfCheck(truth, { imageSizes, targetTexts }, limits = DEFAULT_LIMITS) {
+  const { minImages, minPerImage, minDistinct } = limits;
   const errors = [];
   const counts = {};
   for (const [kind, details] of Object.entries(DETAILS)) {
@@ -96,7 +108,7 @@ export function selfCheck(truth, { imageSizes, targetTexts }) {
   if (!truth || typeof truth !== "object") return { errors: ["truth が空"], counts };
   checkKeys(truth, ALLOWED_KEYS.root, "root", errors);
   const images = Array.isArray(truth.images) ? truth.images : [];
-  if (images.length < MIN_IMAGES) errors.push(`画像が ${images.length} 枚(${MIN_IMAGES} 枚以上が必要)`);
+  if (images.length < minImages) errors.push(`画像が ${images.length} 枚(${minImages} 枚以上が必要)`);
 
   for (const img of images) {
     checkKeys(img, ALLOWED_KEYS.image, img.file ?? "image", errors);
@@ -132,11 +144,11 @@ export function selfCheck(truth, { imageSizes, targetTexts }) {
   for (const [key, c] of Object.entries(counts)) {
     c.distinct = distinct.get(key).size;
     const detail = key.split("/")[1];
-    if (c.perImage < MIN_PER_IMAGE_COUNT(detail)) {
-      errors.push(`${key}: 画像ごとの件数 ${c.perImage}(${MIN_PER_IMAGE_COUNT(detail)} 件以上が必要)`);
+    if (c.perImage < minPerImage(detail)) {
+      errors.push(`${key}: 画像ごとの件数 ${c.perImage}(${minPerImage(detail)} 件以上が必要)`);
     }
-    if (c.distinct < MIN_DISTINCT_TARGETS) {
-      errors.push(`${key}: 異なる正解 ${c.distinct} 件(${MIN_DISTINCT_TARGETS} 件以上が必要)`);
+    if (c.distinct < minDistinct) {
+      errors.push(`${key}: 異なる正解 ${c.distinct} 件(${minDistinct} 件以上が必要)`);
     }
   }
 
@@ -150,9 +162,10 @@ export function selfCheck(truth, { imageSizes, targetTexts }) {
 
 /**
  * 全ページを撮影し、truth と(自己検査用に)正解の文字列を返す。文字列はメモリ上だけで使う。
+ * @param {{PAGES_DIR:string, IMAGES_DIR:string, TRUTH_PATH:string}} dirs
  * @returns {Promise<{truth: object, maskTexts: string[]}>}
  */
-async function generate() {
+async function generate({ PAGES_DIR, IMAGES_DIR, TRUTH_PATH }) {
   const { chromium } = await import("@playwright/test");
   const pageFiles = (await readdir(PAGES_DIR)).filter((f) => f.endsWith(".html")).sort();
   await rm(IMAGES_DIR, { recursive: true, force: true });
@@ -257,7 +270,7 @@ function measureSpans() {
   return { scrollX: sx, scrollY: sy, spans };
 }
 
-async function loadImageSizes(truth) {
+async function loadImageSizes(truth, IMAGES_DIR) {
   const sizes = new Map();
   for (const img of truth.images ?? []) {
     try {
@@ -269,12 +282,25 @@ async function loadImageSizes(truth) {
   return sizes;
 }
 
+/** `--set=<名前>` を読む(無ければ default) */
+export function parseSet(argv) {
+  const arg = argv.find((a) => a.startsWith("--set="));
+  const name = arg ? arg.slice("--set=".length) : "default";
+  if (!(name in SETS)) throw new Error(`未知の評価セット: ${name}(${Object.keys(SETS).join(" / ")})`);
+  return name;
+}
+
 async function main() {
-  const { truth, targetTexts, genErrors } = await generate();
-  const imageSizes = await loadImageSizes(truth);
-  const { errors: checkErrors, counts } = selfCheck(truth, { imageSizes, targetTexts });
+  const setName = parseSet(process.argv.slice(2));
+  const dir = SETS[setName].dir;
+  const dirs = { PAGES_DIR: path.join(dir, "pages"), IMAGES_DIR: path.join(dir, "images"), TRUTH_PATH: path.join(dir, "truth.json") };
+  const limits = setName === "holdout" ? HOLDOUT_LIMITS : DEFAULT_LIMITS;
+  const { truth, targetTexts, genErrors } = await generate(dirs);
+  const imageSizes = await loadImageSizes(truth, dirs.IMAGES_DIR);
+  const { errors: checkErrors, counts } = selfCheck(truth, { imageSizes, targetTexts }, limits);
   const errors = [...genErrors, ...checkErrors];
 
+  if (setName !== "default") console.log(`評価セット: ${setName}`);
   console.log(`画像: ${(truth.images ?? []).length} 枚`);
   console.log("細分ごとの件数(画像ごと / 異なる正解):");
   for (const [key, c] of Object.entries(counts)) {

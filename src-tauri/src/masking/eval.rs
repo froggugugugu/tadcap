@@ -8,6 +8,8 @@
 //! - 読み取った文字列は扱わない。判定・出力は矩形・種類・細分・画像名だけ(NFR-002)。標準出力にも書かない
 //! - 生データは `testreport/masking/eval-<日付>[-<ラベル>].json`、まとめは
 //!   `output/reports/masking/eval-<日付>[-<ラベル>].md`(ラベルは環境変数 `MASK_EVAL_LABEL`。調整前後の比較用)
+//! - 環境変数 `MASK_EVAL_SET=holdout` で、調整に使っていないホールドアウト(`eval/masking/holdout/`)を測る。
+//!   ラベルの既定は `holdout`(本番の出力を上書きしない)。95% の判定は本番セットだけで行い、ホールドアウトは記録だけ
 
 use std::collections::BTreeMap;
 
@@ -33,6 +35,37 @@ const NAMED_DETAILS: [&str; 5] = ["cued_number", "person_ja", "person_en", "comp
 /// 解像度 × テーマの列の順(表の列)。
 const VARIANTS: [(&str, &str); 4] =
     [("fhd", "light"), ("fhd", "dark"), ("retina", "light"), ("retina", "dark")];
+
+/// 評価セット。本番(調整に使う)とホールドアウト(調整に使わない確認用)。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EvalSet {
+    Default,
+    Holdout,
+}
+
+impl EvalSet {
+    /// 環境変数 `MASK_EVAL_SET` の値から。未設定・空・`default` は本番。未知の名前は `None`。
+    fn parse(value: Option<&str>) -> Option<Self> {
+        match value.map(str::trim) {
+            None | Some("" | "default") => Some(Self::Default),
+            Some("holdout") => Some(Self::Holdout),
+            Some(_) => None,
+        }
+    }
+
+    /// リポジトリのルートからの置き場所(`truth.json` と `images/` がある)。
+    fn dir(self) -> &'static str {
+        match self {
+            Self::Default => "eval/masking",
+            Self::Holdout => "eval/masking/holdout",
+        }
+    }
+
+    /// 出力名のラベル。`MASK_EVAL_LABEL` があればそれ、無ければホールドアウトは `holdout`(本番を上書きしない)。
+    fn label(self, env_label: Option<String>) -> Option<String> {
+        env_label.or_else(|| (self == Self::Holdout).then(|| "holdout".to_string()))
+    }
+}
 
 /// 細分の目標(%)。未知の細分は `None`。
 fn target_percent(detail: &str) -> Option<u32> {
@@ -346,7 +379,12 @@ fn utc_date(unix_seconds: u64) -> String {
 }
 
 /// まとめ(Markdown)。細分 × (フル HD / Retina × 明 / 暗)の検出率と、誤検出の件数。
-fn render_markdown(env: &Environment, summary: &Summary, false_positives: &BTreeMap<(String, String), usize>) -> String {
+fn render_markdown(
+    env: &Environment,
+    summary: &Summary,
+    false_positives: &BTreeMap<(String, String), usize>,
+    set: EvalSet,
+) -> String {
     let pct = |t: Option<&Tally>| match t {
         Some(t) => match t.percent() {
             Some(p) => format!("{p:.1}% ({}/{})", t.hit, t.total),
@@ -357,6 +395,9 @@ fn render_markdown(env: &Environment, summary: &Summary, false_positives: &BTree
     let mut md = String::new();
     md.push_str(&format!("# 自動マスキングの検出率({})\n\n", env.date));
     md.push_str("> `masking::eval::masking_eval` が生成(読み取った文字列は含まない)。\n\n");
+    if set == EvalSet::Holdout {
+        md.push_str("> 評価セット: ホールドアウト(`eval/masking/holdout/`。規則の調整に使っていない画面)。判定は参考。\n\n");
+    }
     md.push_str("## 環境\n\n");
     md.push_str(&format!("- macOS: {} / 機種: {}\n", env.os_version, env.machine));
     md.push_str(&format!(
@@ -415,8 +456,11 @@ fn masking_eval() {
     use super::{detect, geometry, ocr, png, scan_page, RecognizedPage};
 
     let root = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
+    let set = EvalSet::parse(std::env::var("MASK_EVAL_SET").ok().as_deref())
+        .expect("MASK_EVAL_SET は default か holdout");
+    let set_dir = set.dir();
     let truth: Truth = serde_json::from_str(
-        &std::fs::read_to_string(format!("{root}/eval/masking/truth.json")).expect("truth.json を読めなかった"),
+        &std::fs::read_to_string(format!("{root}/{set_dir}/truth.json")).expect("truth.json を読めなかった"),
     )
     .expect("truth.json の形が不正");
     assert!(!truth.images.is_empty(), "truth.json に画像が無い");
@@ -442,7 +486,7 @@ fn masking_eval() {
     let mut false_positives: BTreeMap<(String, String), usize> = BTreeMap::new();
 
     for image in &truth.images {
-        let bytes = std::fs::read(format!("{root}/eval/masking/images/{}", image.file)).expect("評価画像を読めなかった");
+        let bytes = std::fs::read(format!("{root}/{set_dir}/images/{}", image.file)).expect("評価画像を読めなかった");
         let size = png::validate(&bytes).expect("評価画像が PNG でない");
         assert_eq!((size.width, size.height), (image.width, image.height), "{} の大きさが truth と違う", image.file);
 
@@ -513,7 +557,7 @@ fn masking_eval() {
     }
 
     let summary = summarize(&judged);
-    let suffix = std::env::var("MASK_EVAL_LABEL").map(|l| format!("-{l}")).unwrap_or_default();
+    let suffix = set.label(std::env::var("MASK_EVAL_LABEL").ok()).map(|l| format!("-{l}")).unwrap_or_default();
     let raw = RawReport { environment: env, images: raw_images };
     std::fs::create_dir_all(format!("{root}/testreport/masking")).expect("出力先を作れなかった");
     std::fs::create_dir_all(format!("{root}/output/reports/masking")).expect("出力先を作れなかった");
@@ -524,11 +568,15 @@ fn masking_eval() {
     .expect("生データを書けなかった");
     std::fs::write(
         format!("{root}/output/reports/masking/eval-{date}{suffix}.md"),
-        render_markdown(&raw.environment, &summary, &false_positives),
+        render_markdown(&raw.environment, &summary, &false_positives, set),
     )
     .expect("まとめを書けなかった");
 
     // 形が決まっているものは 95% 以上(TASK #6: 届くまで止める)。固有名詞側は記録だけ。
+    // ホールドアウトは合わせ込みの確認用なので記録だけ(止めない)。
+    if set == EvalSet::Holdout {
+        return;
+    }
     let missing: Vec<String> = FIXED_SHAPE_DETAILS
         .iter()
         .filter_map(|d| {
@@ -637,6 +685,25 @@ mod tests {
         assert_eq!(match_detail_of("cue_value"), Some(MatchDetail::LabeledSecret));
         assert_eq!(match_detail_of("cued_number"), Some(MatchDetail::LabeledNumber));
         assert_eq!(match_detail_of("unknown"), None);
+    }
+
+    #[test]
+    fn 評価セットは環境変数で切り替え_既定は本番() {
+        assert_eq!(EvalSet::parse(None), Some(EvalSet::Default));
+        assert_eq!(EvalSet::parse(Some("")), Some(EvalSet::Default));
+        assert_eq!(EvalSet::parse(Some("default")), Some(EvalSet::Default));
+        assert_eq!(EvalSet::parse(Some("holdout")), Some(EvalSet::Holdout));
+        assert_eq!(EvalSet::parse(Some("pages")), None);
+        assert_eq!(EvalSet::Default.dir(), "eval/masking");
+        assert_eq!(EvalSet::Holdout.dir(), "eval/masking/holdout");
+    }
+
+    #[test]
+    fn ホールドアウトのラベルの既定はholdoutで本番は従来どおり() {
+        assert_eq!(EvalSet::Default.label(None), None);
+        assert_eq!(EvalSet::Default.label(Some("x".into())), Some("x".to_string()));
+        assert_eq!(EvalSet::Holdout.label(None), Some("holdout".to_string()));
+        assert_eq!(EvalSet::Holdout.label(Some("holdout".into())), Some("holdout".to_string()));
     }
 
     #[test]
