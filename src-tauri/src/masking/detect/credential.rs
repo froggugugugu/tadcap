@@ -3,12 +3,17 @@
 //! 正規化(全角→半角)後の文字列に規則を当てる。正規表現は線形時間の `regex` クレートだけを使う。
 //!
 //! - URL のクエリ: `http(s)://` から空白・非 ASCII の手前までを URL とし、`?` 以降だけを返す(PRD §10 #3)。
+//!   スキームの無いパス(`GET /export?from=...`)も、語頭の `/` から始まり `?` と `=` を含めば URL とみなす。
+//!   読み取りで入った空白 1 つの後に `=`・`?` を含む塊が続けば URL の続きとする。`?` が誤読された
+//!   (`?` が無く、パスに `=` がある)ときは、最初の `=` の前のキーとその直前の 1 文字からをクエリとする。
 //!   URL の中(パス・クエリ)はトークン・ランダム列の規則の対象から外す
 //! - 接頭辞付きトークン: 語頭の接頭辞(`lexicon.rs`)+ 本体(16 文字以上・英字と数字を両方含む)
 //! - 長いランダム列: `[A-Za-z0-9_-]` の塊で 20 文字以上・英字と数字が混在し、文字の種類(小文字・大文字・数字)の
 //!   切り替わりが 3 回以上あるもの。厳密な文字集合は求めない(誤読 `0`→`Q` などを許す)
-//! - 読み取りで入った途中の空白 1 つ: 両側が英字と数字を含む塊なら、1 つの列として扱う
+//! - 読み取りで入った途中の空白(1 つずつ): 続く塊が英字と数字を含むか、大文字・小文字の切り替わりが 2 回以上
+//!   あれば、1 つの列として扱う(何か所でも続ける)。末尾の `l`・`I` が `]`・`|` に誤読された 1 文字も含める
 //! - 手がかり語の値: 手がかり語(英字はキーの一部でもよい)+ 区切り + ASCII の値(空白・非 ASCII の手前まで)。
+//!   値の後に空白 1 つを挟んで英数字と記号(英字以外)を含む塊が続けば、読み取りで入った空白として値に含める。
 //!   手がかり語だけの観測は、同じ行の右隣(無ければ直下の行)の観測を値とする(`layout.rs`)
 
 use std::ops::Range;
@@ -30,15 +35,21 @@ const MIN_RANDOM_LEN: usize = 20;
 const MIN_CLASS_CHANGES: usize = 3;
 /// 手がかり語だけの観測(ラベル)とみなす文字数の上限。長い文は値を探さない。
 const MAX_LABEL_CHARS: usize = 20;
+/// 塊の続きとみなす、大文字・小文字・数字の切り替わりの最小回数(英字だけの塊。`aBc`・`Xy_Zw` など)。
+const MIN_CONTINUATION_CHANGES: usize = 2;
 
-/// URL(1 番目のグループがクエリ)。ホスト・パスは `?` を除く ASCII の記号・英数字。
-static URL: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)https?://[\x21-\x3e\x40-\x7e]+(\?[\x21-\x7e]+)?").expect("固定の正規表現が不正")
+/// スキーム付きの URL。空白・非 ASCII の手前まで(クエリの位置は `query_of` で決める)。
+static URL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)https?://[\x21-\x7e]+").expect("固定の正規表現が不正"));
+
+/// スキームの無いパスだけの URL(1 番目のグループ)。語頭の `/` から始まり、`?` と `=` を含む。
+static PATH_URL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?:^|[\x20"'(=])(/[\x21-\x7e]*\?[\x21-\x7e]*=[\x21-\x7e]*)"#).expect("固定の正規表現が不正")
 });
 
-/// 英数字・`-`・`_` の塊(トークン・ランダム列の単位)。
+/// 英数字・`-`・`_` の塊(トークン・ランダム列の単位)。末尾の `]`・`|` 1 文字は `l`・`I` の誤読として含める。
 static CHUNK: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[A-Za-z0-9_\-]+").expect("固定の正規表現が不正"));
+    LazyLock::new(|| Regex::new(r"[A-Za-z0-9_\-]+[\]|]?").expect("固定の正規表現が不正"));
 
 /// 接頭辞付きトークン(1 番目のグループが接頭辞、2 番目が本体)。接頭辞の前は英数字でないこと。
 static PREFIXED: LazyLock<Regex> = LazyLock::new(|| {
@@ -104,8 +115,9 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
     let mut has_own_value = Vec::with_capacity(lines.len());
     for line in lines {
         let text = line.as_str();
-        let urls: Vec<Range<usize>> = URL.find_iter(text).map(|m| m.range()).collect();
-        let queries = URL.captures_iter(text).filter_map(|c| c.get(1)).map(|m| m.range());
+        let found_urls = find_urls(text);
+        let urls: Vec<Range<usize>> = found_urls.iter().map(|(url, _)| url.clone()).collect();
+        let queries = found_urls.into_iter().filter_map(|(_, query)| query);
         let tokens = find_prefixed_tokens(text, &urls);
         let excluded: Vec<Range<usize>> = urls.iter().chain(&tokens).cloned().collect();
         let randoms = find_random_strings(text, &excluded);
@@ -139,7 +151,74 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
     matches
 }
 
-/// 接頭辞付きトークン(バイト範囲)。URL の中は対象外。本体の後に空白 1 つを挟んで続く塊も本体に含める。
+/// URL とそのクエリ(バイト範囲)。スキーム付きの URL と、スキームの無いパスだけの URL を左から順に返す。
+fn find_urls(text: &str) -> Vec<(Range<usize>, Option<Range<usize>>)> {
+    let mut urls: Vec<(Range<usize>, Option<Range<usize>>)> = Vec::new();
+    for m in URL.find_iter(text) {
+        if urls.last().is_some_and(|(url, _)| m.start() < url.end) {
+            continue;
+        }
+        let url = m.start()..extend_across_space(text, m.end());
+        // `://` の後(ホストの先頭)から `?` を探す
+        let host = text[url.clone()].find("://").map_or(url.start, |p| url.start + p + 3);
+        let query = query_of(text, &url, host);
+        urls.push((url, query));
+    }
+    for caps in PATH_URL.captures_iter(text) {
+        let Some(m) = caps.get(1) else {
+            continue;
+        };
+        let url = m.start()..extend_across_space(text, m.end());
+        if overlaps_any(&url, &urls.iter().map(|(u, _)| u.clone()).collect::<Vec<_>>()) {
+            continue;
+        }
+        let query = query_of(text, &url, url.start);
+        urls.push((url, query));
+    }
+    urls.sort_by_key(|(url, _)| url.start);
+    urls
+}
+
+/// URL の後に空白 1 つを挟んで `=` か `?` を含む ASCII の塊が続くなら、読み取りで入った空白とみなして
+/// URL の続きにする(何か所でも)。続けた後の終わりの位置を返す。
+fn extend_across_space(text: &str, mut end: usize) -> usize {
+    while text.as_bytes().get(end) == Some(&b' ') {
+        let len = ascii_chunk_len(&text[end + 1..]);
+        if len == 0 || !text[end + 1..end + 1 + len].contains(['=', '?']) {
+            break;
+        }
+        end += 1 + len;
+    }
+    end
+}
+
+/// URL のクエリ(バイト範囲)。`from`(ホストまたはパスの先頭)以降の最初の `?` から URL の終わりまで。
+/// `?` の後が空なら `None`。`?` が無ければ誤読とみなし、最初の `/` より後の最初の `=` の前のキー
+/// (英字・`_`)と、その直前の 1 文字(`/` 以外。誤読された `?`)からをクエリとする。
+fn query_of(text: &str, url: &Range<usize>, from: usize) -> Option<Range<usize>> {
+    let body = &text[from..url.end];
+    if let Some(q) = body.find('?') {
+        let start = from + q;
+        return (start + 1 < url.end).then_some(start..url.end);
+    }
+    let slash = from + body.find('/')?;
+    let eq = slash + text[slash..url.end].find('=')?;
+    let key_start = text[slash + 1..eq]
+        .rfind(|c: char| !(c.is_ascii_alphabetic() || c == '_'))
+        .map_or(slash + 1, |p| slash + 1 + p + 1);
+    if key_start == eq {
+        return None;
+    }
+    let start = if key_start > slash + 1 { key_start - 1 } else { key_start };
+    Some(start..url.end)
+}
+
+/// 先頭から続く ASCII の記号・英数字(空白を除く)のバイト数。
+fn ascii_chunk_len(text: &str) -> usize {
+    text.bytes().take_while(|b| (0x21..=0x7e).contains(b)).count()
+}
+
+/// 接頭辞付きトークン(バイト範囲)。URL の中は対象外。本体の後に空白 1 つずつを挟んで続く塊も本体に含める。
 fn find_prefixed_tokens(text: &str, urls: &[Range<usize>]) -> Vec<Range<usize>> {
     let mut found: Vec<Range<usize>> = Vec::new();
     for caps in PREFIXED.captures_iter(text) {
@@ -151,11 +230,16 @@ fn find_prefixed_tokens(text: &str, urls: &[Range<usize>]) -> Vec<Range<usize>> 
             continue;
         }
         let mut end = body.end();
-        if let Some(next) = chunk_after_single_space(text, end) {
+        while let Some(next) = chunk_after_single_space(text, end) {
             let next_text = &text[next.clone()];
-            if is_token_like(next_text) && !TOKEN_PREFIXES.iter().any(|p| next_text.starts_with(p)) {
-                end = next.end;
+            if !continues_chunk(next_text) || TOKEN_PREFIXES.iter().any(|p| next_text.starts_with(p)) {
+                break;
             }
+            end = next.end;
+        }
+        // 本体の末尾の `]`・`|`(`l`・`I` の誤読)。続く空白の後の塊は上で見ているので、ここでは 1 文字だけ
+        if matches!(text.as_bytes().get(end), Some(b']' | b'|')) {
+            end += 1;
         }
         let body_text = &text[body.start()..end];
         if non_space_len(body_text) >= MIN_PREFIXED_BODY_LEN && is_token_like(body_text) {
@@ -172,26 +256,30 @@ fn find_random_strings(text: &str, excluded: &[Range<usize>]) -> Vec<Range<usize
     let mut found = Vec::new();
     let mut i = 0;
     while i < chunks.len() {
-        let current = chunks[i].clone();
-        if let Some(next) = chunks.get(i + 1) {
-            let joined = current.start..next.end;
+        // 空白 1 つずつで続く塊を最後まで集め、ランダム列になる最も長いつながりを採る
+        let mut last = i;
+        while let Some(next) = chunks.get(last + 1) {
+            let current = &chunks[last];
             let single_space = next.start == current.end + 1 && text.as_bytes()[current.end] == b' ';
-            if single_space
-                && is_token_like(&text[current.clone()])
-                && is_token_like(&text[next.clone()])
-                && is_random(&text[joined.clone()])
-            {
-                found.push(joined);
-                i += 2;
-                continue;
+            if !(single_space && continues_chunk(&text[current.clone()]) && continues_chunk(&text[next.clone()])) {
+                break;
             }
+            last += 1;
         }
-        if is_random(&text[current.clone()]) {
-            found.push(current);
+        match (i..=last).rev().find(|&j| is_random(&text[chunks[i].start..chunks[j].end])) {
+            Some(j) => {
+                found.push(chunks[i].start..chunks[j].end);
+                i = j + 1;
+            }
+            None => i += 1,
         }
-        i += 1;
     }
     found
+}
+
+/// 空白をまたいで列の続きとみなす塊か(英字と数字を両方含む、または大文字・小文字・数字の切り替わりが多い)。
+fn continues_chunk(text: &str) -> bool {
+    is_token_like(text) || class_changes(text) >= MIN_CONTINUATION_CHANGES
 }
 
 /// 手がかり語の値(バイト範囲)。空白だけの区切りは、英字の手がかり語そのもの(キーの一部でない)で
@@ -209,7 +297,22 @@ fn find_labeled_values(text: &str) -> Vec<Range<usize>> {
                 || JA_CUES.iter().any(|cue| cue == key.as_str())
                 || (EXACT_ASCII_CUE.is_match(key.as_str())
                     && value.as_str().chars().any(|c| !c.is_ascii_alphabetic()));
-            accepted.then(|| value.range())
+            if !accepted {
+                return None;
+            }
+            // 値の途中に読み取りで入った空白: 続く塊が英数字と英字以外(数字・記号)を含み、次のキーでない
+            let mut end = value.end();
+            while text.as_bytes().get(end) == Some(&b' ') {
+                let next = &text[end + 1..end + 1 + ascii_chunk_len(&text[end + 1..])];
+                let continues = next.bytes().any(|b| b.is_ascii_alphanumeric())
+                    && next.bytes().any(|b| !b.is_ascii_alphabetic())
+                    && !next.contains([':', '=']);
+                if !continues {
+                    break;
+                }
+                end += 1 + next.len();
+            }
+            Some(value.start()..end)
         })
         .collect()
 }
@@ -620,6 +723,84 @@ mod tests {
         assert!(random(&line).is_empty());
         assert!(prefixed(&line).is_empty());
         assert_eq!(url_query(&line), vec![span(&line, "?v=2")]);
+    }
+
+    #[test]
+    fn urlの途中に読み取りで入った空白をまたいでクエリを返す() {
+        // クエリの途中の空白
+        let query = "?lang=j a&user=8812";
+        let line = format!("参考:https://docs.example.com/guide{query}");
+        assert_eq!(url_query(&line), vec![span(&line, query)]);
+        // パスの途中の空白(続きの塊が `?` を含む)
+        let query = "?state=x8Kd02&prompt=consent";
+        let line = format!("https://app.example.com/ callback{query}");
+        assert_eq!(url_query(&line), vec![span(&line, query)]);
+        // `=`・`?` を含まない続きは URL に含めない
+        let line = "https://example.com/a?b=1 and more";
+        assert_eq!(url_query(line), vec![span(line, "?b=1")]);
+        assert!(url_query("https://example.com/path next").is_empty());
+    }
+
+    #[test]
+    fn urlのはてなが誤読されたらキーの直前の1文字からをクエリとする() {
+        // `?` が数字に読まれた形(`/i/1043?c=...` → `/i/10437c=...`)
+        let line = "https://pay.example.com/i/10437c=C00918273&h=9fa1";
+        assert_eq!(url_query(line), vec![span(line, "7c=C00918273&h=9fa1")]);
+        // ホストの中の `=` やパスの無い URL は対象外のまま
+        assert!(url_query("https://example.com").is_empty());
+        assert!(url_query("https://example.com/=").is_empty());
+    }
+
+    #[test]
+    fn スキームの無いパスのクエリを検出する() {
+        let query = "?from=2026-09-01&key=Hn4wT9";
+        let line = format!("2026-10-09T09:12:04Z INFO GET /export{query} 200");
+        assert_eq!(url_query(&line), vec![span(&line, query)]);
+        // `?` か `=` が無いパス、語の途中から始まるパスは対象外
+        for line in ["GET /export 200", "GET /export?all 200", "例: example.com/a?b=1"] {
+            assert!(url_query(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn トークンの途中の空白が複数か所でも1件として検出する() {
+        let line = format!("{}{} {} {}", TOKEN_PREFIXES[7], mixed(3, 6), mixed(5, 10), mixed(7, 12));
+        assert_eq!(prefixed(&line), vec![whole(&line)]);
+        // 接頭辞の直後に空白が入り、本体が短く分かれた形
+        let line = format!("{}{} {}", TOKEN_PREFIXES[7], mixed(3, 2), mixed(5, 30));
+        assert_eq!(prefixed(&line), vec![whole(&line)]);
+    }
+
+    #[test]
+    fn トークンとランダム列の末尾の誤読された1文字を含める() {
+        let line = format!("{}{}]", TOKEN_PREFIXES[7], mixed(3, 20));
+        assert_eq!(prefixed(&line), vec![whole(&line)]);
+        let line = format!("{}| {}", mixed(3, 16), mixed(5, 10));
+        assert_eq!(random(&line), vec![whole(&line)]);
+    }
+
+    #[test]
+    fn ランダム列の続きは大文字小文字の切り替わりの多い塊も含める() {
+        // 英字だけでも大文字・小文字が 2 回以上切り替わる塊は続きとみなす
+        let line = format!("{} xYz abC_DeF", mixed(3, 17));
+        assert_eq!(random(&line), vec![whole(&line)]);
+        // 普通の単語(切り替わり 1 回以下)は含めない
+        let value = mixed(3, 24);
+        let line = format!("{value} Hello world");
+        assert_eq!(random(&line), vec![span(&line, &value)]);
+    }
+
+    #[test]
+    fn 手がかり語の値の途中に読み取りで入った空白をまたぐ() {
+        let head = mixed(2, 7);
+        let line = format!("password: {head} XYZ&");
+        assert_eq!(labeled(&line), vec![span(&line, &format!("{head} XYZ&"))]);
+        // 英字だけの語・次のキー・記号だけの塊は含めない
+        let value = secret_value();
+        for tail in [" next", " DB_HOST=x1", " (初回)", " :"] {
+            let line = format!("password: {value}{tail}");
+            assert_eq!(labeled(&line), vec![span(&line, &value)]);
+        }
     }
 
     // ---- UTF-16 範囲 ----

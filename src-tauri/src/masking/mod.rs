@@ -310,13 +310,13 @@ mod tests {
     #[test]
     fn scan_pageは偽物のページから余白込みの矩形と種類を返す() {
         // 偽物のページ: 行は左端 0.05・幅 0.9・高さ 0.04、0 行目の上端は 0.01(左上原点)。
-        // 1000x1000 では 0 行目が y=10..50(高さ 40 → 余白 max(2, 40×0.2)=8)、
+        // 1000x1000 では 0 行目が y=10..50(高さ 40 → 余白 max(2, 40×0.25)=10)、
         // 20 文字の等分で 1 文字 45px なので、5..20 は x=275..950。
         let page = FakePage::new(&[MAIL_LINE, "plain words only here"]);
         let candidates = scan_page(&page, SIZE_1000);
         assert_eq!(
             candidates,
-            vec![MaskCandidate { x: 267, y: 2, width: 691, height: 56, kind: MaskKind::Contact }]
+            vec![MaskCandidate { x: 265, y: 0, width: 695, height: 60, kind: MaskKind::Contact }]
         );
     }
 
@@ -358,7 +358,7 @@ mod tests {
         let candidates = scan_page(&page, SIZE_1000);
         assert_eq!(
             candidates,
-            vec![MaskCandidate { x: 267, y: 2, width: 691, height: 56, kind: MaskKind::Contact }]
+            vec![MaskCandidate { x: 265, y: 0, width: 695, height: 60, kind: MaskKind::Contact }]
         );
     }
 

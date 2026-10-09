@@ -8,10 +8,11 @@
 use super::png::ImageSize;
 use super::{MaskCandidate, MaskKind, NormalizedRect};
 
-/// 余白の下限(ピクセル)。ARCH §5.3 の `max(2px, 行の高さ × 0.2)` の `2px`。
-const MIN_PADDING_PX: i64 = 2;
-/// 余白の行の高さに対する係数。ARCH §5.3 の `0.2`【仮定】。AM-T19 の評価で調整する。
-const PADDING_RATIO: f64 = 0.2;
+/// 余白の下限(ピクセル)。ARCH §5.3 の `max(2px, 行の高さ × 係数)` の `2px`。
+pub(super) const MIN_PADDING_PX: i64 = 2;
+/// 余白の行の高さに対する係数。ARCH §5.3 の【仮定】`0.2` を AM-T19 の評価で `0.25` に決めた
+/// (形が決まっているものの検出率は 0.2〜0.3 で同じ、0.175 以下で下がる。境目から余裕を取る)。
+pub(super) const PADDING_RATIO: f64 = 0.25;
 /// 「ほぼ同じ矩形」とみなす重なりの割合(IoU = 共通部分 / 和集合)を分数で持つ(90%)。
 /// 整数の面積で比べ、浮動小数の誤差を持ち込まない。
 const NEAR_SAME_NUMERATOR: u64 = 9;
@@ -59,7 +60,7 @@ pub(super) fn to_pixel_rect(rect: NormalizedRect, size: ImageSize) -> PixelRect 
     }
 }
 
-/// 行の高さ(ピクセル)に応じた余白。`max(2px, 行の高さ × 0.2)` を整数へ切り上げる。
+/// 行の高さ(ピクセル)に応じた余白。`max(2px, 行の高さ × PADDING_RATIO)` を整数へ切り上げる。
 pub(super) fn padding_for(line_height: i64) -> i64 {
     let scaled = ceil_outward(line_height.max(0) as f64 * PADDING_RATIO);
     scaled.max(MIN_PADDING_PX)
@@ -301,19 +302,19 @@ mod tests {
     // ---- 余白 ----
 
     #[test]
-    fn 余白は行の高さの2割で下限は2px() {
+    fn 余白は行の高さの25パーセントで下限は2px() {
         assert_eq!(padding_for(0), 2);
-        assert_eq!(padding_for(5), 2); // 1.0 → 下限
-        assert_eq!(padding_for(10), 2); // 2.0
-        assert_eq!(padding_for(15), 3); // 3.0000000000000004 でも 3
-        assert_eq!(padding_for(20), 4);
-        assert_eq!(padding_for(23), 5); // 4.6 → 切り上げ
+        assert_eq!(padding_for(5), 2); // 1.25 → 2(下限と同じ)
+        assert_eq!(padding_for(4), 2); // 1.0 → 下限
+        assert_eq!(padding_for(12), 3); // 3.0 ちょうどは 4 にしない
+        assert_eq!(padding_for(20), 5);
+        assert_eq!(padding_for(23), 6); // 5.75 → 切り上げ
     }
 
     #[test]
     fn 余白を上下左右に足す() {
         let c = pad_and_clip(px(100, 200, 400, 400), 20, SIZE, MaskKind::Contact);
-        assert_eq!(c, Some(cand(96, 196, 308, 208, MaskKind::Contact)));
+        assert_eq!(c, Some(cand(95, 195, 310, 210, MaskKind::Contact)));
     }
 
     // ---- 画像範囲への収め ----
@@ -321,19 +322,19 @@ mod tests {
     #[test]
     fn 左端と上端の外へ出た分は0に収める() {
         let c = pad_and_clip(px(1, 0, 50, 20), 20, SIZE, MaskKind::Credential);
-        assert_eq!(c, Some(cand(0, 0, 54, 24, MaskKind::Credential)));
+        assert_eq!(c, Some(cand(0, 0, 55, 25, MaskKind::Credential)));
     }
 
     #[test]
     fn 右端と下端を超えた分は画像の大きさに収める() {
         let c = pad_and_clip(px(950, 480, 999, 500), 20, SIZE, MaskKind::Financial);
-        assert_eq!(c, Some(cand(946, 476, 54, 24, MaskKind::Financial)));
+        assert_eq!(c, Some(cand(945, 475, 55, 25, MaskKind::Financial)));
     }
 
     #[test]
     fn 負の座標から始まる矩形も収める() {
         let c = pad_and_clip(px(-30, -10, 20, 10), 10, SIZE, MaskKind::Contact);
-        assert_eq!(c, Some(cand(0, 0, 22, 12, MaskKind::Contact)));
+        assert_eq!(c, Some(cand(0, 0, 23, 13, MaskKind::Contact)));
     }
 
     #[test]

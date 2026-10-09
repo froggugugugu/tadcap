@@ -5,9 +5,11 @@
 //! - カード番号: 数字の組(区切りは空白 1 つかハイフン 1 つで、1 つの番号の中では同じ区切り)が 13〜19 桁で
 //!   チェックディジット(Luhn)が正しいもの。区切りがあるときは最初の組が 4 桁、残りの組が 2〜6 桁。
 //!   4 桁 × 4 組の区切りがある 16 桁は Luhn が合わなくても候補にする(ARCH §15 #6 B・PRD FR-006 改訂)。
-//!   前後が英数字に続く数字の並びは対象外
+//!   前後が英数字に続く数字の並びは対象外。1 つの番号が読み取りで横に並ぶ複数の観測に分かれた場合
+//!   (「1234 5678」「9012」「3456」)は、数字だけの観測を右へつないで判定し、各観測の数字の範囲を返す
 //! - 口座番号: 手がかり語(「口座番号」「口座」「普通」「当座」)の後の 6〜8 桁の数字(数字だけを返す)。
-//!   手がかり語だけの観測(数字を含まない短いラベル)は、同じ行の右隣(無ければ直下の行)の観測の先頭の数字を値とする
+//!   手がかり語だけの観測(数字を含まない短いラベル)は、同じ行の右隣(無ければ直下の行)の観測の先頭の数字を値とする。
+//!   その値の前の預金の種類が誤読されていても(空白の前の数字・空白以外の 1〜3 文字)、続く数字を値とする
 //! - 金額: 通貨記号・単位(`lexicon.rs`)が前か後ろに付いた数値だけ(PRD §10 #1)。記号・単位を含めて返す。
 //!   桁区切りの `,` と小数を含む
 
@@ -36,10 +38,18 @@ const UNCHECKED_CARD_GROUPS: [usize; 4] = [4, 4, 4, 4];
 const ACCOUNT_DIGITS: std::ops::RangeInclusive<usize> = 6..=8;
 /// 手がかり語だけの観測(ラベル)とみなす文字数の上限。長い文は値を探さない。
 const MAX_LABEL_CHARS: usize = 20;
+/// 分かれたカード番号としてつなぐ観測の数の上限。
+const MAX_SPLIT_CARD_PARTS: usize = 4;
+/// 分かれたカード番号の観測の間の隙間の上限(左の観測の 1 文字の幅に対する倍数)。
+const MAX_SPLIT_CARD_GAP_CHARS: f64 = 2.0;
 
 /// 数字の並び(組の間の区切りは空白 1 つかハイフン 1 つ)。
 static DIGIT_RUN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[0-9]+(?:[\x20\-][0-9]+)*").expect("固定の正規表現が不正"));
+
+/// 観測全体が数字の並びだけ(前後の空白を除いた文字列に当てる)。分かれたカード番号の部品。
+static DIGITS_ONLY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[0-9]+(?:[\x20\-][0-9]+)*$").expect("固定の正規表現が不正"));
 
 /// 語の一覧を行と同じ規則で正規化し、長いものを先にした正規表現の選択肢にする。
 fn alternatives(words: &[&str]) -> String {
@@ -73,7 +83,8 @@ static ACCOUNT_LABEL: LazyLock<Regex> =
 
 /// ラベルの右隣・直下の観測の先頭の口座番号(預金の種類は任意)。前後の空白を除いた文字列に当てる。
 static ACCOUNT_VALUE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(r"^(?:{}\x20*)?(?P<number>[0-9]+)", account_type_pattern())).expect("固定の正規表現が不正")
+    Regex::new(&format!(r"^(?:{}\x20*|[^0-9\x20]{{1,3}}\x20+)?(?P<number>[0-9]+)", account_type_pattern()))
+        .expect("固定の正規表現が不正")
 });
 
 /// 通貨付きの金額(`amount` のグループが返す範囲)。英字の通貨の単位は前が英字でないこと。
@@ -106,11 +117,15 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
     let mut matches = Vec::new();
     // 自分の行の中で口座番号が見つかった観測(ラベルの値として重ねて探さない)
     let mut has_own_account = Vec::with_capacity(lines.len());
+    // 自分の行の中でカード番号が見つかった観測(分かれたカード番号の部品にしない)
+    let mut has_own_card = Vec::with_capacity(lines.len());
     for line in lines {
         let text = line.as_str();
         let accounts = find_accounts(text);
         has_own_account.push(!accounts.is_empty());
-        let found = find_cards(text)
+        let cards = find_cards(text);
+        has_own_card.push(!cards.is_empty());
+        let found = cards
             .into_iter()
             .map(|r| (r, MatchDetail::CardNumber))
             .chain(accounts.into_iter().map(|r| (r, MatchDetail::AccountNumber)))
@@ -135,7 +150,82 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
             matches.push(found);
         }
     }
+    matches.extend(find_split_cards(page, lines, &has_own_card));
     matches
+}
+
+/// 横に並ぶ数字だけの観測をつないだカード番号(各観測の数字の範囲)。左端の観測から右へ、
+/// つないだ全体がカード番号の形になる最も長いつながりを採る。自分でカード番号を持つ観測は部品にしない。
+fn find_split_cards(page: &dyn RecognizedPage, lines: &[Line], has_own_card: &[bool]) -> Vec<Match> {
+    let is_part = |position: usize| !has_own_card[position] && DIGITS_ONLY.is_match(lines[position].as_str().trim());
+    let mut used = vec![false; lines.len()];
+    let mut matches = Vec::new();
+    for start in 0..lines.len() {
+        if used[start] || !is_part(start) {
+            continue;
+        }
+        let mut chain = vec![start];
+        while chain.len() < MAX_SPLIT_CARD_PARTS {
+            let last = chain[chain.len() - 1];
+            let Some(next) = adjacent_right(page, lines, last).filter(|&n| !used[n] && is_part(n) && !chain.contains(&n))
+            else {
+                break;
+            };
+            chain.push(next);
+        }
+        // 2 つ以上の観測をつないでカード番号の形になる、最も長いつながり
+        let Some(len) = (2..=chain.len()).rev().find(|&len| is_split_card(lines, &chain[..len])) else {
+            continue;
+        };
+        for &position in &chain[..len] {
+            used[position] = true;
+            let line = &lines[position];
+            if let Some(found) = line.to_match(trimmed_range(line.as_str()), MatchDetail::CardNumber) {
+                matches.push(found);
+            }
+        }
+    }
+    matches
+}
+
+/// つないだ観測の数字が 1 つのカード番号の形か。観測の間はハイフンを含む観測があればハイフン、
+/// 無ければ空白 1 つでつなぐ(1 つの番号の中では同じ区切り)。
+fn is_split_card(lines: &[Line], parts: &[usize]) -> bool {
+    let texts: Vec<&str> = parts.iter().map(|&p| lines[p].as_str().trim()).collect();
+    let separator = if texts.iter().any(|t| t.contains('-')) { "-" } else { " " };
+    let joined = texts.join(separator);
+    matches!(find_cards(&joined).as_slice(), [only] if *only == (0..joined.len()))
+}
+
+/// `position` の観測の右に接して並ぶ観測(縦の中心が同じ行の高さに入り、左端が `position` の右端から
+/// 1 文字の幅の `MAX_SPLIT_CARD_GAP_CHARS` 倍以内。読み取りの領域どうしの小さな重なりも許す)。
+fn adjacent_right(page: &dyn RecognizedPage, lines: &[Line], position: usize) -> Option<usize> {
+    let left = page.line_box(lines[position].index);
+    let chars = lines[position].as_str().trim().chars().count().max(1);
+    let char_width = left.width / chars as f64;
+    let right_edge = left.x + left.width;
+    lines
+        .iter()
+        .enumerate()
+        .filter(|&(p, _)| p != position)
+        .map(|(p, line)| (p, page.line_box(line.index)))
+        .filter(|(_, rect)| {
+            let center = rect.y + rect.height / 2.0;
+            center >= left.y
+                && center <= left.y + left.height
+                && rect.x > left.x + left.width / 2.0
+                && rect.x >= right_edge - char_width
+                && rect.x <= right_edge + char_width * MAX_SPLIT_CARD_GAP_CHARS
+        })
+        .min_by(|(pa, a), (pb, b)| a.x.total_cmp(&b.x).then(pa.cmp(pb)))
+        .map(|(p, _)| p)
+}
+
+/// 前後の空白を除いた部分のバイト範囲。
+fn trimmed_range(text: &str) -> Range<usize> {
+    let start = text.len() - text.trim_start().len();
+    let end = text.trim_end().len();
+    start..end.max(start)
 }
 
 /// カード番号(バイト範囲)。数字の並びごとに、区切りの組の連続する部分からカードの形のものを左から採る。
@@ -554,6 +644,88 @@ mod tests {
         assert_eq!(
             detect_page(&page, MatchDetail::AccountNumber),
             vec![Match::new(1, 1..7, MatchDetail::AccountNumber)]
+        );
+    }
+
+    #[test]
+    fn 口座のラベルの値の預金の種類が誤読されていても数字を値とする() {
+        // 「当座」が別の字や記号に読まれた形(AM-T19 の評価で見つかった)。種類の後に空白があること
+        for value in ["当坐 4471029", "=座 4471029", "x 4471029"] {
+            let page = GridPage::new(&[("振込先口座", LEFT_CELL), (value, RIGHT_CELL)]);
+            assert_eq!(
+                detect_page(&page, MatchDetail::AccountNumber),
+                vec![Match::new(1, span(value, "4471029"), MatchDetail::AccountNumber)]
+            );
+        }
+        // 空白の無い前置き・4 文字以上の前置きは対象外
+        for value in ["当坐4471029", "ABCD 4471029"] {
+            let page = GridPage::new(&[("振込先口座", LEFT_CELL), (value, RIGHT_CELL)]);
+            assert!(detect_page(&page, MatchDetail::AccountNumber).is_empty());
+        }
+    }
+
+    // ---- 横に並ぶ観測に分かれたカード番号 ----
+
+    /// 4 桁 × 4 組のカード番号を、指定した組の数ずつ別の観測(左から右へ並ぶ)に分ける。
+    /// `gap` は観測の間の隙間(正規化座標。負なら重なり)。1 文字の幅は 0.01。
+    fn split_card_page(card: &str, parts: &[usize], gap: f64) -> (GridPage, Vec<String>) {
+        let groups: Vec<&str> = card.split(' ').collect();
+        let mut texts = Vec::new();
+        let mut start = 0;
+        for &n in parts {
+            texts.push(groups[start..start + n].join(" "));
+            start += n;
+        }
+        let mut x = 0.1;
+        let mut cells = Vec::new();
+        for text in &texts {
+            let width = 0.01 * text.len() as f64;
+            cells.push((x, 0.5, width, 0.05));
+            x += width + gap;
+        }
+        let page = GridPage::new(
+            &texts.iter().zip(&cells).map(|(t, c)| (t.as_str(), *c)).collect::<Vec<_>>(),
+        );
+        (page, texts)
+    }
+
+    #[test]
+    fn 横に並ぶ観測に分かれたカード番号をつないで各観測を返す() {
+        let card = grouped(&valid_card(16, 7), &[4, 4, 4, 4], " ");
+        for (parts, gap) in [(vec![2, 1, 1], 0.003), (vec![2, 2], -0.004), (vec![1, 1, 1, 1], 0.015)] {
+            let (page, texts) = split_card_page(&card, &parts, gap);
+            let expected: Vec<Match> =
+                texts.iter().enumerate().map(|(i, t)| Match::new(i, whole(t), MatchDetail::CardNumber)).collect();
+            assert_eq!(detect_page(&page, MatchDetail::CardNumber), expected, "{parts:?}");
+        }
+    }
+
+    #[test]
+    fn 離れた観測やカードの形にならない数字はつながない() {
+        let card = grouped(&valid_card(16, 7), &[4, 4, 4, 4], " ");
+        // 隙間が 1 文字の幅の 2 倍を超える
+        let (page, _) = split_card_page(&card, &[2, 2], 0.05);
+        assert!(detect_page(&page, MatchDetail::CardNumber).is_empty());
+        // つないでも桁が足りない(4 桁 × 3 組・Luhn なし)
+        let short = grouped(&invalid_card(12, 5), &[4, 4, 4], " ");
+        let (page, _) = split_card_page(&short, &[2, 1], 0.003);
+        assert!(detect_page(&page, MatchDetail::CardNumber).is_empty());
+        // 数字以外を含む観測は部品にしない
+        let page = GridPage::new(&[("9123 4567", (0.1, 0.5, 0.09, 0.05)), ("期限 12/28", (0.193, 0.5, 0.1, 0.05))]);
+        assert!(detect_page(&page, MatchDetail::CardNumber).is_empty());
+    }
+
+    #[test]
+    fn 自分でカード番号を持つ観測は分かれたカードの部品にしない() {
+        let card = grouped(&valid_card(16, 7), &[4, 4, 4, 4], " ");
+        let next = grouped(&valid_card(16, 3), &[4, 4, 4, 4], " ");
+        let page = GridPage::new(&[(card.as_str(), (0.1, 0.5, 0.19, 0.05)), (next.as_str(), (0.293, 0.5, 0.19, 0.05))]);
+        assert_eq!(
+            detect_page(&page, MatchDetail::CardNumber),
+            vec![
+                Match::new(0, whole(&card), MatchDetail::CardNumber),
+                Match::new(1, whole(&next), MatchDetail::CardNumber)
+            ]
         );
     }
 

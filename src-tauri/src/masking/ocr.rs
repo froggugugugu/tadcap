@@ -30,7 +30,7 @@ use super::{NormalizedRect, RecognizedPage, ScanError};
 const RECOGNITION_LANGUAGES: [&str; 2] = ["ja-JP", "en-US"];
 
 /// 言語補正を使うか。既定はオフ(速く、トークン・番号を辞書の語へ寄せない)。評価(AM-T19)で決める。
-const USES_LANGUAGE_CORRECTION: bool = false;
+pub(super) const USES_LANGUAGE_CORRECTION: bool = false;
 
 /// 1 行(Vision の観測 1 件)の読み取り結果。
 struct VisionLine {

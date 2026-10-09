@@ -18,13 +18,19 @@ use super::Line;
 /// - ドメインの最後は英字 2 文字以上(末尾の `.` や `、` を含めない)
 /// - `. ` のように点の**後ろ**に空白があるときは、続く語が小文字・数字で始まる場合だけドメインの続きとみなす
 ///   (`taro@example.com. Thanks` の文頭の語を含めないため)
+/// - ドメインの途中の語(最後の `.` より前)に読み取りで入った空白 1 つは、続きが小文字・数字で始まる場合だけ許す
+/// - 最後の `.` が読み取りで落ちた形(`taro@examplejp`)は、ドメインが `DOTLESS_TLDS` のどれかで終わる場合だけ認める
 static EMAIL: LazyLock<Regex> = LazyLock::new(|| {
     let local = r"[A-Za-z0-9_%+\-]+(?:\x20?\.\x20?[A-Za-z0-9_%+\-]+)*";
-    let label = r"[A-Za-z0-9][A-Za-z0-9\-]*";
-    let next_label = r"(?:\x20?\.[A-Za-z0-9][A-Za-z0-9\-]*|\x20?\.\x20[a-z0-9][A-Za-z0-9\-]*)";
+    let label = r"[A-Za-z0-9][A-Za-z0-9\-]*(?:\x20[a-z0-9][A-Za-z0-9\-]*)?";
+    let next_label = r"(?:\x20?\.[A-Za-z0-9][A-Za-z0-9\-]*(?:\x20[a-z0-9][A-Za-z0-9\-]*)?|\x20?\.\x20[a-z0-9][A-Za-z0-9\-]*)";
     let tld = r"(?:\x20?\.[A-Za-z]{2,}|\x20?\.\x20[a-z][A-Za-z]+)";
-    Regex::new(&format!(r"{local}\x20?@\x20?{label}{next_label}*{tld}")).expect("固定の正規表現が不正")
+    let dotless = format!(r"[A-Za-z0-9][A-Za-z0-9\-]*(?:{})\b", DOTLESS_TLDS.join("|"));
+    Regex::new(&format!(r"{local}\x20?@\x20?(?:{label}{next_label}*{tld}|{dotless})")).expect("固定の正規表現が不正")
 });
+
+/// 最後の `.` が落ちたドメインの終わりとして認める TLD(評価画像の読み取りで落ちた形。AM-T19)。
+const DOTLESS_TLDS: [&str; 4] = ["com", "net", "org", "jp"];
 
 /// 郵便番号。`〒` + 7 桁(ハイフン・空白は任意)、または記号なしの `NNN-NNNN`(ハイフン必須)。
 static POSTAL: LazyLock<Regex> = LazyLock::new(|| {
@@ -279,6 +285,26 @@ mod tests {
     fn 一行の複数のメールをそれぞれ検出する() {
         let line = "a@example.com, b@example.org";
         assert_eq!(emails(line), vec![span(line, "a@example.com"), span(line, "b@example.org")]);
+    }
+
+    #[test]
+    fn メールのドメインの語の途中の空白を許す() {
+        // 読み取りで語の途中に空白が入った形(最後の `.` より前の語だけ)
+        let line = "Author <tomas@dev.examp le.org>";
+        assert_eq!(emails(line), vec![span(line, "tomas@dev.examp le.org")]);
+        // 空白の後が大文字なら別の語とみなす
+        let line = "taro@mail.example.com Thanks";
+        assert_eq!(emails(line), vec![span(line, "taro@mail.example.com")]);
+    }
+
+    #[test]
+    fn メールの最後の点が落ちた形はtldで終わるときだけ認める() {
+        for (line, expected) in [("mio.sato@examplejp", "mio.sato@examplejp"), ("宛先 taro@samplecom です", "taro@samplecom")] {
+            assert_eq!(emails(line), vec![span(line, expected)]);
+        }
+        for line in ["taro@example", "taro@examplejpx", "user@localhost"] {
+            assert!(emails(line).is_empty());
+        }
     }
 
     #[test]
