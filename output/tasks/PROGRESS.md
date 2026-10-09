@@ -39,13 +39,13 @@
 
 ## 3. 次にやること(優先順)
 
-**機密情報の自動マスキング(2026-10-09 ゲート 3 承認済み・AM-T01 完了)**: `output/tasks/TASK_auto-masking.md`(AM-T01〜T26)。【要確認】7 件。推奨順 T01→T03→T04→T05→T02→T06→T07→T08→T09→T11→T10→T20→T12→T13→T14→T15→T16→T17→T18→T19→T21→T22→T23→T24→T25→T26。🚏 = T01・T20・T19・T23 の後に人間の承認
+**機密情報の自動マスキング(2026-10-09 ゲート 3 承認済み・AM-T01・AM-T03 完了)**: `output/tasks/TASK_auto-masking.md`(AM-T01〜T26)。【要確認】7 件。推奨順 T01→T03→T04→T05→T02→T06→T07→T08→T09→T11→T10→T20→T12→T13→T14→T15→T16→T17→T18→T19→T21→T22→T23→T24→T25→T26。🚏 = T01・T20・T19・T23 の後に人間の承認
 
 | ID | 内容 | 受け入れ条件(E2E / 実機で確認できる粒度) | passes |
 | -- | ---- | ------------------------------------------ | ------ |
 | AM-T01 | 辞書の出典・ライセンス確認(`/legal-check`) | 姓・ローマ字の姓名・都道府県の出典・ライセンス・再配布可否・表示義務が報告書にあり、人間が承認 | ✅ |
 | AM-T02 | UI 仕様の確定(`/ui-ux-design`) | ボタン・結果パネル・印の色・文言が決まり、文言に保証の表現が無い | ❌ |
-| AM-T03 | 依存の追加と供給経路の確認 | `Cargo.lock` で増えるパッケージが `objc2-vision` 1 件だけ・`default-features = false`・脆弱性 0 件の証拠が報告書にある | ❌ |
+| AM-T03 | 依存の追加と供給経路の確認 | `Cargo.lock` で増えるパッケージが `objc2-vision` 1 件だけ・`default-features = false`・脆弱性 0 件の証拠が報告書にある | ✅ |
 | AM-T04 | Rust の masking 基盤(型・PNG 検証・正規化・UTF-16 位置) | `cargo test masking::` が緑、`SensitiveText` の Debug が伏せ字 | ❌ |
 | AM-T05 | 評価用画像セットと生成スクリプト | `npm run mask:fixtures` で 20 枚以上と `truth.json` ができ、自己検査が通る。npm の依存は増えない | ❌ |
 | AM-T06 | 候補の状態ストア `maskSession` | 古い token・別の画像の結果を捨て、外す/戻すができる(Vitest) | ❌ |
@@ -109,6 +109,13 @@
 #7 F-04 を MVP に含める(既定キー Cmd+Shift+2 等の空きキー、変更 UI は MVP 外) / #8 ライトテーマ固定 / 追加: F-08 メニューバー常駐も MVP に含める(Dock アイコンは非表示で確定)
 
 ## 4. セッションログ(新しいものを上に)
+
+### 2026-10-09 — v1.0.1(ライセンス全文の同梱)・Tauri 2.12.1・AM-T03
+
+- **v1.0.1**: 依存のライセンス全文を `THIRD_PARTY_LICENSES.md` に生成して同梱(`npm run licenses`、release.yml で `licenses:check`)。公開物で Notarized・同梱ファイル一致を確認
+- **Tauri 2.11.6 → 2.12.1**(人間の決定「先に unic-* を解消」): 保守終了の unic-* 5 件が外れた。公開当日の 2.12.2 は避けた。`source-map-js` 1.2.2(開発用の high を解消)。検証: build / vitest 450 / cargo 137 / clippy 0 / e2e 60 / dist:mac・起動 OK
+- **AM-T03**: `objc2-vision` 0.3.2 を default-features 無しで追加。lock の追加は 1 件のみ。証拠 `output/reports/security/DEPS_auto-masking_2026-10-09.md`
+- **申し送り**: Tauri 更新後の実機確認(トレイ・グローバルショートカット・キャプチャ・クリップボード・設定画面)は未実施。次のリリース前に人間が確認する。次のタスクは推奨順で AM-T04
 
 ### 2026-10-09 — AM-T01 辞書の出典・ライセンス確認
 
