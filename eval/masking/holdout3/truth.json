@@ -1,0 +1,7498 @@
+{
+ "version": 1,
+ "generator": "scripts/mask-eval-fixtures.mjs",
+ "details": {
+  "contact": [
+   "email",
+   "phone",
+   "address"
+  ],
+  "credential": [
+   "prefixed_token",
+   "random_string",
+   "cue_value",
+   "url_query"
+  ],
+  "identifier": [
+   "cued_number",
+   "person_ja",
+   "person_en",
+   "company"
+  ],
+  "financial": [
+   "card",
+   "account",
+   "amount"
+  ]
+ },
+ "images": [
+  {
+   "file": "payables.fhd.light.png",
+   "page": "payables.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "payables#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 137,
+     "y": 15,
+     "width": 152,
+     "height": 16
+    },
+    {
+     "target": "payables#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1798,
+     "y": 15,
+     "width": 102,
+     "height": 16
+    },
+    {
+     "target": "payables#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 111,
+     "width": 145,
+     "height": 16
+    },
+    {
+     "target": "payables#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 558,
+     "y": 111,
+     "width": 179,
+     "height": 16
+    },
+    {
+     "target": "payables#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 988,
+     "y": 111,
+     "width": 37,
+     "height": 15
+    },
+    {
+     "target": "payables#05",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1287,
+     "y": 111,
+     "width": 196,
+     "height": 15
+    },
+    {
+     "target": "payables#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1804,
+     "y": 111,
+     "width": 86,
+     "height": 16
+    },
+    {
+     "target": "payables#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 133,
+     "width": 159,
+     "height": 16
+    },
+    {
+     "target": "payables#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 558,
+     "y": 133,
+     "width": 186,
+     "height": 16
+    },
+    {
+     "target": "payables#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 966,
+     "y": 133,
+     "width": 74,
+     "height": 15
+    },
+    {
+     "target": "payables#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1323,
+     "y": 133,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "payables#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1822,
+     "y": 133,
+     "width": 68,
+     "height": 16
+    },
+    {
+     "target": "payables#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 155,
+     "width": 179,
+     "height": 16
+    },
+    {
+     "target": "payables#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 558,
+     "y": 155,
+     "width": 107,
+     "height": 16
+    },
+    {
+     "target": "payables#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 988,
+     "y": 155,
+     "width": 52,
+     "height": 15
+    },
+    {
+     "target": "payables#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1330,
+     "y": 155,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "payables#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1795,
+     "y": 155,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "payables#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 177,
+     "width": 118,
+     "height": 16
+    },
+    {
+     "target": "payables#18",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 558,
+     "y": 177,
+     "width": 181,
+     "height": 16
+    },
+    {
+     "target": "payables#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 988,
+     "y": 177,
+     "width": 59,
+     "height": 15
+    },
+    {
+     "target": "payables#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1287,
+     "y": 177,
+     "width": 124,
+     "height": 15
+    },
+    {
+     "target": "payables#21",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1810,
+     "y": 177,
+     "width": 80,
+     "height": 16
+    },
+    {
+     "target": "payables#22",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 148,
+     "y": 199,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "payables#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 558,
+     "y": 199,
+     "width": 144,
+     "height": 16
+    },
+    {
+     "target": "payables#24",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1352,
+     "y": 199,
+     "width": 73,
+     "height": 15
+    },
+    {
+     "target": "payables#25",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1832,
+     "y": 199,
+     "width": 58,
+     "height": 16
+    },
+    {
+     "target": "payables#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 221,
+     "width": 136,
+     "height": 16
+    },
+    {
+     "target": "payables#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 558,
+     "y": 221,
+     "width": 124,
+     "height": 16
+    },
+    {
+     "target": "payables#28",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1287,
+     "y": 221,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "payables#29",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1829,
+     "y": 221,
+     "width": 61,
+     "height": 16
+    },
+    {
+     "target": "payables#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 243,
+     "width": 121,
+     "height": 16
+    },
+    {
+     "target": "payables#31",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 558,
+     "y": 243,
+     "width": 121,
+     "height": 16
+    },
+    {
+     "target": "payables#32",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1287,
+     "y": 243,
+     "width": 196,
+     "height": 15
+    },
+    {
+     "target": "payables#33",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1806,
+     "y": 243,
+     "width": 84,
+     "height": 16
+    },
+    {
+     "target": "payables#34",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 265,
+     "width": 93,
+     "height": 16
+    },
+    {
+     "target": "payables#35",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 558,
+     "y": 265,
+     "width": 105,
+     "height": 16
+    },
+    {
+     "target": "payables#36",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1330,
+     "y": 265,
+     "width": 52,
+     "height": 15
+    },
+    {
+     "target": "payables#37",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1806,
+     "y": 265,
+     "width": 84,
+     "height": 16
+    },
+    {
+     "target": "payables#38",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 195,
+     "y": 288,
+     "width": 64,
+     "height": 16
+    },
+    {
+     "target": "payables#39",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 446,
+     "y": 288,
+     "width": 44,
+     "height": 16
+    },
+    {
+     "target": "payables#40",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 223,
+     "y": 399,
+     "width": 74,
+     "height": 14
+    },
+    {
+     "target": "payables#41",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 190,
+     "y": 415,
+     "width": 81,
+     "height": 14
+    },
+    {
+     "target": "payables#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 151,
+     "y": 432,
+     "width": 159,
+     "height": 14
+    },
+    {
+     "target": "payables#43",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 151,
+     "y": 448,
+     "width": 126,
+     "height": 14
+    },
+    {
+     "target": "payables#44",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 151,
+     "y": 465,
+     "width": 126,
+     "height": 14
+    },
+    {
+     "target": "payables#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 184,
+     "y": 481,
+     "width": 146,
+     "height": 14
+    },
+    {
+     "target": "payables#46",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 151,
+     "y": 498,
+     "width": 159,
+     "height": 14
+    },
+    {
+     "target": "payables#47",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 151,
+     "y": 514,
+     "width": 246,
+     "height": 14
+    },
+    {
+     "target": "payables#48",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 210,
+     "y": 531,
+     "width": 34,
+     "height": 14
+    },
+    {
+     "target": "payables#49",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 270,
+     "y": 531,
+     "width": 67,
+     "height": 14
+    },
+    {
+     "target": "payables#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 254,
+     "y": 574,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "payables#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 254,
+     "y": 592,
+     "width": 188,
+     "height": 15
+    },
+    {
+     "target": "payables#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 254,
+     "y": 610,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "payables#53",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 312,
+     "y": 647,
+     "width": 140,
+     "height": 13
+    },
+    {
+     "target": "payables#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 148,
+     "y": 730,
+     "width": 123,
+     "height": 16
+    },
+    {
+     "target": "payables#55",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 392,
+     "y": 730,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "payables#56",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 392,
+     "y": 752,
+     "width": 117,
+     "height": 15
+    },
+    {
+     "target": "payables#57",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 392,
+     "y": 774,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "payables#58",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 148,
+     "y": 796,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "payables#59",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 392,
+     "y": 796,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "payables#60",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 803,
+     "y": 360,
+     "width": 58,
+     "height": 15
+    },
+    {
+     "target": "payables#61",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 803,
+     "y": 378,
+     "width": 73,
+     "height": 15
+    },
+    {
+     "target": "payables#62",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 803,
+     "y": 396,
+     "width": 80,
+     "height": 15
+    },
+    {
+     "target": "payables#63",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 803,
+     "y": 414,
+     "width": 143,
+     "height": 16
+    },
+    {
+     "target": "payables#64",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 803,
+     "y": 431,
+     "width": 168,
+     "height": 16
+    },
+    {
+     "target": "payables#65",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 803,
+     "y": 449,
+     "width": 287,
+     "height": 16
+    },
+    {
+     "target": "payables#66",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 803,
+     "y": 467,
+     "width": 163,
+     "height": 16
+    },
+    {
+     "target": "payables#67",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 803,
+     "y": 484,
+     "width": 118,
+     "height": 16
+    },
+    {
+     "target": "payables#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 803,
+     "y": 502,
+     "width": 136,
+     "height": 16
+    },
+    {
+     "target": "payables#69",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 803,
+     "y": 519,
+     "width": 287,
+     "height": 16
+    },
+    {
+     "target": "payables#70",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 964,
+     "y": 537,
+     "width": 70,
+     "height": 16
+    },
+    {
+     "target": "payables#71",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1055,
+     "y": 561,
+     "width": 98,
+     "height": 16
+    },
+    {
+     "target": "payables#72",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1169,
+     "y": 561,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "payables#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 807,
+     "y": 579,
+     "width": 59,
+     "height": 15
+    },
+    {
+     "target": "payables#74",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 776,
+     "y": 597,
+     "width": 196,
+     "height": 15
+    },
+    {
+     "target": "payables#75",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 803,
+     "y": 663,
+     "width": 183,
+     "height": 16
+    },
+    {
+     "target": "payables#76",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 803,
+     "y": 682,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "payables#77",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 986,
+     "y": 700,
+     "width": 127,
+     "height": 13
+    },
+    {
+     "target": "payables#78",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1434,
+     "y": 360,
+     "width": 126,
+     "height": 16
+    },
+    {
+     "target": "payables#79",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1434,
+     "y": 378,
+     "width": 86,
+     "height": 16
+    },
+    {
+     "target": "payables#80",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1585,
+     "y": 396,
+     "width": 134,
+     "height": 13
+    },
+    {
+     "target": "payables#81",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1522,
+     "y": 414,
+     "width": 128,
+     "height": 13
+    },
+    {
+     "target": "payables#82",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1434,
+     "y": 514,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "payables#83",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1484,
+     "y": 532,
+     "width": 218,
+     "height": 15
+    },
+    {
+     "target": "payables#84",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 550,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "payables#85",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 568,
+     "width": 246,
+     "height": 15
+    },
+    {
+     "target": "payables#86",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 586,
+     "width": 254,
+     "height": 13
+    },
+    {
+     "target": "payables#87",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 604,
+     "width": 145,
+     "height": 15
+    },
+    {
+     "target": "payables#88",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 622,
+     "width": 246,
+     "height": 15
+    },
+    {
+     "target": "payables#89",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1358,
+     "y": 686,
+     "width": 83,
+     "height": 16
+    },
+    {
+     "target": "payables#90",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1588,
+     "y": 686,
+     "width": 203,
+     "height": 16
+    },
+    {
+     "target": "payables#91",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1452,
+     "y": 708,
+     "width": 52,
+     "height": 15
+    },
+    {
+     "target": "payables#92",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1447,
+     "y": 728,
+     "width": 110,
+     "height": 16
+    },
+    {
+     "target": "payables#93",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1646,
+     "y": 728,
+     "width": 70,
+     "height": 16
+    },
+    {
+     "target": "payables#94",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1406,
+     "y": 749,
+     "width": 145,
+     "height": 15
+    },
+    {
+     "target": "payables#95",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1571,
+     "y": 748,
+     "width": 86,
+     "height": 16
+    },
+    {
+     "target": "payables#96",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1413,
+     "y": 770,
+     "width": 107,
+     "height": 15
+    },
+    {
+     "target": "payables#97",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1605,
+     "y": 770,
+     "width": 58,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "payables.fhd.dark.png",
+   "page": "payables.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "payables#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 137,
+     "y": 15,
+     "width": 152,
+     "height": 16
+    },
+    {
+     "target": "payables#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1798,
+     "y": 15,
+     "width": 102,
+     "height": 16
+    },
+    {
+     "target": "payables#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 111,
+     "width": 145,
+     "height": 16
+    },
+    {
+     "target": "payables#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 558,
+     "y": 111,
+     "width": 179,
+     "height": 16
+    },
+    {
+     "target": "payables#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 988,
+     "y": 111,
+     "width": 37,
+     "height": 15
+    },
+    {
+     "target": "payables#05",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1287,
+     "y": 111,
+     "width": 196,
+     "height": 15
+    },
+    {
+     "target": "payables#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1804,
+     "y": 111,
+     "width": 86,
+     "height": 16
+    },
+    {
+     "target": "payables#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 133,
+     "width": 159,
+     "height": 16
+    },
+    {
+     "target": "payables#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 558,
+     "y": 133,
+     "width": 186,
+     "height": 16
+    },
+    {
+     "target": "payables#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 966,
+     "y": 133,
+     "width": 74,
+     "height": 15
+    },
+    {
+     "target": "payables#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1323,
+     "y": 133,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "payables#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1822,
+     "y": 133,
+     "width": 68,
+     "height": 16
+    },
+    {
+     "target": "payables#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 155,
+     "width": 179,
+     "height": 16
+    },
+    {
+     "target": "payables#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 558,
+     "y": 155,
+     "width": 107,
+     "height": 16
+    },
+    {
+     "target": "payables#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 988,
+     "y": 155,
+     "width": 52,
+     "height": 15
+    },
+    {
+     "target": "payables#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1330,
+     "y": 155,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "payables#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1795,
+     "y": 155,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "payables#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 177,
+     "width": 118,
+     "height": 16
+    },
+    {
+     "target": "payables#18",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 558,
+     "y": 177,
+     "width": 181,
+     "height": 16
+    },
+    {
+     "target": "payables#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 988,
+     "y": 177,
+     "width": 59,
+     "height": 15
+    },
+    {
+     "target": "payables#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1287,
+     "y": 177,
+     "width": 124,
+     "height": 15
+    },
+    {
+     "target": "payables#21",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1810,
+     "y": 177,
+     "width": 80,
+     "height": 16
+    },
+    {
+     "target": "payables#22",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 148,
+     "y": 199,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "payables#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 558,
+     "y": 199,
+     "width": 144,
+     "height": 16
+    },
+    {
+     "target": "payables#24",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1352,
+     "y": 199,
+     "width": 73,
+     "height": 15
+    },
+    {
+     "target": "payables#25",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1832,
+     "y": 199,
+     "width": 58,
+     "height": 16
+    },
+    {
+     "target": "payables#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 221,
+     "width": 136,
+     "height": 16
+    },
+    {
+     "target": "payables#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 558,
+     "y": 221,
+     "width": 124,
+     "height": 16
+    },
+    {
+     "target": "payables#28",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1287,
+     "y": 221,
+     "width": 174,
+     "height": 15
+    },
+    {
+     "target": "payables#29",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1829,
+     "y": 221,
+     "width": 61,
+     "height": 16
+    },
+    {
+     "target": "payables#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 243,
+     "width": 121,
+     "height": 16
+    },
+    {
+     "target": "payables#31",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 558,
+     "y": 243,
+     "width": 121,
+     "height": 16
+    },
+    {
+     "target": "payables#32",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1287,
+     "y": 243,
+     "width": 196,
+     "height": 15
+    },
+    {
+     "target": "payables#33",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1806,
+     "y": 243,
+     "width": 84,
+     "height": 16
+    },
+    {
+     "target": "payables#34",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 148,
+     "y": 265,
+     "width": 93,
+     "height": 16
+    },
+    {
+     "target": "payables#35",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 558,
+     "y": 265,
+     "width": 105,
+     "height": 16
+    },
+    {
+     "target": "payables#36",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1330,
+     "y": 265,
+     "width": 52,
+     "height": 15
+    },
+    {
+     "target": "payables#37",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1806,
+     "y": 265,
+     "width": 84,
+     "height": 16
+    },
+    {
+     "target": "payables#38",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 195,
+     "y": 288,
+     "width": 64,
+     "height": 16
+    },
+    {
+     "target": "payables#39",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 446,
+     "y": 288,
+     "width": 44,
+     "height": 16
+    },
+    {
+     "target": "payables#40",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 223,
+     "y": 399,
+     "width": 74,
+     "height": 14
+    },
+    {
+     "target": "payables#41",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 190,
+     "y": 415,
+     "width": 81,
+     "height": 14
+    },
+    {
+     "target": "payables#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 151,
+     "y": 432,
+     "width": 159,
+     "height": 14
+    },
+    {
+     "target": "payables#43",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 151,
+     "y": 448,
+     "width": 126,
+     "height": 14
+    },
+    {
+     "target": "payables#44",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 151,
+     "y": 465,
+     "width": 126,
+     "height": 14
+    },
+    {
+     "target": "payables#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 184,
+     "y": 481,
+     "width": 146,
+     "height": 14
+    },
+    {
+     "target": "payables#46",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 151,
+     "y": 498,
+     "width": 159,
+     "height": 14
+    },
+    {
+     "target": "payables#47",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 151,
+     "y": 514,
+     "width": 246,
+     "height": 14
+    },
+    {
+     "target": "payables#48",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 210,
+     "y": 531,
+     "width": 34,
+     "height": 14
+    },
+    {
+     "target": "payables#49",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 270,
+     "y": 531,
+     "width": 67,
+     "height": 14
+    },
+    {
+     "target": "payables#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 254,
+     "y": 574,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "payables#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 254,
+     "y": 592,
+     "width": 188,
+     "height": 15
+    },
+    {
+     "target": "payables#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 254,
+     "y": 610,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "payables#53",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 312,
+     "y": 647,
+     "width": 140,
+     "height": 13
+    },
+    {
+     "target": "payables#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 148,
+     "y": 730,
+     "width": 123,
+     "height": 16
+    },
+    {
+     "target": "payables#55",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 392,
+     "y": 730,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "payables#56",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 392,
+     "y": 752,
+     "width": 117,
+     "height": 15
+    },
+    {
+     "target": "payables#57",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 392,
+     "y": 774,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "payables#58",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 148,
+     "y": 796,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "payables#59",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 392,
+     "y": 796,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "payables#60",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 803,
+     "y": 360,
+     "width": 58,
+     "height": 15
+    },
+    {
+     "target": "payables#61",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 803,
+     "y": 378,
+     "width": 73,
+     "height": 15
+    },
+    {
+     "target": "payables#62",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 803,
+     "y": 396,
+     "width": 80,
+     "height": 15
+    },
+    {
+     "target": "payables#63",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 803,
+     "y": 414,
+     "width": 143,
+     "height": 16
+    },
+    {
+     "target": "payables#64",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 803,
+     "y": 431,
+     "width": 168,
+     "height": 16
+    },
+    {
+     "target": "payables#65",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 803,
+     "y": 449,
+     "width": 287,
+     "height": 16
+    },
+    {
+     "target": "payables#66",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 803,
+     "y": 467,
+     "width": 163,
+     "height": 16
+    },
+    {
+     "target": "payables#67",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 803,
+     "y": 484,
+     "width": 118,
+     "height": 16
+    },
+    {
+     "target": "payables#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 803,
+     "y": 502,
+     "width": 136,
+     "height": 16
+    },
+    {
+     "target": "payables#69",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 803,
+     "y": 519,
+     "width": 287,
+     "height": 16
+    },
+    {
+     "target": "payables#70",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 964,
+     "y": 537,
+     "width": 70,
+     "height": 16
+    },
+    {
+     "target": "payables#71",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1055,
+     "y": 561,
+     "width": 98,
+     "height": 16
+    },
+    {
+     "target": "payables#72",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1169,
+     "y": 561,
+     "width": 95,
+     "height": 16
+    },
+    {
+     "target": "payables#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 807,
+     "y": 579,
+     "width": 59,
+     "height": 15
+    },
+    {
+     "target": "payables#74",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 776,
+     "y": 597,
+     "width": 196,
+     "height": 15
+    },
+    {
+     "target": "payables#75",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 803,
+     "y": 663,
+     "width": 183,
+     "height": 16
+    },
+    {
+     "target": "payables#76",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 803,
+     "y": 682,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "payables#77",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 986,
+     "y": 700,
+     "width": 127,
+     "height": 13
+    },
+    {
+     "target": "payables#78",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1434,
+     "y": 360,
+     "width": 126,
+     "height": 16
+    },
+    {
+     "target": "payables#79",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1434,
+     "y": 378,
+     "width": 86,
+     "height": 16
+    },
+    {
+     "target": "payables#80",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1585,
+     "y": 396,
+     "width": 134,
+     "height": 13
+    },
+    {
+     "target": "payables#81",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1522,
+     "y": 414,
+     "width": 128,
+     "height": 13
+    },
+    {
+     "target": "payables#82",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1434,
+     "y": 514,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "payables#83",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1484,
+     "y": 532,
+     "width": 218,
+     "height": 15
+    },
+    {
+     "target": "payables#84",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 550,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "payables#85",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 568,
+     "width": 246,
+     "height": 15
+    },
+    {
+     "target": "payables#86",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 586,
+     "width": 254,
+     "height": 13
+    },
+    {
+     "target": "payables#87",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 604,
+     "width": 145,
+     "height": 15
+    },
+    {
+     "target": "payables#88",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1434,
+     "y": 622,
+     "width": 246,
+     "height": 15
+    },
+    {
+     "target": "payables#89",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1358,
+     "y": 686,
+     "width": 83,
+     "height": 16
+    },
+    {
+     "target": "payables#90",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1588,
+     "y": 686,
+     "width": 203,
+     "height": 16
+    },
+    {
+     "target": "payables#91",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1452,
+     "y": 708,
+     "width": 52,
+     "height": 15
+    },
+    {
+     "target": "payables#92",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1447,
+     "y": 728,
+     "width": 110,
+     "height": 16
+    },
+    {
+     "target": "payables#93",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1646,
+     "y": 728,
+     "width": 70,
+     "height": 16
+    },
+    {
+     "target": "payables#94",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1406,
+     "y": 749,
+     "width": 145,
+     "height": 15
+    },
+    {
+     "target": "payables#95",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1571,
+     "y": 748,
+     "width": 86,
+     "height": 16
+    },
+    {
+     "target": "payables#96",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1413,
+     "y": 770,
+     "width": 107,
+     "height": 15
+    },
+    {
+     "target": "payables#97",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1605,
+     "y": 770,
+     "width": 58,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "payables.retina.light.png",
+   "page": "payables.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "payables#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 274,
+     "y": 31,
+     "width": 303,
+     "height": 31
+    },
+    {
+     "target": "payables#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2636,
+     "y": 31,
+     "width": 204,
+     "height": 31
+    },
+    {
+     "target": "payables#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 222,
+     "width": 289,
+     "height": 31
+    },
+    {
+     "target": "payables#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 892,
+     "y": 222,
+     "width": 356,
+     "height": 31
+    },
+    {
+     "target": "payables#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1540,
+     "y": 222,
+     "width": 74,
+     "height": 29
+    },
+    {
+     "target": "payables#05",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1950,
+     "y": 222,
+     "width": 392,
+     "height": 29
+    },
+    {
+     "target": "payables#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2649,
+     "y": 222,
+     "width": 171,
+     "height": 31
+    },
+    {
+     "target": "payables#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 266,
+     "width": 317,
+     "height": 31
+    },
+    {
+     "target": "payables#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 892,
+     "y": 266,
+     "width": 371,
+     "height": 31
+    },
+    {
+     "target": "payables#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1497,
+     "y": 266,
+     "width": 146,
+     "height": 29
+    },
+    {
+     "target": "payables#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2023,
+     "y": 266,
+     "width": 174,
+     "height": 29
+    },
+    {
+     "target": "payables#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2685,
+     "y": 266,
+     "width": 135,
+     "height": 31
+    },
+    {
+     "target": "payables#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 310,
+     "width": 357,
+     "height": 31
+    },
+    {
+     "target": "payables#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 892,
+     "y": 310,
+     "width": 213,
+     "height": 31
+    },
+    {
+     "target": "payables#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1540,
+     "y": 310,
+     "width": 103,
+     "height": 29
+    },
+    {
+     "target": "payables#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2037,
+     "y": 310,
+     "width": 261,
+     "height": 29
+    },
+    {
+     "target": "payables#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2631,
+     "y": 310,
+     "width": 189,
+     "height": 31
+    },
+    {
+     "target": "payables#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 354,
+     "width": 236,
+     "height": 31
+    },
+    {
+     "target": "payables#18",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 892,
+     "y": 354,
+     "width": 360,
+     "height": 31
+    },
+    {
+     "target": "payables#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1540,
+     "y": 354,
+     "width": 117,
+     "height": 29
+    },
+    {
+     "target": "payables#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1950,
+     "y": 354,
+     "width": 247,
+     "height": 29
+    },
+    {
+     "target": "payables#21",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2660,
+     "y": 354,
+     "width": 160,
+     "height": 31
+    },
+    {
+     "target": "payables#22",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 296,
+     "y": 398,
+     "width": 189,
+     "height": 31
+    },
+    {
+     "target": "payables#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 892,
+     "y": 398,
+     "width": 287,
+     "height": 31
+    },
+    {
+     "target": "payables#24",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2080,
+     "y": 398,
+     "width": 146,
+     "height": 29
+    },
+    {
+     "target": "payables#25",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2704,
+     "y": 398,
+     "width": 116,
+     "height": 31
+    },
+    {
+     "target": "payables#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 443,
+     "width": 272,
+     "height": 31
+    },
+    {
+     "target": "payables#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 892,
+     "y": 443,
+     "width": 246,
+     "height": 31
+    },
+    {
+     "target": "payables#28",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1950,
+     "y": 443,
+     "width": 348,
+     "height": 29
+    },
+    {
+     "target": "payables#29",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2699,
+     "y": 443,
+     "width": 121,
+     "height": 31
+    },
+    {
+     "target": "payables#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 487,
+     "width": 242,
+     "height": 31
+    },
+    {
+     "target": "payables#31",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 892,
+     "y": 487,
+     "width": 241,
+     "height": 31
+    },
+    {
+     "target": "payables#32",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1950,
+     "y": 487,
+     "width": 392,
+     "height": 29
+    },
+    {
+     "target": "payables#33",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2652,
+     "y": 487,
+     "width": 168,
+     "height": 31
+    },
+    {
+     "target": "payables#34",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 531,
+     "width": 185,
+     "height": 31
+    },
+    {
+     "target": "payables#35",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 892,
+     "y": 531,
+     "width": 209,
+     "height": 31
+    },
+    {
+     "target": "payables#36",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2037,
+     "y": 531,
+     "width": 102,
+     "height": 29
+    },
+    {
+     "target": "payables#37",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2652,
+     "y": 531,
+     "width": 168,
+     "height": 31
+    },
+    {
+     "target": "payables#38",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 391,
+     "y": 577,
+     "width": 127,
+     "height": 31
+    },
+    {
+     "target": "payables#39",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 893,
+     "y": 577,
+     "width": 87,
+     "height": 31
+    },
+    {
+     "target": "payables#40",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 447,
+     "y": 798,
+     "width": 147,
+     "height": 27
+    },
+    {
+     "target": "payables#41",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 381,
+     "y": 831,
+     "width": 160,
+     "height": 27
+    },
+    {
+     "target": "payables#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 302,
+     "y": 864,
+     "width": 318,
+     "height": 27
+    },
+    {
+     "target": "payables#43",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 302,
+     "y": 897,
+     "width": 252,
+     "height": 27
+    },
+    {
+     "target": "payables#44",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 302,
+     "y": 930,
+     "width": 252,
+     "height": 27
+    },
+    {
+     "target": "payables#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 368,
+     "y": 963,
+     "width": 292,
+     "height": 27
+    },
+    {
+     "target": "payables#46",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 302,
+     "y": 996,
+     "width": 318,
+     "height": 27
+    },
+    {
+     "target": "payables#47",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 302,
+     "y": 1029,
+     "width": 491,
+     "height": 27
+    },
+    {
+     "target": "payables#48",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 421,
+     "y": 1062,
+     "width": 67,
+     "height": 27
+    },
+    {
+     "target": "payables#49",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 540,
+     "y": 1062,
+     "width": 133,
+     "height": 27
+    },
+    {
+     "target": "payables#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 508,
+     "y": 1148,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "payables#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 508,
+     "y": 1184,
+     "width": 376,
+     "height": 29
+    },
+    {
+     "target": "payables#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 508,
+     "y": 1220,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "payables#53",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 625,
+     "y": 1294,
+     "width": 279,
+     "height": 25
+    },
+    {
+     "target": "payables#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 296,
+     "y": 1460,
+     "width": 246,
+     "height": 31
+    },
+    {
+     "target": "payables#55",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 645,
+     "y": 1460,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "payables#56",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 645,
+     "y": 1505,
+     "width": 232,
+     "height": 29
+    },
+    {
+     "target": "payables#57",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 645,
+     "y": 1549,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "payables#58",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 296,
+     "y": 1593,
+     "width": 190,
+     "height": 31
+    },
+    {
+     "target": "payables#59",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 645,
+     "y": 1593,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "payables#60",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1311,
+     "y": 720,
+     "width": 117,
+     "height": 29
+    },
+    {
+     "target": "payables#61",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1311,
+     "y": 756,
+     "width": 146,
+     "height": 29
+    },
+    {
+     "target": "payables#62",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1311,
+     "y": 792,
+     "width": 160,
+     "height": 29
+    },
+    {
+     "target": "payables#63",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1311,
+     "y": 828,
+     "width": 287,
+     "height": 31
+    },
+    {
+     "target": "payables#64",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1311,
+     "y": 862,
+     "width": 335,
+     "height": 31
+    },
+    {
+     "target": "payables#65",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1311,
+     "y": 898,
+     "width": 574,
+     "height": 31
+    },
+    {
+     "target": "payables#66",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1311,
+     "y": 934,
+     "width": 327,
+     "height": 31
+    },
+    {
+     "target": "payables#67",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1311,
+     "y": 968,
+     "width": 236,
+     "height": 31
+    },
+    {
+     "target": "payables#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1311,
+     "y": 1004,
+     "width": 271,
+     "height": 31
+    },
+    {
+     "target": "payables#69",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1311,
+     "y": 1038,
+     "width": 573,
+     "height": 31
+    },
+    {
+     "target": "payables#70",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1633,
+     "y": 1074,
+     "width": 139,
+     "height": 31
+    },
+    {
+     "target": "payables#71",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1107,
+     "y": 1156,
+     "width": 195,
+     "height": 31
+    },
+    {
+     "target": "payables#72",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1336,
+     "y": 1156,
+     "width": 188,
+     "height": 31
+    },
+    {
+     "target": "payables#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1751,
+     "y": 1158,
+     "width": 116,
+     "height": 29
+    },
+    {
+     "target": "payables#74",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1258,
+     "y": 1195,
+     "width": 391,
+     "height": 28
+    },
+    {
+     "target": "payables#75",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1311,
+     "y": 1327,
+     "width": 366,
+     "height": 31
+    },
+    {
+     "target": "payables#76",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1311,
+     "y": 1364,
+     "width": 204,
+     "height": 29
+    },
+    {
+     "target": "payables#77",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1678,
+     "y": 1400,
+     "width": 254,
+     "height": 25
+    },
+    {
+     "target": "payables#78",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2234,
+     "y": 720,
+     "width": 251,
+     "height": 31
+    },
+    {
+     "target": "payables#79",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2234,
+     "y": 756,
+     "width": 173,
+     "height": 31
+    },
+    {
+     "target": "payables#80",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2538,
+     "y": 792,
+     "width": 266,
+     "height": 25
+    },
+    {
+     "target": "payables#81",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2411,
+     "y": 829,
+     "width": 254,
+     "height": 24
+    },
+    {
+     "target": "payables#82",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2234,
+     "y": 1028,
+     "width": 262,
+     "height": 29
+    },
+    {
+     "target": "payables#83",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2336,
+     "y": 1064,
+     "width": 434,
+     "height": 29
+    },
+    {
+     "target": "payables#84",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1100,
+     "width": 464,
+     "height": 29
+    },
+    {
+     "target": "payables#85",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1136,
+     "width": 493,
+     "height": 29
+    },
+    {
+     "target": "payables#86",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1172,
+     "width": 507,
+     "height": 25
+    },
+    {
+     "target": "payables#87",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1208,
+     "width": 290,
+     "height": 29
+    },
+    {
+     "target": "payables#88",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1244,
+     "width": 493,
+     "height": 29
+    },
+    {
+     "target": "payables#89",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2083,
+     "y": 1373,
+     "width": 165,
+     "height": 31
+    },
+    {
+     "target": "payables#90",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2010,
+     "y": 1408,
+     "width": 406,
+     "height": 31
+    },
+    {
+     "target": "payables#91",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2271,
+     "y": 1450,
+     "width": 102,
+     "height": 29
+    },
+    {
+     "target": "payables#92",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2261,
+     "y": 1490,
+     "width": 219,
+     "height": 31
+    },
+    {
+     "target": "payables#93",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2658,
+     "y": 1490,
+     "width": 140,
+     "height": 31
+    },
+    {
+     "target": "payables#94",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2178,
+     "y": 1534,
+     "width": 290,
+     "height": 28
+    },
+    {
+     "target": "payables#95",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2508,
+     "y": 1532,
+     "width": 172,
+     "height": 30
+    },
+    {
+     "target": "payables#96",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2192,
+     "y": 1574,
+     "width": 215,
+     "height": 31
+    },
+    {
+     "target": "payables#97",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2577,
+     "y": 1574,
+     "width": 116,
+     "height": 31
+    }
+   ]
+  },
+  {
+   "file": "payables.retina.dark.png",
+   "page": "payables.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "payables#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 274,
+     "y": 31,
+     "width": 303,
+     "height": 31
+    },
+    {
+     "target": "payables#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2636,
+     "y": 31,
+     "width": 204,
+     "height": 31
+    },
+    {
+     "target": "payables#02",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 222,
+     "width": 289,
+     "height": 31
+    },
+    {
+     "target": "payables#03",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 892,
+     "y": 222,
+     "width": 356,
+     "height": 31
+    },
+    {
+     "target": "payables#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1540,
+     "y": 222,
+     "width": 74,
+     "height": 29
+    },
+    {
+     "target": "payables#05",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1950,
+     "y": 222,
+     "width": 392,
+     "height": 29
+    },
+    {
+     "target": "payables#06",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2649,
+     "y": 222,
+     "width": 171,
+     "height": 31
+    },
+    {
+     "target": "payables#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 266,
+     "width": 317,
+     "height": 31
+    },
+    {
+     "target": "payables#08",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 892,
+     "y": 266,
+     "width": 371,
+     "height": 31
+    },
+    {
+     "target": "payables#09",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1497,
+     "y": 266,
+     "width": 146,
+     "height": 29
+    },
+    {
+     "target": "payables#10",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2023,
+     "y": 266,
+     "width": 174,
+     "height": 29
+    },
+    {
+     "target": "payables#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2685,
+     "y": 266,
+     "width": 135,
+     "height": 31
+    },
+    {
+     "target": "payables#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 310,
+     "width": 357,
+     "height": 31
+    },
+    {
+     "target": "payables#13",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 892,
+     "y": 310,
+     "width": 213,
+     "height": 31
+    },
+    {
+     "target": "payables#14",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1540,
+     "y": 310,
+     "width": 103,
+     "height": 29
+    },
+    {
+     "target": "payables#15",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2037,
+     "y": 310,
+     "width": 261,
+     "height": 29
+    },
+    {
+     "target": "payables#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2631,
+     "y": 310,
+     "width": 189,
+     "height": 31
+    },
+    {
+     "target": "payables#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 354,
+     "width": 236,
+     "height": 31
+    },
+    {
+     "target": "payables#18",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 892,
+     "y": 354,
+     "width": 360,
+     "height": 31
+    },
+    {
+     "target": "payables#19",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1540,
+     "y": 354,
+     "width": 117,
+     "height": 29
+    },
+    {
+     "target": "payables#20",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1950,
+     "y": 354,
+     "width": 247,
+     "height": 29
+    },
+    {
+     "target": "payables#21",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2660,
+     "y": 354,
+     "width": 160,
+     "height": 31
+    },
+    {
+     "target": "payables#22",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 296,
+     "y": 398,
+     "width": 189,
+     "height": 31
+    },
+    {
+     "target": "payables#23",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 892,
+     "y": 398,
+     "width": 287,
+     "height": 31
+    },
+    {
+     "target": "payables#24",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2080,
+     "y": 398,
+     "width": 146,
+     "height": 29
+    },
+    {
+     "target": "payables#25",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2704,
+     "y": 398,
+     "width": 116,
+     "height": 31
+    },
+    {
+     "target": "payables#26",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 443,
+     "width": 272,
+     "height": 31
+    },
+    {
+     "target": "payables#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 892,
+     "y": 443,
+     "width": 246,
+     "height": 31
+    },
+    {
+     "target": "payables#28",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1950,
+     "y": 443,
+     "width": 348,
+     "height": 29
+    },
+    {
+     "target": "payables#29",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2699,
+     "y": 443,
+     "width": 121,
+     "height": 31
+    },
+    {
+     "target": "payables#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 487,
+     "width": 242,
+     "height": 31
+    },
+    {
+     "target": "payables#31",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 892,
+     "y": 487,
+     "width": 241,
+     "height": 31
+    },
+    {
+     "target": "payables#32",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1950,
+     "y": 487,
+     "width": 392,
+     "height": 29
+    },
+    {
+     "target": "payables#33",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2652,
+     "y": 487,
+     "width": 168,
+     "height": 31
+    },
+    {
+     "target": "payables#34",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 296,
+     "y": 531,
+     "width": 185,
+     "height": 31
+    },
+    {
+     "target": "payables#35",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 892,
+     "y": 531,
+     "width": 209,
+     "height": 31
+    },
+    {
+     "target": "payables#36",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2037,
+     "y": 531,
+     "width": 102,
+     "height": 29
+    },
+    {
+     "target": "payables#37",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2652,
+     "y": 531,
+     "width": 168,
+     "height": 31
+    },
+    {
+     "target": "payables#38",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 391,
+     "y": 577,
+     "width": 127,
+     "height": 31
+    },
+    {
+     "target": "payables#39",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 893,
+     "y": 577,
+     "width": 87,
+     "height": 31
+    },
+    {
+     "target": "payables#40",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 447,
+     "y": 798,
+     "width": 147,
+     "height": 27
+    },
+    {
+     "target": "payables#41",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 381,
+     "y": 831,
+     "width": 160,
+     "height": 27
+    },
+    {
+     "target": "payables#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 302,
+     "y": 864,
+     "width": 318,
+     "height": 27
+    },
+    {
+     "target": "payables#43",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 302,
+     "y": 897,
+     "width": 252,
+     "height": 27
+    },
+    {
+     "target": "payables#44",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 302,
+     "y": 930,
+     "width": 252,
+     "height": 27
+    },
+    {
+     "target": "payables#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 368,
+     "y": 963,
+     "width": 292,
+     "height": 27
+    },
+    {
+     "target": "payables#46",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 302,
+     "y": 996,
+     "width": 318,
+     "height": 27
+    },
+    {
+     "target": "payables#47",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 302,
+     "y": 1029,
+     "width": 491,
+     "height": 27
+    },
+    {
+     "target": "payables#48",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 421,
+     "y": 1062,
+     "width": 67,
+     "height": 27
+    },
+    {
+     "target": "payables#49",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 540,
+     "y": 1062,
+     "width": 133,
+     "height": 27
+    },
+    {
+     "target": "payables#50",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 508,
+     "y": 1148,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "payables#51",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 508,
+     "y": 1184,
+     "width": 376,
+     "height": 29
+    },
+    {
+     "target": "payables#52",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 508,
+     "y": 1220,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "payables#53",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 625,
+     "y": 1294,
+     "width": 279,
+     "height": 25
+    },
+    {
+     "target": "payables#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 296,
+     "y": 1460,
+     "width": 246,
+     "height": 31
+    },
+    {
+     "target": "payables#55",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 645,
+     "y": 1460,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "payables#56",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 645,
+     "y": 1505,
+     "width": 232,
+     "height": 29
+    },
+    {
+     "target": "payables#57",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 645,
+     "y": 1549,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "payables#58",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 296,
+     "y": 1593,
+     "width": 190,
+     "height": 31
+    },
+    {
+     "target": "payables#59",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 645,
+     "y": 1593,
+     "width": 275,
+     "height": 29
+    },
+    {
+     "target": "payables#60",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1311,
+     "y": 720,
+     "width": 117,
+     "height": 29
+    },
+    {
+     "target": "payables#61",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1311,
+     "y": 756,
+     "width": 146,
+     "height": 29
+    },
+    {
+     "target": "payables#62",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1311,
+     "y": 792,
+     "width": 160,
+     "height": 29
+    },
+    {
+     "target": "payables#63",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1311,
+     "y": 828,
+     "width": 287,
+     "height": 31
+    },
+    {
+     "target": "payables#64",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1311,
+     "y": 862,
+     "width": 335,
+     "height": 31
+    },
+    {
+     "target": "payables#65",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1311,
+     "y": 898,
+     "width": 574,
+     "height": 31
+    },
+    {
+     "target": "payables#66",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1311,
+     "y": 934,
+     "width": 327,
+     "height": 31
+    },
+    {
+     "target": "payables#67",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1311,
+     "y": 968,
+     "width": 236,
+     "height": 31
+    },
+    {
+     "target": "payables#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1311,
+     "y": 1004,
+     "width": 271,
+     "height": 31
+    },
+    {
+     "target": "payables#69",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1311,
+     "y": 1038,
+     "width": 573,
+     "height": 31
+    },
+    {
+     "target": "payables#70",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1633,
+     "y": 1074,
+     "width": 139,
+     "height": 31
+    },
+    {
+     "target": "payables#71",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1107,
+     "y": 1156,
+     "width": 195,
+     "height": 31
+    },
+    {
+     "target": "payables#72",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1336,
+     "y": 1156,
+     "width": 188,
+     "height": 31
+    },
+    {
+     "target": "payables#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1751,
+     "y": 1158,
+     "width": 116,
+     "height": 29
+    },
+    {
+     "target": "payables#74",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1258,
+     "y": 1195,
+     "width": 391,
+     "height": 28
+    },
+    {
+     "target": "payables#75",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1311,
+     "y": 1327,
+     "width": 366,
+     "height": 31
+    },
+    {
+     "target": "payables#76",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1311,
+     "y": 1364,
+     "width": 204,
+     "height": 29
+    },
+    {
+     "target": "payables#77",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1678,
+     "y": 1400,
+     "width": 254,
+     "height": 25
+    },
+    {
+     "target": "payables#78",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2234,
+     "y": 720,
+     "width": 251,
+     "height": 31
+    },
+    {
+     "target": "payables#79",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2234,
+     "y": 756,
+     "width": 173,
+     "height": 31
+    },
+    {
+     "target": "payables#80",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2538,
+     "y": 792,
+     "width": 266,
+     "height": 25
+    },
+    {
+     "target": "payables#81",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2411,
+     "y": 829,
+     "width": 254,
+     "height": 24
+    },
+    {
+     "target": "payables#82",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2234,
+     "y": 1028,
+     "width": 262,
+     "height": 29
+    },
+    {
+     "target": "payables#83",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2336,
+     "y": 1064,
+     "width": 434,
+     "height": 29
+    },
+    {
+     "target": "payables#84",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1100,
+     "width": 464,
+     "height": 29
+    },
+    {
+     "target": "payables#85",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1136,
+     "width": 493,
+     "height": 29
+    },
+    {
+     "target": "payables#86",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1172,
+     "width": 507,
+     "height": 25
+    },
+    {
+     "target": "payables#87",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1208,
+     "width": 290,
+     "height": 29
+    },
+    {
+     "target": "payables#88",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2234,
+     "y": 1244,
+     "width": 493,
+     "height": 29
+    },
+    {
+     "target": "payables#89",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2083,
+     "y": 1373,
+     "width": 165,
+     "height": 31
+    },
+    {
+     "target": "payables#90",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2010,
+     "y": 1408,
+     "width": 406,
+     "height": 31
+    },
+    {
+     "target": "payables#91",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2271,
+     "y": 1450,
+     "width": 102,
+     "height": 29
+    },
+    {
+     "target": "payables#92",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2261,
+     "y": 1490,
+     "width": 219,
+     "height": 31
+    },
+    {
+     "target": "payables#93",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2658,
+     "y": 1490,
+     "width": 140,
+     "height": 31
+    },
+    {
+     "target": "payables#94",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2178,
+     "y": 1534,
+     "width": 290,
+     "height": 28
+    },
+    {
+     "target": "payables#95",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2508,
+     "y": 1532,
+     "width": 172,
+     "height": 30
+    },
+    {
+     "target": "payables#96",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2192,
+     "y": 1574,
+     "width": 215,
+     "height": 31
+    },
+    {
+     "target": "payables#97",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 2577,
+     "y": 1574,
+     "width": 116,
+     "height": 31
+    }
+   ]
+  },
+  {
+   "file": "rental.fhd.light.png",
+   "page": "rental.html",
+   "variant": "fhd",
+   "theme": "light",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "rental#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 144,
+     "y": 16,
+     "width": 156,
+     "height": 13
+    },
+    {
+     "target": "rental#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1759,
+     "y": 16,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "rental#02",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 244,
+     "y": 92,
+     "width": 304,
+     "height": 13
+    },
+    {
+     "target": "rental#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 232,
+     "y": 112,
+     "width": 120,
+     "height": 13
+    },
+    {
+     "target": "rental#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 384,
+     "y": 112,
+     "width": 61,
+     "height": 13
+    },
+    {
+     "target": "rental#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 232,
+     "y": 131,
+     "width": 88,
+     "height": 13
+    },
+    {
+     "target": "rental#06",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 333,
+     "y": 131,
+     "width": 156,
+     "height": 13
+    },
+    {
+     "target": "rental#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 232,
+     "y": 150,
+     "width": 80,
+     "height": 15
+    },
+    {
+     "target": "rental#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 195,
+     "y": 244,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "rental#09",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 488,
+     "y": 244,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 195,
+     "y": 268,
+     "width": 85,
+     "height": 13
+    },
+    {
+     "target": "rental#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 488,
+     "y": 268,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 195,
+     "y": 293,
+     "width": 95,
+     "height": 13
+    },
+    {
+     "target": "rental#13",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 492,
+     "y": 293,
+     "width": 52,
+     "height": 13
+    },
+    {
+     "target": "rental#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 500,
+     "y": 317,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 195,
+     "y": 342,
+     "width": 77,
+     "height": 13
+    },
+    {
+     "target": "rental#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 496,
+     "y": 342,
+     "width": 48,
+     "height": 13
+    },
+    {
+     "target": "rental#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 195,
+     "y": 366,
+     "width": 73,
+     "height": 13
+    },
+    {
+     "target": "rental#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 488,
+     "y": 366,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#19",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 284,
+     "y": 438,
+     "width": 37,
+     "height": 15
+    },
+    {
+     "target": "rental#20",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 359,
+     "y": 458,
+     "width": 30,
+     "height": 15
+    },
+    {
+     "target": "rental#21",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 344,
+     "y": 478,
+     "width": 58,
+     "height": 15
+    },
+    {
+     "target": "rental#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 380,
+     "y": 499,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "rental#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 390,
+     "y": 518,
+     "width": 114,
+     "height": 13
+    },
+    {
+     "target": "rental#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 232,
+     "y": 537,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "rental#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 383,
+     "y": 557,
+     "width": 77,
+     "height": 13
+    },
+    {
+     "target": "rental#26",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 216,
+     "y": 625,
+     "width": 192,
+     "height": 13
+    },
+    {
+     "target": "rental#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 536,
+     "y": 625,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "rental#28",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 283,
+     "y": 643,
+     "width": 112,
+     "height": 12
+    },
+    {
+     "target": "rental#29",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 279,
+     "y": 676,
+     "width": 134,
+     "height": 13
+    },
+    {
+     "target": "rental#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 696,
+     "y": 106,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "rental#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 696,
+     "y": 146,
+     "width": 104,
+     "height": 13
+    },
+    {
+     "target": "rental#32",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1008,
+     "y": 145,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "rental#33",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 696,
+     "y": 185,
+     "width": 132,
+     "height": 13
+    },
+    {
+     "target": "rental#34",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1008,
+     "y": 185,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "rental#35",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 696,
+     "y": 224,
+     "width": 96,
+     "height": 13
+    },
+    {
+     "target": "rental#36",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1008,
+     "y": 224,
+     "width": 173,
+     "height": 13
+    },
+    {
+     "target": "rental#37",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 696,
+     "y": 262,
+     "width": 265,
+     "height": 13
+    },
+    {
+     "target": "rental#38",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 696,
+     "y": 301,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "rental#39",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1008,
+     "y": 301,
+     "width": 157,
+     "height": 13
+    },
+    {
+     "target": "rental#40",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 696,
+     "y": 340,
+     "width": 261,
+     "height": 13
+    },
+    {
+     "target": "rental#41",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 696,
+     "y": 379,
+     "width": 145,
+     "height": 13
+    },
+    {
+     "target": "rental#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1024,
+     "y": 379,
+     "width": 104,
+     "height": 13
+    },
+    {
+     "target": "rental#43",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1011,
+     "y": 474,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#44",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1019,
+     "y": 499,
+     "width": 48,
+     "height": 13
+    },
+    {
+     "target": "rental#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1007,
+     "y": 523,
+     "width": 60,
+     "height": 13
+    },
+    {
+     "target": "rental#46",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 970,
+     "y": 547,
+     "width": 97,
+     "height": 13
+    },
+    {
+     "target": "rental#47",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 979,
+     "y": 572,
+     "width": 88,
+     "height": 13
+    },
+    {
+     "target": "rental#48",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 966,
+     "y": 643,
+     "width": 52,
+     "height": 15
+    },
+    {
+     "target": "rental#49",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 938,
+     "y": 663,
+     "width": 51,
+     "height": 15
+    },
+    {
+     "target": "rental#50",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 862,
+     "y": 684,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "rental#51",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 798,
+     "y": 703,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "rental#52",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 798,
+     "y": 723,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "rental#53",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 798,
+     "y": 742,
+     "width": 117,
+     "height": 15
+    },
+    {
+     "target": "rental#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 798,
+     "y": 761,
+     "width": 66,
+     "height": 15
+    },
+    {
+     "target": "rental#55",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1449,
+     "y": 117,
+     "width": 51,
+     "height": 14
+    },
+    {
+     "target": "rental#56",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1725,
+     "y": 118,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#57",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1449,
+     "y": 142,
+     "width": 68,
+     "height": 14
+    },
+    {
+     "target": "rental#58",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1725,
+     "y": 143,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#59",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1449,
+     "y": 166,
+     "width": 93,
+     "height": 14
+    },
+    {
+     "target": "rental#60",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1725,
+     "y": 167,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#61",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1449,
+     "y": 190,
+     "width": 51,
+     "height": 14
+    },
+    {
+     "target": "rental#62",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1725,
+     "y": 191,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#63",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1843,
+     "y": 191,
+     "width": 47,
+     "height": 13
+    },
+    {
+     "target": "rental#64",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1843,
+     "y": 216,
+     "width": 47,
+     "height": 13
+    },
+    {
+     "target": "rental#65",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1437,
+     "y": 244,
+     "width": 65,
+     "height": 13
+    },
+    {
+     "target": "rental#66",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1521,
+     "y": 244,
+     "width": 153,
+     "height": 13
+    },
+    {
+     "target": "rental#67",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1444,
+     "y": 314,
+     "width": 49,
+     "height": 13
+    },
+    {
+     "target": "rental#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1444,
+     "y": 334,
+     "width": 106,
+     "height": 13
+    },
+    {
+     "target": "rental#69",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1581,
+     "y": 334,
+     "width": 37,
+     "height": 13
+    },
+    {
+     "target": "rental#70",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1444,
+     "y": 353,
+     "width": 93,
+     "height": 13
+    },
+    {
+     "target": "rental#71",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1550,
+     "y": 353,
+     "width": 188,
+     "height": 13
+    },
+    {
+     "target": "rental#72",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1444,
+     "y": 373,
+     "width": 85,
+     "height": 13
+    },
+    {
+     "target": "rental#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1628,
+     "y": 391,
+     "width": 83,
+     "height": 13
+    },
+    {
+     "target": "rental#74",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1444,
+     "y": 458,
+     "width": 247,
+     "height": 15
+    },
+    {
+     "target": "rental#75",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1444,
+     "y": 495,
+     "width": 247,
+     "height": 15
+    },
+    {
+     "target": "rental#76",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1444,
+     "y": 514,
+     "width": 189,
+     "height": 15
+    },
+    {
+     "target": "rental#77",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1444,
+     "y": 534,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "rental#78",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1444,
+     "y": 571,
+     "width": 175,
+     "height": 15
+    },
+    {
+     "target": "rental#79",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1380,
+     "y": 647,
+     "width": 25,
+     "height": 13
+    },
+    {
+     "target": "rental#80",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1430,
+     "y": 647,
+     "width": 178,
+     "height": 13
+    },
+    {
+     "target": "rental#81",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1374,
+     "y": 665,
+     "width": 181,
+     "height": 13
+    },
+    {
+     "target": "rental#82",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1514,
+     "y": 699,
+     "width": 165,
+     "height": 13
+    },
+    {
+     "target": "rental#83",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1389,
+     "y": 717,
+     "width": 55,
+     "height": 13
+    },
+    {
+     "target": "rental#84",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1599,
+     "y": 717,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#85",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1425,
+     "y": 735,
+     "width": 73,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "rental.fhd.dark.png",
+   "page": "rental.html",
+   "variant": "fhd",
+   "theme": "dark",
+   "dpr": 1,
+   "width": 1920,
+   "height": 1080,
+   "regions": [
+    {
+     "target": "rental#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 144,
+     "y": 16,
+     "width": 156,
+     "height": 13
+    },
+    {
+     "target": "rental#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1759,
+     "y": 16,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "rental#02",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 244,
+     "y": 92,
+     "width": 304,
+     "height": 13
+    },
+    {
+     "target": "rental#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 232,
+     "y": 112,
+     "width": 120,
+     "height": 13
+    },
+    {
+     "target": "rental#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 384,
+     "y": 112,
+     "width": 61,
+     "height": 13
+    },
+    {
+     "target": "rental#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 232,
+     "y": 131,
+     "width": 88,
+     "height": 13
+    },
+    {
+     "target": "rental#06",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 333,
+     "y": 131,
+     "width": 156,
+     "height": 13
+    },
+    {
+     "target": "rental#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 232,
+     "y": 150,
+     "width": 80,
+     "height": 15
+    },
+    {
+     "target": "rental#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 195,
+     "y": 244,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "rental#09",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 488,
+     "y": 244,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 195,
+     "y": 268,
+     "width": 85,
+     "height": 13
+    },
+    {
+     "target": "rental#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 488,
+     "y": 268,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 195,
+     "y": 293,
+     "width": 95,
+     "height": 13
+    },
+    {
+     "target": "rental#13",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 492,
+     "y": 293,
+     "width": 52,
+     "height": 13
+    },
+    {
+     "target": "rental#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 500,
+     "y": 317,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 195,
+     "y": 342,
+     "width": 77,
+     "height": 13
+    },
+    {
+     "target": "rental#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 496,
+     "y": 342,
+     "width": 48,
+     "height": 13
+    },
+    {
+     "target": "rental#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 195,
+     "y": 366,
+     "width": 73,
+     "height": 13
+    },
+    {
+     "target": "rental#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 488,
+     "y": 366,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#19",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 284,
+     "y": 438,
+     "width": 37,
+     "height": 15
+    },
+    {
+     "target": "rental#20",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 359,
+     "y": 458,
+     "width": 30,
+     "height": 15
+    },
+    {
+     "target": "rental#21",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 344,
+     "y": 478,
+     "width": 58,
+     "height": 15
+    },
+    {
+     "target": "rental#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 380,
+     "y": 499,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "rental#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 390,
+     "y": 518,
+     "width": 114,
+     "height": 13
+    },
+    {
+     "target": "rental#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 232,
+     "y": 537,
+     "width": 131,
+     "height": 15
+    },
+    {
+     "target": "rental#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 383,
+     "y": 557,
+     "width": 77,
+     "height": 13
+    },
+    {
+     "target": "rental#26",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 216,
+     "y": 625,
+     "width": 192,
+     "height": 13
+    },
+    {
+     "target": "rental#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 536,
+     "y": 625,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "rental#28",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 283,
+     "y": 643,
+     "width": 112,
+     "height": 12
+    },
+    {
+     "target": "rental#29",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 279,
+     "y": 676,
+     "width": 134,
+     "height": 13
+    },
+    {
+     "target": "rental#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 696,
+     "y": 106,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "rental#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 696,
+     "y": 146,
+     "width": 104,
+     "height": 13
+    },
+    {
+     "target": "rental#32",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1008,
+     "y": 145,
+     "width": 88,
+     "height": 15
+    },
+    {
+     "target": "rental#33",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 696,
+     "y": 185,
+     "width": 132,
+     "height": 13
+    },
+    {
+     "target": "rental#34",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1008,
+     "y": 185,
+     "width": 89,
+     "height": 13
+    },
+    {
+     "target": "rental#35",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 696,
+     "y": 224,
+     "width": 96,
+     "height": 13
+    },
+    {
+     "target": "rental#36",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1008,
+     "y": 224,
+     "width": 173,
+     "height": 13
+    },
+    {
+     "target": "rental#37",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 696,
+     "y": 262,
+     "width": 265,
+     "height": 13
+    },
+    {
+     "target": "rental#38",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 696,
+     "y": 301,
+     "width": 53,
+     "height": 13
+    },
+    {
+     "target": "rental#39",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1008,
+     "y": 301,
+     "width": 157,
+     "height": 13
+    },
+    {
+     "target": "rental#40",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 696,
+     "y": 340,
+     "width": 261,
+     "height": 13
+    },
+    {
+     "target": "rental#41",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 696,
+     "y": 379,
+     "width": 145,
+     "height": 13
+    },
+    {
+     "target": "rental#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1024,
+     "y": 379,
+     "width": 104,
+     "height": 13
+    },
+    {
+     "target": "rental#43",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1011,
+     "y": 474,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#44",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1019,
+     "y": 499,
+     "width": 48,
+     "height": 13
+    },
+    {
+     "target": "rental#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1007,
+     "y": 523,
+     "width": 60,
+     "height": 13
+    },
+    {
+     "target": "rental#46",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 970,
+     "y": 547,
+     "width": 97,
+     "height": 13
+    },
+    {
+     "target": "rental#47",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 979,
+     "y": 572,
+     "width": 88,
+     "height": 13
+    },
+    {
+     "target": "rental#48",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 966,
+     "y": 643,
+     "width": 52,
+     "height": 15
+    },
+    {
+     "target": "rental#49",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 938,
+     "y": 663,
+     "width": 51,
+     "height": 15
+    },
+    {
+     "target": "rental#50",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 862,
+     "y": 684,
+     "width": 102,
+     "height": 15
+    },
+    {
+     "target": "rental#51",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 798,
+     "y": 703,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "rental#52",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 798,
+     "y": 723,
+     "width": 138,
+     "height": 15
+    },
+    {
+     "target": "rental#53",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 798,
+     "y": 742,
+     "width": 117,
+     "height": 15
+    },
+    {
+     "target": "rental#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 798,
+     "y": 761,
+     "width": 66,
+     "height": 15
+    },
+    {
+     "target": "rental#55",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1449,
+     "y": 117,
+     "width": 51,
+     "height": 14
+    },
+    {
+     "target": "rental#56",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1725,
+     "y": 118,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#57",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1449,
+     "y": 142,
+     "width": 68,
+     "height": 14
+    },
+    {
+     "target": "rental#58",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1725,
+     "y": 143,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#59",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1449,
+     "y": 166,
+     "width": 93,
+     "height": 14
+    },
+    {
+     "target": "rental#60",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1725,
+     "y": 167,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#61",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1449,
+     "y": 190,
+     "width": 51,
+     "height": 14
+    },
+    {
+     "target": "rental#62",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1725,
+     "y": 191,
+     "width": 44,
+     "height": 13
+    },
+    {
+     "target": "rental#63",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1843,
+     "y": 191,
+     "width": 47,
+     "height": 13
+    },
+    {
+     "target": "rental#64",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1843,
+     "y": 216,
+     "width": 47,
+     "height": 13
+    },
+    {
+     "target": "rental#65",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1437,
+     "y": 244,
+     "width": 65,
+     "height": 13
+    },
+    {
+     "target": "rental#66",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1521,
+     "y": 244,
+     "width": 153,
+     "height": 13
+    },
+    {
+     "target": "rental#67",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1444,
+     "y": 314,
+     "width": 49,
+     "height": 13
+    },
+    {
+     "target": "rental#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1444,
+     "y": 334,
+     "width": 106,
+     "height": 13
+    },
+    {
+     "target": "rental#69",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1581,
+     "y": 334,
+     "width": 37,
+     "height": 13
+    },
+    {
+     "target": "rental#70",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1444,
+     "y": 353,
+     "width": 93,
+     "height": 13
+    },
+    {
+     "target": "rental#71",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1550,
+     "y": 353,
+     "width": 188,
+     "height": 13
+    },
+    {
+     "target": "rental#72",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1444,
+     "y": 373,
+     "width": 85,
+     "height": 13
+    },
+    {
+     "target": "rental#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1628,
+     "y": 391,
+     "width": 83,
+     "height": 13
+    },
+    {
+     "target": "rental#74",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1444,
+     "y": 458,
+     "width": 247,
+     "height": 15
+    },
+    {
+     "target": "rental#75",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1444,
+     "y": 495,
+     "width": 247,
+     "height": 15
+    },
+    {
+     "target": "rental#76",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 1444,
+     "y": 514,
+     "width": 189,
+     "height": 15
+    },
+    {
+     "target": "rental#77",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1444,
+     "y": 534,
+     "width": 232,
+     "height": 15
+    },
+    {
+     "target": "rental#78",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 1444,
+     "y": 571,
+     "width": 175,
+     "height": 15
+    },
+    {
+     "target": "rental#79",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1380,
+     "y": 647,
+     "width": 25,
+     "height": 13
+    },
+    {
+     "target": "rental#80",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1430,
+     "y": 647,
+     "width": 178,
+     "height": 13
+    },
+    {
+     "target": "rental#81",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1374,
+     "y": 665,
+     "width": 181,
+     "height": 13
+    },
+    {
+     "target": "rental#82",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 1514,
+     "y": 699,
+     "width": 165,
+     "height": 13
+    },
+    {
+     "target": "rental#83",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1389,
+     "y": 717,
+     "width": 55,
+     "height": 13
+    },
+    {
+     "target": "rental#84",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1599,
+     "y": 717,
+     "width": 56,
+     "height": 13
+    },
+    {
+     "target": "rental#85",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 1425,
+     "y": 735,
+     "width": 73,
+     "height": 15
+    }
+   ]
+  },
+  {
+   "file": "rental.retina.light.png",
+   "page": "rental.html",
+   "variant": "retina",
+   "theme": "light",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "rental#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 288,
+     "y": 33,
+     "width": 312,
+     "height": 25
+    },
+    {
+     "target": "rental#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2559,
+     "y": 33,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "rental#02",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 488,
+     "y": 185,
+     "width": 511,
+     "height": 25
+    },
+    {
+     "target": "rental#02",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 464,
+     "y": 220,
+     "width": 96,
+     "height": 25
+    },
+    {
+     "target": "rental#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 464,
+     "y": 259,
+     "width": 240,
+     "height": 25
+    },
+    {
+     "target": "rental#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 768,
+     "y": 259,
+     "width": 121,
+     "height": 25
+    },
+    {
+     "target": "rental#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 464,
+     "y": 298,
+     "width": 175,
+     "height": 25
+    },
+    {
+     "target": "rental#06",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 666,
+     "y": 298,
+     "width": 312,
+     "height": 25
+    },
+    {
+     "target": "rental#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 464,
+     "y": 334,
+     "width": 159,
+     "height": 29
+    },
+    {
+     "target": "rental#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 356,
+     "y": 523,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "rental#09",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 739,
+     "y": 523,
+     "width": 110,
+     "height": 25
+    },
+    {
+     "target": "rental#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 356,
+     "y": 572,
+     "width": 169,
+     "height": 25
+    },
+    {
+     "target": "rental#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 739,
+     "y": 572,
+     "width": 110,
+     "height": 25
+    },
+    {
+     "target": "rental#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 356,
+     "y": 621,
+     "width": 188,
+     "height": 25
+    },
+    {
+     "target": "rental#13",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 746,
+     "y": 621,
+     "width": 103,
+     "height": 25
+    },
+    {
+     "target": "rental#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 762,
+     "y": 670,
+     "width": 87,
+     "height": 25
+    },
+    {
+     "target": "rental#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 356,
+     "y": 719,
+     "width": 153,
+     "height": 25
+    },
+    {
+     "target": "rental#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 754,
+     "y": 719,
+     "width": 95,
+     "height": 25
+    },
+    {
+     "target": "rental#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 356,
+     "y": 768,
+     "width": 145,
+     "height": 25
+    },
+    {
+     "target": "rental#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 739,
+     "y": 768,
+     "width": 110,
+     "height": 25
+    },
+    {
+     "target": "rental#19",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 568,
+     "y": 910,
+     "width": 73,
+     "height": 29
+    },
+    {
+     "target": "rental#20",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 718,
+     "y": 951,
+     "width": 59,
+     "height": 29
+    },
+    {
+     "target": "rental#21",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 688,
+     "y": 992,
+     "width": 116,
+     "height": 29
+    },
+    {
+     "target": "rental#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 761,
+     "y": 1033,
+     "width": 174,
+     "height": 29
+    },
+    {
+     "target": "rental#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 780,
+     "y": 1071,
+     "width": 228,
+     "height": 25
+    },
+    {
+     "target": "rental#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 464,
+     "y": 1110,
+     "width": 261,
+     "height": 29
+    },
+    {
+     "target": "rental#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 767,
+     "y": 1149,
+     "width": 153,
+     "height": 25
+    },
+    {
+     "target": "rental#26",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 432,
+     "y": 1286,
+     "width": 383,
+     "height": 24
+    },
+    {
+     "target": "rental#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 310,
+     "y": 1320,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "rental#28",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 256,
+     "y": 1355,
+     "width": 221,
+     "height": 25
+    },
+    {
+     "target": "rental#29",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 559,
+     "y": 1423,
+     "width": 266,
+     "height": 25
+    },
+    {
+     "target": "rental#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1091,
+     "y": 212,
+     "width": 203,
+     "height": 29
+    },
+    {
+     "target": "rental#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1091,
+     "y": 292,
+     "width": 208,
+     "height": 25
+    },
+    {
+     "target": "rental#32",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1543,
+     "y": 290,
+     "width": 174,
+     "height": 29
+    },
+    {
+     "target": "rental#33",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1091,
+     "y": 370,
+     "width": 262,
+     "height": 25
+    },
+    {
+     "target": "rental#34",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1543,
+     "y": 370,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "rental#35",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1091,
+     "y": 448,
+     "width": 191,
+     "height": 25
+    },
+    {
+     "target": "rental#36",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1543,
+     "y": 448,
+     "width": 345,
+     "height": 25
+    },
+    {
+     "target": "rental#37",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1091,
+     "y": 525,
+     "width": 529,
+     "height": 25
+    },
+    {
+     "target": "rental#38",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1091,
+     "y": 603,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "rental#39",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1543,
+     "y": 603,
+     "width": 313,
+     "height": 25
+    },
+    {
+     "target": "rental#40",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1091,
+     "y": 681,
+     "width": 521,
+     "height": 25
+    },
+    {
+     "target": "rental#41",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1091,
+     "y": 759,
+     "width": 288,
+     "height": 25
+    },
+    {
+     "target": "rental#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1575,
+     "y": 759,
+     "width": 207,
+     "height": 25
+    },
+    {
+     "target": "rental#43",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1509,
+     "y": 949,
+     "width": 109,
+     "height": 25
+    },
+    {
+     "target": "rental#44",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1525,
+     "y": 998,
+     "width": 93,
+     "height": 25
+    },
+    {
+     "target": "rental#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1500,
+     "y": 1047,
+     "width": 118,
+     "height": 25
+    },
+    {
+     "target": "rental#46",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1426,
+     "y": 1095,
+     "width": 192,
+     "height": 25
+    },
+    {
+     "target": "rental#47",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1444,
+     "y": 1144,
+     "width": 174,
+     "height": 25
+    },
+    {
+     "target": "rental#48",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1631,
+     "y": 1287,
+     "width": 102,
+     "height": 29
+    },
+    {
+     "target": "rental#49",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1574,
+     "y": 1327,
+     "width": 103,
+     "height": 29
+    },
+    {
+     "target": "rental#50",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1423,
+     "y": 1368,
+     "width": 203,
+     "height": 29
+    },
+    {
+     "target": "rental#51",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1295,
+     "y": 1407,
+     "width": 276,
+     "height": 29
+    },
+    {
+     "target": "rental#52",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1295,
+     "y": 1446,
+     "width": 276,
+     "height": 29
+    },
+    {
+     "target": "rental#53",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1295,
+     "y": 1485,
+     "width": 232,
+     "height": 28
+    },
+    {
+     "target": "rental#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1295,
+     "y": 1523,
+     "width": 131,
+     "height": 29
+    },
+    {
+     "target": "rental#55",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2194,
+     "y": 235,
+     "width": 102,
+     "height": 27
+    },
+    {
+     "target": "rental#56",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2560,
+     "y": 237,
+     "width": 85,
+     "height": 25
+    },
+    {
+     "target": "rental#57",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2194,
+     "y": 284,
+     "width": 135,
+     "height": 27
+    },
+    {
+     "target": "rental#58",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2560,
+     "y": 286,
+     "width": 85,
+     "height": 25
+    },
+    {
+     "target": "rental#59",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2194,
+     "y": 333,
+     "width": 186,
+     "height": 27
+    },
+    {
+     "target": "rental#60",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2560,
+     "y": 335,
+     "width": 85,
+     "height": 25
+    },
+    {
+     "target": "rental#61",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2194,
+     "y": 381,
+     "width": 102,
+     "height": 27
+    },
+    {
+     "target": "rental#62",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2560,
+     "y": 383,
+     "width": 85,
+     "height": 25
+    },
+    {
+     "target": "rental#63",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2727,
+     "y": 383,
+     "width": 93,
+     "height": 25
+    },
+    {
+     "target": "rental#64",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2726,
+     "y": 432,
+     "width": 94,
+     "height": 25
+    },
+    {
+     "target": "rental#65",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2229,
+     "y": 489,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "rental#66",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 2397,
+     "y": 489,
+     "width": 305,
+     "height": 25
+    },
+    {
+     "target": "rental#67",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2243,
+     "y": 629,
+     "width": 97,
+     "height": 25
+    },
+    {
+     "target": "rental#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2243,
+     "y": 668,
+     "width": 210,
+     "height": 25
+    },
+    {
+     "target": "rental#69",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2516,
+     "y": 668,
+     "width": 73,
+     "height": 25
+    },
+    {
+     "target": "rental#70",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2243,
+     "y": 707,
+     "width": 184,
+     "height": 25
+    },
+    {
+     "target": "rental#71",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2454,
+     "y": 707,
+     "width": 376,
+     "height": 25
+    },
+    {
+     "target": "rental#72",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2243,
+     "y": 746,
+     "width": 169,
+     "height": 25
+    },
+    {
+     "target": "rental#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2609,
+     "y": 783,
+     "width": 166,
+     "height": 25
+    },
+    {
+     "target": "rental#74",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2243,
+     "y": 917,
+     "width": 492,
+     "height": 29
+    },
+    {
+     "target": "rental#75",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2243,
+     "y": 991,
+     "width": 492,
+     "height": 29
+    },
+    {
+     "target": "rental#76",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2243,
+     "y": 1029,
+     "width": 376,
+     "height": 29
+    },
+    {
+     "target": "rental#77",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2243,
+     "y": 1068,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "rental#78",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2243,
+     "y": 1142,
+     "width": 347,
+     "height": 29
+    },
+    {
+     "target": "rental#79",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2115,
+     "y": 1294,
+     "width": 48,
+     "height": 25
+    },
+    {
+     "target": "rental#80",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2215,
+     "y": 1294,
+     "width": 354,
+     "height": 25
+    },
+    {
+     "target": "rental#81",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2103,
+     "y": 1330,
+     "width": 360,
+     "height": 25
+    },
+    {
+     "target": "rental#82",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2381,
+     "y": 1398,
+     "width": 330,
+     "height": 25
+    },
+    {
+     "target": "rental#83",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2133,
+     "y": 1434,
+     "width": 109,
+     "height": 25
+    },
+    {
+     "target": "rental#84",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2552,
+     "y": 1434,
+     "width": 112,
+     "height": 25
+    },
+    {
+     "target": "rental#85",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2524,
+     "y": 1470,
+     "width": 145,
+     "height": 29
+    }
+   ]
+  },
+  {
+   "file": "rental.retina.dark.png",
+   "page": "rental.html",
+   "variant": "retina",
+   "theme": "dark",
+   "dpr": 2,
+   "width": 2880,
+   "height": 1800,
+   "regions": [
+    {
+     "target": "rental#00",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 288,
+     "y": 33,
+     "width": 312,
+     "height": 25
+    },
+    {
+     "target": "rental#01",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2559,
+     "y": 33,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "rental#02",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 488,
+     "y": 185,
+     "width": 511,
+     "height": 25
+    },
+    {
+     "target": "rental#02",
+     "line": 1,
+     "kind": "contact",
+     "detail": "address",
+     "x": 464,
+     "y": 220,
+     "width": 96,
+     "height": 25
+    },
+    {
+     "target": "rental#03",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 464,
+     "y": 259,
+     "width": 240,
+     "height": 25
+    },
+    {
+     "target": "rental#04",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 768,
+     "y": 259,
+     "width": 121,
+     "height": 25
+    },
+    {
+     "target": "rental#05",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 464,
+     "y": 298,
+     "width": 175,
+     "height": 25
+    },
+    {
+     "target": "rental#06",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 666,
+     "y": 298,
+     "width": 312,
+     "height": 25
+    },
+    {
+     "target": "rental#07",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 464,
+     "y": 334,
+     "width": 159,
+     "height": 29
+    },
+    {
+     "target": "rental#08",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 356,
+     "y": 523,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "rental#09",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 739,
+     "y": 523,
+     "width": 110,
+     "height": 25
+    },
+    {
+     "target": "rental#10",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 356,
+     "y": 572,
+     "width": 169,
+     "height": 25
+    },
+    {
+     "target": "rental#11",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 739,
+     "y": 572,
+     "width": 110,
+     "height": 25
+    },
+    {
+     "target": "rental#12",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 356,
+     "y": 621,
+     "width": 188,
+     "height": 25
+    },
+    {
+     "target": "rental#13",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 746,
+     "y": 621,
+     "width": 103,
+     "height": 25
+    },
+    {
+     "target": "rental#14",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 762,
+     "y": 670,
+     "width": 87,
+     "height": 25
+    },
+    {
+     "target": "rental#15",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 356,
+     "y": 719,
+     "width": 153,
+     "height": 25
+    },
+    {
+     "target": "rental#16",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 754,
+     "y": 719,
+     "width": 95,
+     "height": 25
+    },
+    {
+     "target": "rental#17",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 356,
+     "y": 768,
+     "width": 145,
+     "height": 25
+    },
+    {
+     "target": "rental#18",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 739,
+     "y": 768,
+     "width": 110,
+     "height": 25
+    },
+    {
+     "target": "rental#19",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 568,
+     "y": 910,
+     "width": 73,
+     "height": 29
+    },
+    {
+     "target": "rental#20",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 718,
+     "y": 951,
+     "width": 59,
+     "height": 29
+    },
+    {
+     "target": "rental#21",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 688,
+     "y": 992,
+     "width": 116,
+     "height": 29
+    },
+    {
+     "target": "rental#22",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 761,
+     "y": 1033,
+     "width": 174,
+     "height": 29
+    },
+    {
+     "target": "rental#23",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 780,
+     "y": 1071,
+     "width": 228,
+     "height": 25
+    },
+    {
+     "target": "rental#24",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 464,
+     "y": 1110,
+     "width": 261,
+     "height": 29
+    },
+    {
+     "target": "rental#25",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 767,
+     "y": 1149,
+     "width": 153,
+     "height": 25
+    },
+    {
+     "target": "rental#26",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 432,
+     "y": 1286,
+     "width": 383,
+     "height": 24
+    },
+    {
+     "target": "rental#27",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 310,
+     "y": 1320,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "rental#28",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 256,
+     "y": 1355,
+     "width": 221,
+     "height": 25
+    },
+    {
+     "target": "rental#29",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 559,
+     "y": 1423,
+     "width": 266,
+     "height": 25
+    },
+    {
+     "target": "rental#30",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1091,
+     "y": 212,
+     "width": 203,
+     "height": 29
+    },
+    {
+     "target": "rental#31",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 1091,
+     "y": 292,
+     "width": 208,
+     "height": 25
+    },
+    {
+     "target": "rental#32",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1543,
+     "y": 290,
+     "width": 174,
+     "height": 29
+    },
+    {
+     "target": "rental#33",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1091,
+     "y": 370,
+     "width": 262,
+     "height": 25
+    },
+    {
+     "target": "rental#34",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1543,
+     "y": 370,
+     "width": 176,
+     "height": 25
+    },
+    {
+     "target": "rental#35",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1091,
+     "y": 448,
+     "width": 191,
+     "height": 25
+    },
+    {
+     "target": "rental#36",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 1543,
+     "y": 448,
+     "width": 345,
+     "height": 25
+    },
+    {
+     "target": "rental#37",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1091,
+     "y": 525,
+     "width": 529,
+     "height": 25
+    },
+    {
+     "target": "rental#38",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 1091,
+     "y": 603,
+     "width": 105,
+     "height": 25
+    },
+    {
+     "target": "rental#39",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 1543,
+     "y": 603,
+     "width": 313,
+     "height": 25
+    },
+    {
+     "target": "rental#40",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 1091,
+     "y": 681,
+     "width": 521,
+     "height": 25
+    },
+    {
+     "target": "rental#41",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 1091,
+     "y": 759,
+     "width": 288,
+     "height": 25
+    },
+    {
+     "target": "rental#42",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1575,
+     "y": 759,
+     "width": 207,
+     "height": 25
+    },
+    {
+     "target": "rental#43",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1509,
+     "y": 949,
+     "width": 109,
+     "height": 25
+    },
+    {
+     "target": "rental#44",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1525,
+     "y": 998,
+     "width": 93,
+     "height": 25
+    },
+    {
+     "target": "rental#45",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1500,
+     "y": 1047,
+     "width": 118,
+     "height": 25
+    },
+    {
+     "target": "rental#46",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1426,
+     "y": 1095,
+     "width": 192,
+     "height": 25
+    },
+    {
+     "target": "rental#47",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 1444,
+     "y": 1144,
+     "width": 174,
+     "height": 25
+    },
+    {
+     "target": "rental#48",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1631,
+     "y": 1287,
+     "width": 102,
+     "height": 29
+    },
+    {
+     "target": "rental#49",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1574,
+     "y": 1327,
+     "width": 103,
+     "height": 29
+    },
+    {
+     "target": "rental#50",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 1423,
+     "y": 1368,
+     "width": 203,
+     "height": 29
+    },
+    {
+     "target": "rental#51",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1295,
+     "y": 1407,
+     "width": 276,
+     "height": 29
+    },
+    {
+     "target": "rental#52",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1295,
+     "y": 1446,
+     "width": 276,
+     "height": 29
+    },
+    {
+     "target": "rental#53",
+     "line": 0,
+     "kind": "financial",
+     "detail": "card",
+     "x": 1295,
+     "y": 1485,
+     "width": 232,
+     "height": 28
+    },
+    {
+     "target": "rental#54",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "cued_number",
+     "x": 1295,
+     "y": 1523,
+     "width": 131,
+     "height": 29
+    },
+    {
+     "target": "rental#55",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2194,
+     "y": 235,
+     "width": 102,
+     "height": 27
+    },
+    {
+     "target": "rental#56",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2560,
+     "y": 237,
+     "width": 85,
+     "height": 25
+    },
+    {
+     "target": "rental#57",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2194,
+     "y": 284,
+     "width": 135,
+     "height": 27
+    },
+    {
+     "target": "rental#58",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2560,
+     "y": 286,
+     "width": 85,
+     "height": 25
+    },
+    {
+     "target": "rental#59",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_en",
+     "x": 2194,
+     "y": 333,
+     "width": 186,
+     "height": 27
+    },
+    {
+     "target": "rental#60",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2560,
+     "y": 335,
+     "width": 85,
+     "height": 25
+    },
+    {
+     "target": "rental#61",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2194,
+     "y": 381,
+     "width": 102,
+     "height": 27
+    },
+    {
+     "target": "rental#62",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2560,
+     "y": 383,
+     "width": 85,
+     "height": 25
+    },
+    {
+     "target": "rental#63",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2727,
+     "y": 383,
+     "width": 93,
+     "height": 25
+    },
+    {
+     "target": "rental#64",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2726,
+     "y": 432,
+     "width": 94,
+     "height": 25
+    },
+    {
+     "target": "rental#65",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2229,
+     "y": 489,
+     "width": 128,
+     "height": 25
+    },
+    {
+     "target": "rental#66",
+     "line": 0,
+     "kind": "contact",
+     "detail": "address",
+     "x": 2397,
+     "y": 489,
+     "width": 305,
+     "height": 25
+    },
+    {
+     "target": "rental#67",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2243,
+     "y": 629,
+     "width": 97,
+     "height": 25
+    },
+    {
+     "target": "rental#68",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "company",
+     "x": 2243,
+     "y": 668,
+     "width": 210,
+     "height": 25
+    },
+    {
+     "target": "rental#69",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2516,
+     "y": 668,
+     "width": 73,
+     "height": 25
+    },
+    {
+     "target": "rental#70",
+     "line": 0,
+     "kind": "contact",
+     "detail": "phone",
+     "x": 2243,
+     "y": 707,
+     "width": 184,
+     "height": 25
+    },
+    {
+     "target": "rental#71",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2454,
+     "y": 707,
+     "width": 376,
+     "height": 25
+    },
+    {
+     "target": "rental#72",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2243,
+     "y": 746,
+     "width": 169,
+     "height": 25
+    },
+    {
+     "target": "rental#73",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2609,
+     "y": 783,
+     "width": 166,
+     "height": 25
+    },
+    {
+     "target": "rental#74",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2243,
+     "y": 917,
+     "width": 492,
+     "height": 29
+    },
+    {
+     "target": "rental#75",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2243,
+     "y": 991,
+     "width": 492,
+     "height": 29
+    },
+    {
+     "target": "rental#76",
+     "line": 0,
+     "kind": "credential",
+     "detail": "prefixed_token",
+     "x": 2243,
+     "y": 1029,
+     "width": 376,
+     "height": 29
+    },
+    {
+     "target": "rental#77",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2243,
+     "y": 1068,
+     "width": 463,
+     "height": 29
+    },
+    {
+     "target": "rental#78",
+     "line": 0,
+     "kind": "credential",
+     "detail": "random_string",
+     "x": 2243,
+     "y": 1142,
+     "width": 347,
+     "height": 29
+    },
+    {
+     "target": "rental#79",
+     "line": 0,
+     "kind": "identifier",
+     "detail": "person_ja",
+     "x": 2115,
+     "y": 1294,
+     "width": 48,
+     "height": 25
+    },
+    {
+     "target": "rental#80",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2215,
+     "y": 1294,
+     "width": 354,
+     "height": 25
+    },
+    {
+     "target": "rental#81",
+     "line": 0,
+     "kind": "contact",
+     "detail": "email",
+     "x": 2103,
+     "y": 1330,
+     "width": 360,
+     "height": 25
+    },
+    {
+     "target": "rental#82",
+     "line": 0,
+     "kind": "credential",
+     "detail": "url_query",
+     "x": 2381,
+     "y": 1398,
+     "width": 330,
+     "height": 25
+    },
+    {
+     "target": "rental#83",
+     "line": 0,
+     "kind": "financial",
+     "detail": "amount",
+     "x": 2133,
+     "y": 1434,
+     "width": 109,
+     "height": 25
+    },
+    {
+     "target": "rental#84",
+     "line": 0,
+     "kind": "financial",
+     "detail": "account",
+     "x": 2552,
+     "y": 1434,
+     "width": 112,
+     "height": 25
+    },
+    {
+     "target": "rental#85",
+     "line": 0,
+     "kind": "credential",
+     "detail": "cue_value",
+     "x": 2524,
+     "y": 1470,
+     "width": 145,
+     "height": 29
+    }
+   ]
+  }
+ ]
+}

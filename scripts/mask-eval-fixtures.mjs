@@ -14,6 +14,7 @@
  * 引数 `--set=holdout` で、調整に使っていないホールドアウト(`eval/masking/holdout/` の pages / images /
  * truth.json)を生成する。件数の規定はホールドアウト用(HOLDOUT_LIMITS)。引数なしは従来どおり(出力は変わらない)。
  * `--set=holdout2` は 2 つ目のホールドアウト(`eval/masking/holdout2/`)。規定は holdout と同じ。
+ * `--set=holdout3` は 3 つ目(最終確認用)のホールドアウト(`eval/masking/holdout3/`)。規定は holdout と同じ。
  */
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -27,6 +28,7 @@ export const SETS = {
   default: { dir: EVAL_DIR },
   holdout: { dir: path.join(EVAL_DIR, "holdout") },
   holdout2: { dir: path.join(EVAL_DIR, "holdout2") },
+  holdout3: { dir: path.join(EVAL_DIR, "holdout3") },
 };
 
 /** 種類(IPC の `kind`)ごとの細分。ARCH §5.3 の表の順 */

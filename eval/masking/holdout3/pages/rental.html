@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>賃貸管理(架空・ホールドアウト 3)</title>
+<link rel="stylesheet" href="../../pages/common.css">
+<style>
+  /* 部屋一覧 + 鍵・設備 / 契約詳細(項目名が値の上に乗る入力フォーム型) / 入金消込 + 修繕 + 連携 + メール下書き。既存 11 画面に無い構成 */
+  body { font-size: 12px; line-height: 1.45; }
+  .side { width: 104px; padding: 12px 8px; }
+  .main { display: grid; grid-template-columns: 0.98fr 1.12fr 1.02fr; gap: 10px; padding: 10px 12px; }
+  .col { overflow: hidden; }
+  .card { padding: 8px 11px; margin-bottom: 8px; }
+  .card h2 { font-size: 13px; margin: 0 0 5px; }
+  th, td { padding: 3px 6px; }
+  th { font-size: 11px; }
+  .r { text-align: right; }
+  .kv { grid-template-columns: 96px 1fr; gap: 2px 8px; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; }
+  .form .f label { display: block; font-size: 10px; color: var(--muted); }
+  .form .f .v { border-bottom: 1px solid var(--border); padding: 0 2px 1px; min-height: 17px; }
+  .form .wide { grid-column: 1 / span 2; }
+  .badge { display: inline-block; font-size: 10px; padding: 0 5px; border-radius: 3px; border: 1px solid var(--border); color: var(--muted); }
+  .late { color: var(--warn); border-color: var(--warn); }
+  .ok { color: var(--ok); border-color: var(--ok); }
+  .note { background: var(--panel-2); border-left: 3px solid var(--warn); padding: 3px 7px; margin-top: 4px; }
+  .draft { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; line-height: 1.5; }
+  .u { font-size: 10.5px; }
+  .hw { font-family: Menlo, Monaco, "SF Mono", "Hiragino Sans", monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<!-- 架空データのみ -->
+<div class="topbar"><span class="brand">賃貸管理</span>
+  <span class="muted">管理会社 <span data-mask="identifier/company">みなと台ハウジング株式会社</span> / 汐見台営業所</span>
+  <span class="muted" style="margin-left:auto">担当 <span data-mask="identifier/person_ja">宇佐美 遼</span> さん(内線 214)</span></div>
+<div class="layout">
+  <div class="side"><div>ダッシュボード</div><div>物件</div><div class="on">契約</div><div>入金消込</div><div>修繕</div><div>募集</div><div>帳票</div><div>設定</div></div>
+  <div class="main">
+    <div class="col">
+      <div class="card">
+        <h2>物件 グランエール汐見台</h2>
+        <div class="kv">
+          <div>所在地</div><div>〒<span data-mask="contact/address">259-0000 神奈川県しおみ市汐見台三丁目十二番地の五</span></div>
+          <div>オーナー</div><div><span data-mask="identifier/company">有限会社ひばり不動産</span>(代表 <span data-mask="identifier/person_ja">鷺ノ宮恭子</span>)</div>
+          <div>オーナー連絡</div><div><span data-mask="contact/phone">0466-00-2719</span> / <span data-mask="contact/email">hibari.owner@example.org</span></div>
+          <div>建物管理番号</div><div class="mono"><span data-mask="identifier/cued_number">B-0412-0087</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>部屋一覧(6 戸)</h2>
+        <table>
+          <tr><th>号室</th><th>入居者</th><th class="r">賃料</th><th>状態</th></tr>
+          <tr><td>101</td><td><span data-mask="identifier/person_ja">樋渡 和真</span></td><td class="r"><span data-mask="financial/amount">72,000円</span></td><td><span class="badge ok">入居中</span></td></tr>
+          <tr><td>102</td><td><span data-mask="identifier/company">㈱ことぶき商事</span> 社宅</td><td class="r"><span data-mask="financial/amount">78,500円</span></td><td><span class="badge">法人</span></td></tr>
+          <tr><td>201</td><td><span data-mask="identifier/person_en">Nguyen Thi Lan</span></td><td class="r"><span data-mask="financial/amount">¥69,800</span></td><td><span class="badge ok">入居中</span></td></tr>
+          <tr><td>202</td><td class="muted">(空室)</td><td class="r">募集 <span data-mask="financial/amount">7.1万円</span></td><td><span class="badge">募集中</span></td></tr>
+          <tr><td>203</td><td><span data-mask="identifier/person_ja">小鳥遊 ひなた</span></td><td class="r"><span data-mask="financial/amount">74,000-</span></td><td><span class="badge late">退去予定</span></td></tr>
+          <tr><td>301</td><td><span data-mask="identifier/person_ja">五百旗頭　亮</span> 様</td><td class="r"><span data-mask="financial/amount">75,000円</span></td><td><span class="badge late">滞納</span></td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2>鍵・設備</h2>
+        <div class="kv">
+          <div>オートロック</div><div>暗証番号 <span class="mono" data-mask="credential/cue_value">0428#</span></div>
+          <div>キーボックス</div><div>3F 消火栓横、番号は「<span class="mono" data-mask="credential/cue_value">7319</span>」</div>
+          <div>宅配ボックス</div><div>管理用の解錠コード <span class="mono" data-mask="credential/cue_value" data-gen="secret" data-len="8"></span></div>
+          <div>共用 Wi-Fi</div><div>SSID shiomi-guest / PW: <span class="mono" data-mask="credential/cue_value" data-gen="secret" data-len="12"></span></div>
+          <div>合鍵リンク</div><div class="mono u">https://lock.example.jp/s<span data-mask="credential/url_query">?k=Tr8vQ2&amp;room=201</span></div>
+          <div>合鍵 ID</div><div class="mono s"><span data-mask="credential/random_string" data-gen="random" data-len="18"></span></div>
+          <div>防犯カメラ</div><div class="mono u">rtsp://cam.example.net/1<span data-mask="credential/url_query">?pw=Shio0428</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>入居者専用窓口(掲示文)</h2>
+        <div class="s">お問い合わせは <span data-mask="contact/email">nyukyo-desk＠shiomi.example.jp</span> または フリーダイヤル <span data-mask="contact/phone">0120-000-418</span>(平日 9〜18 時)。夜間の水漏れは <span data-mask="contact/phone">TEL.0466.00.7713</span> へ。</div>
+        <div class="s">入居者アプリの招待:</div>
+        <div class="mono u">https://app.example.jp/i<span data-mask="credential/url_query">?code=SM7Kq2&amp;bld=0412</span></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>賃貸借契約 201号室 <span class="badge ok">更新手続き中</span></h2>
+        <div class="form">
+          <div class="f"><label>契約番号</label><div class="v mono"><span data-mask="identifier/cued_number">RK-2026-001873</span></div></div>
+          <div class="f"><label>契約期間</label><div class="v">2026/04/01〜2028/03/31</div></div>
+          <div class="f"><label>契約者(ローマ字)</label><div class="v"><span data-mask="identifier/person_en">NGUYEN, Thi Lan</span></div></div>
+          <div class="f"><label>在留カード番号</label><div class="v mono"><span data-mask="identifier/cued_number">ZX00418273QA</span></div></div>
+          <div class="f"><label>勤務先</label><div class="v"><span data-mask="identifier/company">合同会社ルミナステップ</span></div></div>
+          <div class="f"><label>勤務先電話</label><div class="v"><span data-mask="contact/phone">045-000-3392</span></div></div>
+          <div class="f"><label>携帯</label><div class="v"><span data-mask="contact/phone">080 0000 6147</span></div></div>
+          <div class="f"><label>メール</label><div class="v"><span data-mask="contact/email">lan.nguyen.201@example.net</span></div></div>
+          <div class="f wide"><label>前住所</label><div class="v"><span data-mask="contact/address">東京都みどり野区桜ケ丘2-14-6 コーポ白樺 102</span></div></div>
+          <div class="f"><label>緊急連絡先</label><div class="v"><span data-mask="identifier/person_ja">後藤 美咲</span>(姉)</div></div>
+          <div class="f"><label>緊急連絡先 電話</label><div class="v"><span data-mask="contact/phone">０９０－００００－２２８１</span></div></div>
+          <div class="f wide"><label>緊急連絡先 住所</label><div class="v"><span data-mask="contact/address">大阪府なにわ台市北浜町１ー４ー２ 南館 ８０５</span></div></div>
+          <div class="f"><label>保証会社</label><div class="v"><span data-mask="identifier/company">株式会社ネストガード保証</span></div></div>
+          <div class="f"><label>保証 承認番号</label><div class="v">第 <span data-mask="identifier/cued_number">2026-0915-0447</span> 号</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>条件</h2>
+        <table>
+          <tr><th>項目</th><th class="r">金額</th><th>備考</th></tr>
+          <tr><td>賃料</td><td class="r"><span data-mask="financial/amount">69,800円</span></td><td>毎月 27 日払い</td></tr>
+          <tr><td>共益費</td><td class="r"><span data-mask="financial/amount">3,000円</span></td><td></td></tr>
+          <tr><td>敷金</td><td class="r"><span data-mask="financial/amount">¥ 69,800-</span></td><td>賃料 1 か月分</td></tr>
+          <tr><td>更新料</td><td class="r"><span data-mask="financial/amount">金陸万九千八百円</span></td><td>新賃料の 1 か月分</td></tr>
+          <tr><td>仲介手数料</td><td class="r"><span data-mask="financial/amount">76,780円(税込)</span></td><td>初回のみ</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2>家賃の支払方法</h2>
+        <div class="kv">
+          <div>口座振替</div><div>さざなみ銀行 汐見台支店 普通 <span class="mono" data-mask="financial/account">0012874</span></div>
+          <div>専用振込口座</div><div>きらら信金 本店 当座 No.<span class="mono" data-mask="financial/account">9000417</span></div>
+          <div>ゆうちょ</div><div>記号・番号 <span class="mono" data-mask="financial/account">10000-00418720</span></div>
+          <div>カード払い</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep="-"></span></div>
+          <div>予備カード</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span>(有効期限 08/29)</div>
+          <div>法人カード(102)</div><div class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-6-4" data-sep=" "></span></div>
+          <div>顧客番号</div><div class="mono"><span data-mask="identifier/cued_number">C00071946</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>10月分 入金消込</h2>
+        <table>
+          <tr><th>入金日</th><th>振込名義</th><th class="r">入金額</th><th class="r">差額</th></tr>
+          <tr><td>10/27</td><td class="hw"><span data-mask="identifier/person_ja">ﾋﾜﾀｼ ｶｽﾞﾏ</span></td><td class="r"><span data-mask="financial/amount">75,000</span></td><td class="r">0</td></tr>
+          <tr><td>10/27</td><td class="hw"><span data-mask="identifier/company">ｺﾄﾌﾞｷｼﾖｳｼﾞ(ｶ</span></td><td class="r"><span data-mask="financial/amount">81,500</span></td><td class="r">0</td></tr>
+          <tr><td>10/28</td><td class="hw"><span data-mask="identifier/person_en">NGUYEN THI LAN</span></td><td class="r"><span data-mask="financial/amount">72,800</span></td><td class="r">0</td></tr>
+          <tr><td>10/31</td><td class="hw"><span data-mask="identifier/person_ja">ｺﾀｶﾅｼ ﾋﾅﾀ</span></td><td class="r"><span data-mask="financial/amount">74,000</span></td><td class="r"><span data-mask="financial/amount">△3,000</span></td></tr>
+          <tr><td>—</td><td class="muted">未入金(301)</td><td class="r">0</td><td class="r"><span data-mask="financial/amount">-78,000</span></td></tr>
+        </table>
+        <div class="note s">督促状の送付先:<span data-mask="identifier/person_ja">五百旗頭 亮</span> 殿 <span data-mask="contact/address">しおみ市汐見台3-12-5-301</span></div>
+      </div>
+      <div class="card">
+        <h2>修繕依頼 #2026-118(給湯器の交換)</h2>
+        <div class="kv">
+          <div>依頼者</div><div><span data-mask="identifier/person_ja">樋渡和真</span>(ヒワタシ カズマ)</div>
+          <div>業者</div><div><span data-mask="identifier/company">大和田設備工業(株)</span> 担当 <span data-mask="identifier/person_ja">三ツ木</span></div>
+          <div>業者連絡先</div><div><span data-mask="contact/phone">(0466)00-5524</span> / <span data-mask="contact/email">OHWADA-SETSUBI@example.jp</span></div>
+          <div>見積額</div><div><span data-mask="financial/amount">金壱拾弐万円也</span>(負担: オーナー)</div>
+          <div>写真</div><div class="mono u">https://photo.example.com/118<span data-mask="credential/url_query">?t=0c9Fz1&amp;v=2</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>外部連携</h2>
+        <div class="kv s">
+          <div>電子契約 API キー</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="1" data-len="30"></span></div>
+          <div>決済の秘密鍵</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="10" data-len="26"></span></div>
+          <div>帳票出力トークン</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="5" data-len="20"></span></div>
+          <div>通知の署名シークレット</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="32"></span></div>
+          <div>前回の同期 ID</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="24"></span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>メール下書き(更新のご案内)</h2>
+        <div class="draft s">宛先: <span data-mask="identifier/person_ja">樋渡</span> 様 &lt;<span data-mask="contact/email">kazuma.hiwatashi@example.jp</span>&gt;<br>
+          CC: <span data-mask="contact/email">keiyaku@minatodai.example.jp</span><br>
+          更新契約書は下記からご署名ください。<div class="mono u">https://sign.example.com/d<span data-mask="credential/url_query">?sig=8kWq3Z&amp;exp=1762000000</span></div>
+          更新料 <span data-mask="financial/amount">72,000円</span> は 11 月 27 日までに 普通 <span data-mask="financial/account">3318402</span> へお振込みください。
+          入居者アプリの仮パスワードは <span class="mono" data-mask="credential/cue_value" data-gen="secret" data-len="10"></span> です。</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../../pages/fixture.js"></script>
+</body>
+</html>

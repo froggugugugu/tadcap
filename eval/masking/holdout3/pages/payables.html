@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Accounts Payable (fictional, holdout 3)</title>
+<link rel="stylesheet" href="../../pages/common.css">
+<style>
+  /* A full-width payment-run table on top, then wire message preview / vendor master / approvals + integrations. A layout none of the other 11 pages use */
+  body { font-size: 12px; line-height: 1.42; font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif; }
+  .side { width: 118px; padding: 12px 8px; }
+  .main { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .run { margin-bottom: 0; }
+  .lower { display: grid; grid-template-columns: 0.92fr 1.06fr 1.02fr; gap: 10px; min-height: 0; }
+  .col { overflow: hidden; }
+  .card { padding: 7px 11px; margin-bottom: 8px; }
+  .card h2 { font-size: 13px; margin: 0 0 4px; }
+  th, td { padding: 2px 6px; }
+  th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .r { text-align: right; }
+  .kv { grid-template-columns: 104px 1fr; gap: 1px 8px; }
+  .swift { font-family: Menlo, Monaco, "SF Mono", monospace; font-size: 11px; line-height: 1.5; background: var(--term-bg); color: var(--term-text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; }
+  .swift .tag { color: var(--term-dim); }
+  .flag { border-left: 3px solid var(--warn); background: var(--panel-2); padding: 3px 7px; margin-top: 4px; }
+  .pill { display: inline-block; font-size: 10px; padding: 0 6px; border-radius: 9px; border: 1px solid var(--border); color: var(--muted); }
+  .hold { color: var(--warn); border-color: var(--warn); }
+  .u { font-size: 10.5px; }
+  .feed div { border-bottom: 1px dotted var(--border); padding: 1px 0; }
+  .feed .ts { color: var(--muted); font-family: Menlo, Monaco, "SF Mono", monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<!-- Fictional data only -->
+<div class="topbar"><span class="brand">Payables</span>
+  <span class="muted">Entity: <span data-mask="identifier/company">Ashgrove Instruments, Inc.</span> · Payment run PR-1009-A · Value date Oct 15</span>
+  <span class="muted" style="margin-left:auto">Preparer: <span data-mask="identifier/person_en">Owen Fairweather</span></span></div>
+<div class="layout">
+  <div class="side"><div>Inbox</div><div>Invoices</div><div class="on">Payment runs</div><div>Vendors</div><div>Bank files</div><div>Approvals</div><div>Reports</div></div>
+  <div class="main">
+    <div class="card run">
+      <h2>Payment run — 8 lines selected</h2>
+      <table>
+        <tr><th>Vendor</th><th>Remit-to contact</th><th>Ref</th><th>Method</th><th>Pay to</th><th class="r">Amount</th></tr>
+        <tr><td><span data-mask="identifier/company">Brackenridge Tooling LLC</span></td><td><span data-mask="contact/email">ap@brackenridge.example.com</span></td><td class="mono">Inv # <span data-mask="identifier/cued_number">88213</span></td><td>Wire</td><td class="mono"><span data-mask="financial/account">DE00 0000 0000 0532 0130 00</span></td><td class="r"><span data-mask="financial/amount">EUR 48.250,00</span></td></tr>
+        <tr><td><span data-mask="identifier/company">Kestrel &amp; Vane Partners LLP</span></td><td><span data-mask="contact/email">Billing@KestrelVane.example.org</span></td><td class="mono">PO <span data-mask="identifier/cued_number">4500098812</span></td><td>ACH</td><td class="mono">Acct <span data-mask="financial/account">000123987654</span></td><td class="r"><span data-mask="financial/amount">$ 12,400.00</span></td></tr>
+        <tr><td><span data-mask="identifier/company">Moraine Hospitality S.A. de C.V.</span></td><td><span data-mask="contact/phone">+52 55 0000 4812</span></td><td class="mono">Folio <span data-mask="identifier/cued_number">A-77310</span></td><td>Wire</td><td class="mono">CLABE <span data-mask="financial/account">000180000000123456</span></td><td class="r"><span data-mask="financial/amount">MXN 215,600.00</span></td></tr>
+        <tr><td><span data-mask="identifier/company">Pellucid Data Pty Ltd</span></td><td><span data-mask="contact/email">accounts@pellucid.example.net</span></td><td class="mono">Inv # <span data-mask="identifier/cued_number">00041977</span></td><td>P-card</td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-6-5" data-sep=" "></span></td><td class="r"><span data-mask="financial/amount">AUD 3,980.00</span></td></tr>
+        <tr><td><span data-mask="identifier/person_en">Tamsin Holloway</span> <span class="s muted">(1099 contractor)</span></td><td><span data-mask="contact/email">t.holloway@example.com</span></td><td class="mono">Credit memo</td><td>ACH</td><td class="mono">Checking <span data-mask="financial/account">0004418821</span></td><td class="r"><span data-mask="financial/amount">(1,250.00)</span></td></tr>
+        <tr><td><span data-mask="identifier/company">Nordlicht Medien GmbH</span></td><td><span data-mask="contact/phone">+49 (0)30 0000 7719</span></td><td class="mono">RE-2026-1182</td><td>SEPA</td><td class="mono"><span data-mask="financial/account">AT00 0000 0000 0041 2876</span></td><td class="r"><span data-mask="financial/amount">7.430,00 €</span></td></tr>
+        <tr><td><span data-mask="identifier/company">Hollin Bay Freight Ltd</span></td><td><span data-mask="contact/phone">+44 (0)161 496 0815</span></td><td class="mono">HB/26/4471</td><td>Wire</td><td class="mono"><span data-mask="financial/account">GB00 ZZQX 0000 0012 8840 19</span></td><td class="r"><span data-mask="financial/amount">GBP 22,915.40</span></td></tr>
+        <tr><td><span data-mask="identifier/company">Misaki Seiki K.K.</span></td><td><span data-mask="contact/phone">+81-45-000-8810</span></td><td class="mono">MS-26-0332</td><td>Wire</td><td class="mono">Futsu <span data-mask="financial/account">7741029</span></td><td class="r"><span data-mask="financial/amount">JPY 3,400,000</span></td></tr>
+      </table>
+      <div class="s muted" style="margin-top:3px">Run total <span data-mask="financial/amount">USD 1.28M</span> (est., FX as of 09:00) · wire fees <span data-mask="financial/amount">$35 ea.</span> · hold threshold $250k</div>
+    </div>
+
+    <div class="lower">
+      <div class="col">
+        <div class="card">
+          <h2>Wire preview (MT103)</h2>
+          <div class="swift">
+            <div><span class="tag">:20:</span>PRN2026100900117</div>
+            <div><span class="tag">:23B:</span>CRED</div>
+            <div><span class="tag">:32A:</span>261015<span data-mask="financial/amount">EUR48250,00</span></div>
+            <div><span class="tag">:50K:</span>/<span data-mask="financial/account">004401928377</span></div>
+            <div><span data-mask="identifier/company">ASHGROVE INSTRUMENTS INC</span></div>
+            <div><span data-mask="contact/address">1400 LARCHMONT PKWY</span></div>
+            <div><span data-mask="contact/address">FENNICK OH 43000 US</span></div>
+            <div><span class="tag">:59:</span>/<span data-mask="financial/account">DE00000000000532013000</span></div>
+            <div><span data-mask="identifier/company">BRACKENRIDGE TOOLING LLC</span></div>
+            <div><span data-mask="contact/address">KANALSTRASSE 12, 20000 WESTERHAVEN DE</span></div>
+            <div><span class="tag">:70:</span>/INV/<span data-mask="identifier/cued_number">88213</span>/PO/<span data-mask="identifier/cued_number">4500097705</span></div>
+            <div><span class="tag">:71A:</span>SHA</div>
+          </div>
+          <div class="kv s" style="margin-top:4px">
+            <div>UETR</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="32"></span></div>
+            <div>Idempotency key</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-len="26"></span></div>
+            <div>Bank file hash</div><div class="mono"><span data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="32"></span></div>
+          </div>
+          <div class="s muted" style="margin-top:3px">Remittance advice:</div>
+          <div class="mono u">https://remit.example.net/v<span data-mask="credential/url_query">?doc=RA-00918&amp;k=d81Fv0</span></div>
+        </div>
+        <div class="card">
+          <h2>Corporate cards</h2>
+          <table>
+            <tr><th>Holder</th><th>Number</th></tr>
+            <tr><td><span data-mask="identifier/person_en">FAIRWEATHER/OWEN</span></td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep=" "></span></td></tr>
+            <tr><td>Travel (ghost)</td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="16" data-sep=""></span></td></tr>
+            <tr><td>Fleet fuel</td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep="-"></span></td></tr>
+            <tr><td><span data-mask="identifier/person_en">A. Nwosu-Clarke</span></td><td class="mono"><span data-mask="financial/card" data-gen="card" data-group="4-4-4-4" data-sep="."></span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card">
+          <h2>Vendor master — Brackenridge Tooling LLC</h2>
+          <div class="kv">
+            <div>Vendor ID</div><div class="mono"><span data-mask="identifier/cued_number">V-004417</span></div>
+            <div>EIN</div><div class="mono"><span data-mask="identifier/cued_number">00-0004417</span></div>
+            <div>D-U-N-S</div><div class="mono"><span data-mask="identifier/cued_number">00-000-4417</span></div>
+            <div>Remit-to</div><div><span data-mask="contact/address">Dept. 2280, PO Box 4471</span><br><span data-mask="contact/address">Carver Falls, MN 55000-4471</span></div>
+            <div>Ship-from</div><div><span data-mask="contact/address">88 Quarry Ln, Unit B, Halden ON K0K 0A0, Canada</span></div>
+            <div>Primary</div><div><span data-mask="identifier/person_en">Dr. Imogen Achterberg-Lowe</span><br><span data-mask="contact/phone">555.010.8812 ext. 31</span></div>
+            <div>Secondary</div><div><span data-mask="identifier/person_en">LEFEVRE, Marc-Antoine</span><br><span data-mask="contact/email">Marc-Antoine.Lefevre@brackenridge.example.com</span></div>
+            <div>Terms</div><div>Net 45 · 2/10 discount up to <span data-mask="financial/amount">USD 965.00</span></div>
+          </div>
+          <div class="flag s">Bank change requested Oct 7 by email. Verified by phone with <span data-mask="identifier/person_en">Rosa Castellanos</span> at <span data-mask="contact/phone">1-555-010-3301</span>; callback code was <span class="mono" data-mask="credential/cue_value">TUL-4471</span>.<br>Old account: <span class="mono" data-mask="financial/account">DE00 0000 0000 0198 7720 00</span></div>
+        </div>
+        <div class="card">
+          <h2>Vendor portal</h2>
+          <div class="kv s">
+            <div>Login</div><div><span data-mask="contact/email">ap-team@ashgrove.example.net</span></div>
+            <div>Password</div><div class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="14"></span></div>
+            <div>Statement link</div><div class="mono u">https://vendors.example.org/s<span data-mask="credential/url_query">?a=BRK88&amp;sig=Yp3xK0d</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card">
+          <h2>Approvals</h2>
+          <div class="kv s">
+            <div>1st approver</div><div><span data-mask="identifier/person_en">Adaeze Nwosu-Clarke</span> <span class="pill">Approved</span></div>
+            <div>2nd approver</div><div><span data-mask="identifier/person_en">Kenji Moriyama</span> <span class="pill hold">Pending</span></div>
+            <div>Approve link</div><div class="mono u">https://ap.example.com/a<span data-mask="credential/url_query">?run=1009A&amp;t=Qm82ZpLx</span></div>
+            <div>Mobile deep link</div><div class="mono u">payables://run<span data-mask="credential/url_query">?id=1009A&amp;otp=551930</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Bank connectivity</h2>
+          <div class="kv s">
+            <div>SFTP host</div><div class="mono">sftp.bank.example.net:22</div>
+            <div>SFTP user</div><div class="mono">ashgrove_ap</div>
+            <div>Key passphrase</div><div class="mono"><span data-mask="credential/cue_value" data-gen="secret" data-len="18"></span></div>
+            <div>Host fingerprint</div><div class="mono">SHA256:<span data-mask="credential/random_string" data-gen="random" data-len="30"></span></div>
+            <div>Treasury sync</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="0" data-len="24"></span></div>
+            <div>OCR inbox</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="8" data-len="26"></span></div>
+            <div>Alerts bot</div><div class="mono u"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="3" data-len="8"></span></div>
+            <div>Archive bucket</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="4" data-len="16"></span></div>
+            <div>Repo deploy</div><div class="mono"><span data-mask="credential/prefixed_token" data-gen="token" data-prefix="1" data-len="30"></span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Activity</h2>
+          <div class="feed s">
+            <div><span class="ts">09:02</span> <span data-mask="identifier/person_en">O. Fairweather</span> imported 8 invoices from <span data-mask="contact/email">invoices+ap@ashgrove.example.net</span></div>
+            <div><span class="ts">09:11</span> Bank token OTP <span class="mono" data-mask="credential/cue_value">731 904</span> accepted</div>
+            <div><span class="ts">09:14</span> Hold placed on <span data-mask="identifier/company">Moraine Hospitality</span> — over limit by <span data-mask="financial/amount">MXN 15,600</span></div>
+            <div><span class="ts">09:20</span> Session <span class="mono" data-mask="credential/random_string" data-gen="random" data-charset="hex" data-len="20"></span> by <span data-mask="identifier/person_en">Kenji Moriyama</span></div>
+            <div><span class="ts">09:26</span> Call from <span data-mask="contact/phone">+1 (555) 010-7642</span> re: remittance <span data-mask="identifier/cued_number">RA-00918</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../../pages/fixture.js"></script>
+</body>
+</html>

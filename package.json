@@ -19,6 +19,7 @@
     "mask:fixtures": "node scripts/mask-eval-fixtures.mjs",
     "mask:fixtures:holdout": "node scripts/mask-eval-fixtures.mjs --set=holdout",
     "mask:fixtures:holdout2": "node scripts/mask-eval-fixtures.mjs --set=holdout2",
+    "mask:fixtures:holdout3": "node scripts/mask-eval-fixtures.mjs --set=holdout3",
     "latency:summary": "node scripts/latency-summary.mjs"
   },
   "dependencies": {
