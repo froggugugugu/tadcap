@@ -41,6 +41,8 @@ const VARIANTS: [(&str, &str); 4] =
 enum EvalSet {
     Default,
     Holdout,
+    /// 規則の一般化の後に初めて測る 2 つ目のホールドアウト(`eval/masking/holdout2/`)
+    Holdout2,
 }
 
 impl EvalSet {
@@ -49,6 +51,7 @@ impl EvalSet {
         match value.map(str::trim) {
             None | Some("" | "default") => Some(Self::Default),
             Some("holdout") => Some(Self::Holdout),
+            Some("holdout2") => Some(Self::Holdout2),
             Some(_) => None,
         }
     }
@@ -58,12 +61,22 @@ impl EvalSet {
         match self {
             Self::Default => "eval/masking",
             Self::Holdout => "eval/masking/holdout",
+            Self::Holdout2 => "eval/masking/holdout2",
         }
     }
 
     /// 出力名のラベル。`MASK_EVAL_LABEL` があればそれ、無ければホールドアウトは `holdout`(本番を上書きしない)。
     fn label(self, env_label: Option<String>) -> Option<String> {
-        env_label.or_else(|| (self == Self::Holdout).then(|| "holdout".to_string()))
+        env_label.or_else(|| match self {
+            Self::Default => None,
+            Self::Holdout => Some("holdout".to_string()),
+            Self::Holdout2 => Some("holdout2".to_string()),
+        })
+    }
+
+    /// 規則の調整に使っていない確認用のセットか(95% の判定をせず記録だけにする)。
+    fn is_holdout(self) -> bool {
+        self != Self::Default
     }
 }
 
@@ -395,8 +408,8 @@ fn render_markdown(
     let mut md = String::new();
     md.push_str(&format!("# 自動マスキングの検出率({})\n\n", env.date));
     md.push_str("> `masking::eval::masking_eval` が生成(読み取った文字列は含まない)。\n\n");
-    if set == EvalSet::Holdout {
-        md.push_str("> 評価セット: ホールドアウト(`eval/masking/holdout/`。規則の調整に使っていない画面)。判定は参考。\n\n");
+    if set.is_holdout() {
+        md.push_str(&format!("> 評価セット: ホールドアウト(`{}/`。規則の調整に使っていない画面)。判定は参考。\n\n", set.dir()));
     }
     md.push_str("## 環境\n\n");
     md.push_str(&format!("- macOS: {} / 機種: {}\n", env.os_version, env.machine));
@@ -574,7 +587,7 @@ fn masking_eval() {
 
     // 形が決まっているものは 95% 以上(TASK #6: 届くまで止める)。固有名詞側は記録だけ。
     // ホールドアウトは合わせ込みの確認用なので記録だけ(止めない)。
-    if set == EvalSet::Holdout {
+    if set.is_holdout() {
         return;
     }
     let missing: Vec<String> = FIXED_SHAPE_DETAILS
@@ -696,6 +709,8 @@ mod tests {
         assert_eq!(EvalSet::parse(Some("pages")), None);
         assert_eq!(EvalSet::Default.dir(), "eval/masking");
         assert_eq!(EvalSet::Holdout.dir(), "eval/masking/holdout");
+        assert_eq!(EvalSet::parse(Some("holdout2")), Some(EvalSet::Holdout2));
+        assert_eq!(EvalSet::Holdout2.dir(), "eval/masking/holdout2");
     }
 
     #[test]
@@ -704,6 +719,8 @@ mod tests {
         assert_eq!(EvalSet::Default.label(Some("x".into())), Some("x".to_string()));
         assert_eq!(EvalSet::Holdout.label(None), Some("holdout".to_string()));
         assert_eq!(EvalSet::Holdout.label(Some("holdout".into())), Some("holdout".to_string()));
+        assert_eq!(EvalSet::Holdout2.label(None), Some("holdout2".to_string()));
+        assert!(EvalSet::Holdout2.is_holdout() && EvalSet::Holdout.is_holdout() && !EvalSet::Default.is_holdout());
     }
 
     #[test]
