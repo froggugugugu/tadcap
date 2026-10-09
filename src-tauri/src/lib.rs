@@ -3,10 +3,7 @@ mod capture;
 mod clipboard;
 mod commands;
 mod error;
-// 機密情報の自動マスキング(ARCH_auto-masking)。呼び出し口の `commands::scan_sensitive_text` は
-// AM-T18 で入るため、それまでは本番ビルドで未使用の警告(clippy `-D warnings` で SMOKE が落ちる)を
-// 下の属性で抑える。AM-T18 で属性ごと必ず外す(テストビルドでは抑えない)。
-#[cfg_attr(not(test), allow(dead_code))]
+// 機密情報の自動マスキング(ARCH_auto-masking)。呼び出し口は `commands::scan_sensitive_text`。
 mod masking;
 mod settings;
 mod shortcuts;
@@ -68,7 +65,8 @@ pub fn run() {
             commands::get_capture_shortcut,
             commands::set_capture_shortcut,
             commands::reset_capture_shortcut,
-            commands::set_shortcut_recording
+            commands::set_shortcut_recording,
+            commands::scan_sensitive_text
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

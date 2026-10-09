@@ -16,6 +16,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::capture::{self, CaptureKind, CaptureOutcome, CaptureResult, RunError, ScreenRecordingPermission};
 use crate::clipboard;
 use crate::error::AppError;
+use crate::masking::{self, MaskCandidate};
 use crate::shortcuts::{self, CaptureShortcutInfo};
 use crate::window_front::{self, ActivationOrigin};
 
@@ -446,6 +447,82 @@ pub async fn set_shortcut_recording(app: AppHandle, recording: bool) -> Result<(
     Ok(())
 }
 
+/// 文字の読み取り(`scan_sensitive_text`)の実行中フラグ(AM-T18、ARCH_auto-masking §12)。
+///
+/// [`CAPTURE_IN_PROGRESS`] と同じ作法(`AtomicBool` の compare-and-exchange)で二重実行を防ぐ。
+/// 下ろすのは [`TextScanGuard`] の `Drop` だけにし、成功・失敗・パニックのどの終わり方でも必ず下りるようにする。
+static TEXT_SCAN_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+
+/// [`TEXT_SCAN_IN_PROGRESS`] を立てている間だけ生きる印。捨てるとフラグが下りる。
+#[derive(Debug)]
+struct TextScanGuard(());
+
+impl Drop for TextScanGuard {
+    fn drop(&mut self) {
+        TEXT_SCAN_IN_PROGRESS.store(false, Ordering::SeqCst);
+    }
+}
+
+/// 実行中でなければフラグを立ててガードを返す。実行中なら `text_scan_busy`。
+fn begin_text_scan() -> Result<TextScanGuard, AppError> {
+    TEXT_SCAN_IN_PROGRESS
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .map(|_| TextScanGuard(()))
+        .map_err(|_| AppError::TextScanBusy)
+}
+
+/// 本文が生のバイト列(`InvokeBody::Raw`)であることを確かめて取り出す。それ以外は `text_scan_failed`。
+fn png_from_body(body: &InvokeBody) -> Result<&[u8], AppError> {
+    match body {
+        InvokeBody::Raw(bytes) => Ok(bytes),
+        _ => Err(AppError::TextScanFailed),
+    }
+}
+
+/// [`masking::ScanError`] を固定文字列の `text_scan_failed` にする(原因の種類も webview へ出さない)。
+fn app_error_from_scan_error(_err: masking::ScanError) -> AppError {
+    AppError::TextScanFailed
+}
+
+/// ガードを持ったまま `masking::scan` を最後まで実行する(`spawn_blocking` の中で呼ぶ)。
+///
+/// 読み取り(Vision)から候補の確定までを 1 つのスレッドで済ませる(`VisionPage` は `Send` でない)。
+/// 戻るときにガードが捨てられ、フラグが下りる。
+fn run_text_scan(guard: TextScanGuard, png: &[u8]) -> Result<Vec<MaskCandidate>, AppError> {
+    let _guard = guard;
+    masking::scan(png).map_err(app_error_from_scan_error)
+}
+
+/// 経過時間の記録 1 行を整形する(ARCH_auto-masking §12)。載せるのは経過ミリ秒と画像の幅・高さだけで、
+/// 候補の件数・種類・読み取った文字列は載せない。形式は既存の `[tadcap:latency]` に合わせる。
+fn format_scan_latency_log(scan_ms: f64, width: u32, height: u32) -> String {
+    format!("[tadcap:latency] origin=mask scan_ms={scan_ms:.1} size={width}x{height}")
+}
+
+/// ベース画像の PNG から機密情報の候補(矩形と種類)を読み取るコマンド(AM-T18、ARCH_auto-masking §5.4)。
+///
+/// - 本文は PNG の生のバイト列(`InvokeBody::Raw`)。それ以外は `text_scan_failed`
+/// - 別の読み取りが実行中なら `text_scan_busy`(フロントは通常、前の完了を待ってから送る。§7.1 手順 3)
+/// - 実処理(`png::validate` → Vision → 検出 → 矩形の確定)は `spawn_blocking` の中で 1 スレッドで行う。
+///   ガードをその中へ移すので、呼び出し側の Future が先に捨てられても読み取りが終わるまでフラグは下りない
+/// - エラーは固定文字列(`text_scan_busy` / `text_scan_failed`)だけ。経過時間は §12 の形式で標準エラーへ
+///   1 行出す(PNG として読めない入力は大きさが分からないので出さない)
+#[tauri::command]
+pub async fn scan_sensitive_text(request: Request<'_>) -> Result<Vec<MaskCandidate>, AppError> {
+    let png = png_from_body(request.body())?.to_vec();
+    let guard = begin_text_scan()?;
+    let start = Instant::now();
+    let size = masking::image_size(&png);
+    let result = tauri::async_runtime::spawn_blocking(move || run_text_scan(guard, &png))
+        .await
+        .map_err(|_| AppError::TextScanFailed)?;
+    if let Some((width, height)) = size {
+        let scan_ms = capture::duration_to_ms(start.elapsed());
+        eprintln!("{}", format_scan_latency_log(scan_ms, width, height));
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -669,5 +746,71 @@ mod tests {
             AppError::Internal(msg) => assert!(msg.contains("width")),
             _ => panic!("Internalへ変換されるべき"),
         }
+    }
+
+    // ---- scan_sensitive_text(AM-T18)----
+
+    #[test]
+    fn png_from_body_は生のバイト列だけを受け取りそれ以外はtext_scan_failedにする() {
+        let raw = InvokeBody::Raw(vec![1, 2, 3]);
+        assert_eq!(png_from_body(&raw).expect("生のバイト列が弾かれた"), &[1, 2, 3]);
+
+        let json = InvokeBody::Json(serde_json::json!([1, 2, 3]));
+        let err = png_from_body(&json).expect_err("JSON の本文が通った");
+        assert_eq!(serde_json::to_string(&err).unwrap(), "\"text_scan_failed\"");
+    }
+
+    #[test]
+    fn app_error_from_scan_error_はどの失敗も固定文字列text_scan_failedにする() {
+        for err in [
+            crate::masking::ScanError::InvalidPng,
+            crate::masking::ScanError::ImageTooLarge,
+            crate::masking::ScanError::RecognitionFailed,
+        ] {
+            assert_eq!(app_error_from_scan_error(err).to_string(), "text_scan_failed");
+        }
+    }
+
+    /// `TEXT_SCAN_IN_PROGRESS` はモジュール単位の `static` で、触るのはこのテストだけ
+    /// (`try_begin_capture` のテストと同じく、1 つのテスト関数の中で遷移を確かめる)。
+    #[test]
+    fn text_scanの排他は二重実行をtext_scan_busyにし失敗の後も下りる() {
+        let guard = begin_text_scan().expect("最初の開始が弾かれた");
+        let busy = begin_text_scan().expect_err("実行中に 2 回目が通った");
+        assert_eq!(serde_json::to_string(&busy).unwrap(), "\"text_scan_busy\"");
+
+        // 失敗(PNG でない)で終わっても、フラグは下りる
+        let failed = run_text_scan(guard, b"not a png").expect_err("PNG でない入力が通った");
+        assert_eq!(failed.to_string(), "text_scan_failed");
+
+        let again = begin_text_scan().expect("終わった後に再実行できない");
+        // 成功・失敗によらず、ガードを捨てれば下りる
+        drop(again);
+        let last = begin_text_scan().expect("ガードを捨てた後に再実行できない");
+        drop(last);
+    }
+
+    #[test]
+    fn format_scan_latency_log_は経過ミリ秒と画像の大きさだけを出す() {
+        assert_eq!(
+            format_scan_latency_log(1234.56, 1920, 1080),
+            "[tadcap:latency] origin=mask scan_ms=1234.6 size=1920x1080"
+        );
+    }
+
+    /// 実機の Vision で評価画像 1 枚を `run_text_scan` に通し、候補の件数と時間だけを表示する
+    /// (`--nocapture` で確認。読み取った文字列は扱わない)。
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore = "実機の Vision を使う(macOS)"]
+    fn run_text_scan_は評価画像から候補を返す_計測() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../eval/masking/images/billing.fhd.light.png");
+        let png = std::fs::read(path).expect("評価画像を読めなかった");
+        let guard = begin_text_scan().expect("開始できない");
+        let start = Instant::now();
+        let candidates = run_text_scan(guard, &png).expect("読み取りに失敗した");
+        let ms = crate::capture::duration_to_ms(start.elapsed());
+        assert!(!candidates.is_empty(), "候補が 0 件");
+        eprintln!("[measure] candidates={} scan_ms={ms:.1}", candidates.len());
     }
 }

@@ -41,6 +41,13 @@ pub enum AppError {
     /// 設定ファイルへ保存できなかった。元のキーに戻した。
     #[error("settings_save_failed")]
     SettingsSaveFailed,
+    /// 別の文字の読み取り(`scan_sensitive_text`)が実行中(AM-T18、ARCH_auto-masking §5.4)。
+    #[error("text_scan_busy")]
+    TextScanBusy,
+    /// 文字の読み取りに失敗した(PNG でない・大きすぎる・Vision の失敗・本文が生のバイト列でない)。
+    /// 原因の詳細(入力の一部・`NSError` の説明文など)は含めない(ARCH_auto-masking §12)。
+    #[error("text_scan_failed")]
+    TextScanFailed,
 }
 
 impl Serialize for AppError {
@@ -85,6 +92,15 @@ mod tests {
             (AppError::SettingsSaveFailed, "settings_save_failed"),
         ];
         for (err, text) in cases {
+            assert_eq!(serde_json::to_string(&err).unwrap(), format!("\"{text}\""));
+        }
+    }
+
+    #[test]
+    fn 文字の読み取りのエラーは固定文字列でシリアライズされる() {
+        let cases = [(AppError::TextScanBusy, "text_scan_busy"), (AppError::TextScanFailed, "text_scan_failed")];
+        for (err, text) in cases {
+            assert_eq!(err.to_string(), text);
             assert_eq!(serde_json::to_string(&err).unwrap(), format!("\"{text}\""));
         }
     }
