@@ -18,10 +18,13 @@ import { createFixtureCapturePng } from "./fixtures/sampleCapturePng";
 import {
   getClipboardImageStats,
   getClipboardWriteCount,
+  getHeldCaptureImageCount,
   getTextScanCalls,
   installTauriMocks,
+  releaseCaptureImages,
   releaseTextScans,
   routeCrossOriginAssets,
+  setCaptureImageHold,
   setTextScanBehavior,
   type MockCaptureResult,
   type MockScanCandidate,
@@ -59,6 +62,7 @@ const MESSAGES = {
   emptyHint: "貼る前に画像を目で確かめてください。",
   failed: "文字を読み取れませんでした。画像は変更していません。",
   applied: (k: number) => `候補 ${k} 件にモザイクをかけました。⌘Z で戻せます。`,
+  apply: "まとめてモザイク",
 };
 
 /** 印の位置の許容差(CSS px)。`offsetLeft` の整数丸めで最大 0.5px ずれるため。 */
@@ -518,6 +522,59 @@ test.describe("自動マスキング(AM-T17)", () => {
     await releaseTextScans(page);
     await page.waitForTimeout(300);
     await expectIdle(page);
+    expect(pageErrors).toEqual([]);
+  });
+
+  /**
+   * 新規キャプチャの差し替えの途中(`discardMaskSession()` の後、`read_capture_image` の応答待ちで
+   * まだ前の画像が出ている間)にする。戻ったら呼び出し側が {@link releaseCaptureImages} で進める。
+   */
+  async function enterReplacementGap(page: Page): Promise<void> {
+    await setCaptureImageHold(page, true);
+    await page.getByRole("button", { name: "キャプチャ" }).click();
+    await expect.poll(() => getHeldCaptureImageCount(page)).toBe(1);
+    await setCaptureImageHold(page, false);
+    // 前の画像がまだ出ていて、開始できる(隙間に始められる状態)
+    await expect(autoMaskButton(page)).toBeEnabled();
+  }
+
+  // AM-T25-F1 MUST-1(a): 隙間に始めた処理の結果が、画像の差し替えの後に届く。
+  test("差し替えの途中に始め、差し替え後に結果が届いても、処理中のまま残らず古い印も出ない", async ({ page }) => {
+    await captureAndWaitReady(page);
+    await enterReplacementGap(page);
+    await setTextScanBehavior(page, { candidates: CANDIDATES, hold: true });
+    await autoMaskButton(page).click();
+    await expect(page.locator(".mask-bar__count")).toHaveText(MESSAGES.scanning);
+    await waitForScanCalls(page, 1);
+    // 処理中もツールは押せない(AM-T25-F1 SHOULD-1)
+    await expect(page.locator(".tool-toolbar__button").first()).toBeDisabled();
+
+    await releaseCaptureImages(page);
+    await expect(page.locator("#history-sidebar li")).toHaveCount(2);
+    await releaseTextScans(page);
+    await page.waitForTimeout(300);
+    await expectIdle(page);
+
+    // 新しい画像でもう一度始められる
+    await setTextScanBehavior(page, { candidates: CANDIDATES });
+    await autoMaskButton(page).click();
+    await expectReview(page, 4);
+    expect(pageErrors).toEqual([]);
+  });
+
+  // AM-T25-F1 MUST-1(b): 隙間に始めた処理の結果が、画像の差し替えの前に届く。
+  test("差し替えの途中に始め、差し替え前に結果が届いても、新しい画像に古い印が残らない", async ({ page }) => {
+    await captureAndWaitReady(page);
+    await enterReplacementGap(page);
+    await autoMaskButton(page).click();
+    // 前の画像の上で確認中になる
+    await expectReview(page, 4);
+
+    await releaseCaptureImages(page);
+    await expect(page.locator("#history-sidebar li")).toHaveCount(2);
+    await expectIdle(page);
+    // まとめてモザイクは押せない(古い候補で新しい画像を加工しない)
+    await expect(page.getByRole("button", { name: MESSAGES.apply })).toBeHidden();
     expect(pageErrors).toEqual([]);
   });
 

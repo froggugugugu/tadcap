@@ -110,6 +110,15 @@ export function getMaskSession(): MaskSessionState {
 }
 
 /**
+ * 処理中・確認中か(`idle` 以外)。この間はベース・注釈を変える操作(ツール・取り消し/やり直し・
+ * 重ね順・削除)を止める(ARCH §15 #4 の確認モードを処理中にも広げる、AM-T25-F1)。
+ * 省略時は現在の状態で判定する。
+ */
+export function isMaskSessionActive(session: MaskSessionState = state): boolean {
+  return session.status !== "idle";
+}
+
+/**
  * 表示中の画像で読み取りを始める。新しい token を発行して `scanning` へ進め、その token を返す。
  * `scanning`・`review` 中は何もせず `null` を返す(FR-001 の二重実行防止)。
  */

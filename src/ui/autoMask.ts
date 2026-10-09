@@ -7,14 +7,15 @@
 //!   `scanSensitiveText()` → 受け取った矩形を `clipRectToCanvas()` で収め直す → `acceptScanResult()`
 //! - 実行中の invoke を 1 つだけ保持し、終わるまで次を送らない(Rust の `text_scan_busy` を通常は起こさない)
 //! - まとめてモザイクは `applyBaseEdits(activeRects(), pixelateRect)` で 1 手として積み、`discardMaskSession()`
+//! - 開始時に選択を外す。表示中の画像が開始時と違ってきたら候補を捨てる(AM-T25-F1)
 //! - 候補・読み取り結果を `console`・ストレージ・履歴に残さない(NFR-002)。失敗の詳細も画面に出さない
 //!
 //! 判定と文言は DOM なしで試せる純粋関数、実行の流れは入出力を差し込む `createAutoMaskController()`、
 //! DOM の結線は `initAutoMask()` に分ける(ARCH §9.1)。
 
-import { getCanvasState, subscribeCanvasState, type CanvasImage } from "../canvas/canvasState";
+import { getCanvasState, isSameCanvasImage, subscribeCanvasState, type CanvasImage } from "../canvas/canvasState";
 import { clipRectToCanvas, type Rect } from "../canvas/coords";
-import { applyBaseEdits, exportDocumentBase } from "../canvas/documentState";
+import { applyBaseEdits, exportDocumentBase, selectObject } from "../canvas/documentState";
 import {
   acceptScanResult,
   activeRects,
@@ -54,9 +55,12 @@ export function resultStatusText(total: number, excluded: number): string {
 
 // ---- 判定(純粋関数) ----
 
-/** 開始できるか: 画像があり `idle` のとき(ボタンの有効・無効も同じ判定、UI 仕様 §1.4)。 */
-export function canStartScan(hasImage: boolean, session: MaskSessionState): boolean {
-  return hasImage && session.status === "idle";
+/**
+ * 開始できるか: 画像があり `idle` で、ドラッグ中でないとき(ボタンの有効・無効も同じ判定、UI 仕様 §1.4)。
+ * ドラッグ中はベースが書き換わる途中のため始めない(AM-T25-F1 SHOULD-1)。
+ */
+export function canStartScan(hasImage: boolean, session: MaskSessionState, isDrawing = false): boolean {
+  return hasImage && session.status === "idle" && !isDrawing;
 }
 
 export interface AutoMaskKeyEvent {
@@ -172,12 +176,19 @@ export interface AutoMaskDeps {
   getImage: () => CanvasImage | null;
   /** 表示中のベースの実ピクセルの大きさ。 */
   getImageSize: () => { width: number; height: number };
+  /** ドラッグ中か(`canvasState.isDrawing`)。 */
+  isDrawing: () => boolean;
   commitPendingText: () => void;
+  /**
+   * 選択中のオブジェクトの選択を外す(`selectObject(null)`)。確認中に色・文字サイズの選択が
+   * Canvas に効かない前提(UI 仕様 §6)を開始時に成り立たせる(AM-T25-F1 SHOULD-2)。
+   */
+  clearSelection: () => void;
   /** ベースの PNG(注釈のオブジェクトを含まない)。 */
   exportBase: () => Promise<Blob>;
   scan: (png: Blob) => Promise<ScannedCandidate[]>;
-  /** `documentState.applyBaseEdits()`(矩形ごとの描画を 1 手として積む)。 */
-  applyBaseEdits: (rects: readonly Rect[], draw: (ctx: CanvasRenderingContext2D, rect: Rect) => void) => boolean;
+  /** `documentState.applyBaseEdits()`(矩形ごとの描画を 1 手として積む)。戻り値は実際に加工した件数。 */
+  applyBaseEdits: (rects: readonly Rect[], draw: (ctx: CanvasRenderingContext2D, rect: Rect) => void) => number;
   /** トースト(失敗・一括モザイク後)。 */
   notify: (message: string, kind: ToastKind) => void;
 }
@@ -203,10 +214,11 @@ export function createAutoMaskController(deps: AutoMaskDeps): AutoMaskController
 
   const start = async (): Promise<void> => {
     const image = deps.getImage();
-    if (!image || !canStartScan(true, getMaskSession())) {
+    if (!image || !canStartScan(true, getMaskSession(), deps.isDrawing())) {
       return;
     }
     deps.commitPendingText();
+    deps.clearSelection();
     const token = beginScan(image);
     if (token === null) {
       return;
@@ -246,8 +258,13 @@ export function createAutoMaskController(deps: AutoMaskDeps): AutoMaskController
       failScan(token);
       return;
     }
-    // token・画像が開始時と違えば `acceptScanResult()` が捨てる(FR-001)
-    acceptScanResult(token, current, toMaskCandidateInputs(scanned, deps.getImageSize()));
+    // token・画像が開始時と違えば `acceptScanResult()` が捨てる(FR-001)。捨てたのが今の処理なら
+    // (画像の差し替えの隙間に始めた場合など)`scanning` のまま残さず idle に戻す。古い画像の結果
+    // なので失敗のトーストは出さない(AM-T25-F1 MUST-1)
+    const accepted = acceptScanResult(token, current, toMaskCandidateInputs(scanned, deps.getImageSize()));
+    if (!accepted && isCurrentScan(token)) {
+      failScan(token);
+    }
   };
 
   const applyMosaic = (): void => {
@@ -258,8 +275,12 @@ export function createAutoMaskController(deps: AutoMaskDeps): AutoMaskController
     const { width, height } = deps.getImageSize();
     const applied = deps.applyBaseEdits(rects, (ctx, rect) => pixelateRect(ctx, rect, width, height));
     discardMaskSession();
-    if (applied) {
-      deps.notify(AUTO_MASK_MESSAGES.applied(rects.length), "info");
+    // 件数は実際に加工した数。1 件も加工できなければ(サーフェスが無い等)画像は変わっていないので
+    // 失敗として知らせる(AM-T25-F1 C-1)
+    if (applied > 0) {
+      deps.notify(AUTO_MASK_MESSAGES.applied(applied), "info");
+    } else {
+      deps.notify(AUTO_MASK_MESSAGES.failed, "error");
     }
   };
 
@@ -268,6 +289,21 @@ export function createAutoMaskController(deps: AutoMaskDeps): AutoMaskController
   };
 
   return { start, applyMosaic, cancel };
+}
+
+/**
+ * 表示中の画像が処理中・確認中の画像と違ってきたら候補を捨てる(`canvasState` を購読する)。
+ * 画像の差し替え(新規キャプチャ・履歴の切替)は `discardMaskSession()` の後に await を挟んでから
+ * 画像が変わるため、その隙間に始めた処理・届いた結果が新しい画像に残らないようにする
+ * (AM-T25-F1 MUST-1)。戻り値は購読の解除関数。
+ */
+export function bindMaskSessionToCanvasImage(): () => void {
+  return subscribeCanvasState(({ image }) => {
+    const session = getMaskSession();
+    if (session.status !== "idle" && !isSameCanvasImage(session.image, image)) {
+      discardMaskSession();
+    }
+  });
 }
 
 // ---- DOM ----
@@ -387,7 +423,9 @@ export function initAutoMask(elements: AutoMaskElements): () => void {
   const controller = createAutoMaskController({
     getImage: () => getCanvasState().image,
     getImageSize: () => ({ width: elements.canvas.width, height: elements.canvas.height }),
+    isDrawing: () => getCanvasState().isDrawing,
     commitPendingText,
+    clearSelection: () => selectObject(null),
     exportBase: exportDocumentBase,
     scan: scanSensitiveText,
     applyBaseEdits,
@@ -396,7 +434,8 @@ export function initAutoMask(elements: AutoMaskElements): () => void {
 
   const render = (): void => {
     const session = getMaskSession();
-    button.disabled = !canStartScan(getCanvasState().image !== null, session);
+    const { image, isDrawing } = getCanvasState();
+    button.disabled = !canStartScan(image !== null, session, isDrawing);
     renderMaskBar(bar, maskBarView(session));
   };
 
@@ -421,11 +460,14 @@ export function initAutoMask(elements: AutoMaskElements): () => void {
   bar.dismiss.addEventListener("click", controller.cancel);
   bar.apply.addEventListener("click", controller.applyMosaic);
   window.addEventListener("keydown", handleKeydown);
+  // 画像の変化で候補を捨てる購読を、表示の購読より先に登録する(捨てた後の状態で描く)
+  const unbindImage = bindMaskSessionToCanvasImage();
   const unsubscribeSession = subscribeMaskSession(render);
   const unsubscribeCanvas = subscribeCanvasState(render);
   render();
 
   return () => {
+    unbindImage();
     unsubscribeSession();
     unsubscribeCanvas();
     window.removeEventListener("keydown", handleKeydown);

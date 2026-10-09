@@ -19,7 +19,7 @@
 //! 担い、そちらをユニットテストする。ボタンの押下・無効の判定は純粋関数 `toolButtonState()` に
 //! 切り出してユニットテストする(AM-T13)。
 //!
-//! AM-T13: 自動マスキングの確認中(`maskSession` が `review`)は全ツールボタンを無効にする
+//! AM-T13・AM-T25-F1: 自動マスキングの処理中・確認中(`maskSession` が `idle` 以外)は全ツールボタンを無効にする
 //! (ARCH_auto-masking §15 #4 A 案「確認モード」、FR-012)。
 
 import {
@@ -28,7 +28,7 @@ import {
   toggleActiveTool,
   type ToolId,
 } from "../canvas/canvasState";
-import { getMaskSession, subscribeMaskSession } from "../canvas/maskSession";
+import { isMaskSessionActive, subscribeMaskSession } from "../canvas/maskSession";
 
 interface ToolDefinition {
   id: ToolId;
@@ -87,8 +87,14 @@ const TOOLS: ToolDefinition[] = [
 export interface ToolButtonContext {
   activeTool: ToolId | null;
   isDrawing: boolean;
-  /** 自動マスキングの確認中(`maskSession` が `review`)。 */
-  isReviewing: boolean;
+  /** 自動マスキングの処理中・確認中(`maskSession` が `idle` 以外、AM-T13・AM-T25-F1)。 */
+  isMasking: boolean;
+}
+
+/** 今のストア(`canvasState`・`maskSession`)からボタンの文脈を組み立てる。 */
+export function currentToolButtonContext(): ToolButtonContext {
+  const { activeTool, isDrawing } = getCanvasState();
+  return { activeTool, isDrawing, isMasking: isMaskSessionActive() };
 }
 
 /**
@@ -100,14 +106,14 @@ export function toolButtonState(
   context: ToolButtonContext,
 ): { pressed: boolean; disabled: boolean } {
   const pressed = context.activeTool === id;
-  return { pressed, disabled: context.isReviewing || (context.isDrawing && !pressed) };
+  return { pressed, disabled: context.isMasking || (context.isDrawing && !pressed) };
 }
 
 /**
  * ツール切替UIを `mount` 配下に構築し、`canvasState` と結線する(Container相当)。
  * ボタンクリックで `toggleActiveTool()` を呼び、状態変化を購読して押下状態(`aria-pressed`)に
  * 反映する。描画中(`isDrawing`)は非アクティブなボタンを無効化し、ドラッグ中のツール切替を防ぐ。
- * 自動マスキングの確認中は全ボタンを無効化する(`maskSession` も購読する、AM-T13)。
+ * 自動マスキングの処理中・確認中は全ボタンを無効化する(`maskSession` も購読する、AM-T13・AM-T25-F1)。
  */
 export function initToolbar(mount: HTMLElement): void {
   const buttons = new Map<ToolId, HTMLButtonElement>();
@@ -128,10 +134,9 @@ export function initToolbar(mount: HTMLElement): void {
   }
 
   const render = (): void => {
-    const { activeTool, isDrawing } = getCanvasState();
-    const isReviewing = getMaskSession().status === "review";
+    const context = currentToolButtonContext();
     for (const [id, button] of buttons) {
-      const { pressed, disabled } = toolButtonState(id, { activeTool, isDrawing, isReviewing });
+      const { pressed, disabled } = toolButtonState(id, context);
       button.setAttribute("aria-pressed", String(pressed));
       button.classList.toggle("tool-toolbar__button--active", pressed);
       button.disabled = disabled;

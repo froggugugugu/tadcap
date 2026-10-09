@@ -509,8 +509,11 @@ fn format_scan_latency_log(scan_ms: f64, width: u32, height: u32) -> String {
 ///   1 行出す(PNG として読めない入力は大きさが分からないので出さない)
 #[tauri::command]
 pub async fn scan_sensitive_text(request: Request<'_>) -> Result<Vec<MaskCandidate>, AppError> {
-    let png = png_from_body(request.body())?.to_vec();
+    let body = png_from_body(request.body())?;
+    // 実行中なら大きな本文をコピーせずに `text_scan_busy` を返す(AM-T25-F1 C-2)。
+    // `spawn_blocking` へ渡すための所有権のあるコピーは、ガードを取れてから作る
     let guard = begin_text_scan()?;
+    let png = body.to_vec();
     let start = Instant::now();
     let size = masking::image_size(&png);
     let result = tauri::async_runtime::spawn_blocking(move || run_text_scan(guard, &png))

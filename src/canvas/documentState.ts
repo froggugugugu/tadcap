@@ -204,15 +204,16 @@ export function applyBaseEdit(rect: Rect, draw: (ctx: CanvasRenderingContext2D) 
  * 順序の約束: 矩形ごとに「その時点のピクセルを読む → `draw(ctx, rect)`で加工」を**配列順に**行い、
  * 各`pixels`コマンドを1つの`group`で積む。`group`は逆順に取り消し・順にやり直すため、矩形が
  * 重なっていても1回の取り消しで元の画素に戻る。矩形は整数化して画像内に切り詰め、幅・高さが0の
- * ものは飛ばす(`draw`には切り詰め後の矩形を渡す)。有効な矩形が無い・サーフェスが無ければ
- * 何も積まず`false`。
+ * ものは飛ばす(`draw`には切り詰め後の矩形を渡す)。戻り値は実際に加工した矩形の件数
+ * (AM-T25-F1 C-1: 一括モザイク後のトーストに実数を出すため)。有効な矩形が無い・サーフェスが
+ * 無ければ何も積まず`0`。
  */
 export function applyBaseEdits(
   rects: readonly Rect[],
   draw: (ctx: CanvasRenderingContext2D, rect: Rect) => void,
-): boolean {
+): number {
   if (!surface) {
-    return false;
+    return 0;
   }
   const target = surface;
   const { width, height } = target.size();
@@ -227,11 +228,11 @@ export function applyBaseEdits(
     commands.push({ type: "pixels", rect, image: before });
   }
   if (commands.length === 0) {
-    return false;
+    return 0;
   }
   pushCommand({ type: "group", commands });
   commit();
-  return true;
+  return commands.length;
 }
 
 /** 最新の操作を取り消す。取り消せなければ`false`。 */

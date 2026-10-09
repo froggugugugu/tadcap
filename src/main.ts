@@ -174,6 +174,9 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
     // 退避にそのまま使えるよう渡す(ベースを変えるまで再エンコードしない)。
     resetDocument(blob);
     setCanvasImage({ assetUrl: objectUrl, capture: result });
+    // AM-T25-F1: 上の await の間(画像が変わる前)に始めた自動マスキングの処理・結果を捨てる
+    // (`ui/autoMask.ts::bindMaskSessionToCanvasImage` も画像の変化で捨てる。念のため差し替え直後にも)。
+    discardMaskSession();
     const assets = await captureHistoryAssets(canvasEl);
     const evicted = addHistoryItem({
       id: result.id,
@@ -284,6 +287,8 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
       restoreDocument(archived.snapshot, bitmap, archived.base);
       bitmap.close();
       setCanvasImage({ assetUrl: item.image, capture: null });
+      // AM-T25-F1: 上の await の間に始めた自動マスキングの処理・結果を捨てる(新規キャプチャと同じ)。
+      discardMaskSession();
       return;
     }
     const image = await loadImage(item.image);
@@ -292,6 +297,7 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
     // T24と同じ理由)。退避が無い場合(T34以前の経路・失敗時)のフォールバック。
     resetDocument();
     setCanvasImage({ assetUrl: item.image, capture: null });
+    discardMaskSession();
   } catch (error) {
     // 読めなかった項目の選択とCanvasの中身(前の画像)がずれたまま次の保存点を迎えると、別の項目の
     // 内容で上書きしてしまう。エディタを空にして未選択にし、履歴から選び直してもらう(人間の決定)。

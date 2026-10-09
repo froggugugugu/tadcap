@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { beginScan, discardMaskSession, isMaskSessionActive } from "../canvas/maskSession";
 import { selectionKeyAction } from "./selectionKeys";
 
 const plain = { metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, isComposing: false };
@@ -52,5 +53,18 @@ describe("selectionKeyAction(確認中)", () => {
   it("確認が終わる(false)と元どおり", () => {
     expect(selectionKeyAction({ ...plain, key: "Delete" }, true, null, false)).toBe("delete");
     expect(selectionKeyAction({ ...plain, key: "Escape" }, true, null, false)).toBe("deselect");
+  });
+});
+
+// AM-T25-F1 SHOULD-1: 処理中(`scanning`)も確認中と同じく削除・選択解除を止める
+// (`bindSelectionKeys` は `isMaskSessionActive()` を渡す)。
+describe("selectionKeyAction(処理中)", () => {
+  afterEach(() => {
+    discardMaskSession();
+  });
+
+  it("処理中は Delete で削除しない", () => {
+    beginScan({ assetUrl: "blob:selection", capture: null });
+    expect(selectionKeyAction({ ...plain, key: "Delete" }, true, null, isMaskSessionActive())).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import {
   discardMaskSession,
   failScan,
   getMaskSession,
+  isMaskSessionActive,
   subscribeMaskSession,
   toggleCandidate,
   type MaskCandidate,
@@ -340,5 +341,30 @@ describe("候補に文字列を持たせない(NFR-002・ARCH §6.1)", () => {
     expect(Object.keys(state.candidates[0]).sort()).toEqual(["excluded", "id", "kind", "rect"]);
     expect(Object.keys(state.candidates[0].rect).sort()).toEqual(["height", "width", "x", "y"]);
     expect(JSON.stringify(state.candidates)).not.toContain("secret");
+  });
+});
+
+// AM-T25-F1 SHOULD-1: 処理中も確認中と同じく、ベース・注釈を変える操作を止める判定。
+describe("isMaskSessionActive(処理中・確認中か)", () => {
+  beforeEach(() => {
+    discardMaskSession();
+  });
+
+  it("idle では false、scanning・review では true", () => {
+    expect(isMaskSessionActive()).toBe(false);
+    const image = makeImage();
+    const token = beginScan(image);
+    expect(isMaskSessionActive()).toBe(true);
+    acceptScanResult(token!, image, INPUTS);
+    expect(isMaskSessionActive()).toBe(true);
+    discardMaskSession();
+    expect(isMaskSessionActive()).toBe(false);
+  });
+
+  it("状態を渡せばその状態で判定する", () => {
+    const image = makeImage();
+    expect(isMaskSessionActive({ status: "idle" })).toBe(false);
+    expect(isMaskSessionActive({ status: "scanning", token: 1, image })).toBe(true);
+    expect(isMaskSessionActive({ status: "review", token: 1, image, candidates: [] })).toBe(true);
   });
 });

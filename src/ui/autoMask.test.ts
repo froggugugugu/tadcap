@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // `@tauri-apps/api` は Tauri ランタイム無しでは動作しないため、モックに差し替える
 // (`textScan.test.ts` と同じ作法)。本ファイルの実行の組み立ては IPC を差し込みで受けるため、
@@ -7,7 +7,14 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
-import type { CanvasImage } from "../canvas/canvasState";
+import {
+  clearCanvasImage,
+  getCanvasState,
+  setActiveTool,
+  setCanvasImage,
+  setDrawing,
+  type CanvasImage,
+} from "../canvas/canvasState";
 import type { Rect } from "../canvas/coords";
 import {
   acceptScanResult,
@@ -21,6 +28,7 @@ import { TextScanError, type ScannedCandidate } from "../ipc/textScan";
 import { arrangeShortcutCommand } from "./arrangeButtons";
 import {
   AUTO_MASK_MESSAGES,
+  bindMaskSessionToCanvasImage,
   canApplyMosaic,
   canStartScan,
   createAutoMaskController,
@@ -87,6 +95,7 @@ interface Harness {
   scan: ReturnType<typeof vi.fn>;
   applyBaseEdits: ReturnType<typeof vi.fn>;
   notify: ReturnType<typeof vi.fn>;
+  drawing: { current: boolean };
 }
 
 function makeHarness(scanImpl: (png: Blob) => Promise<ScannedCandidate[]> = async () => SCANNED): Harness {
@@ -97,13 +106,19 @@ function makeHarness(scanImpl: (png: Blob) => Promise<ScannedCandidate[]> = asyn
     calls.push("scan");
     return scanImpl(png);
   });
-  const applyBaseEdits = vi.fn((_rects: readonly Rect[]) => true);
+  // 既定は渡した矩形をすべて適用できた扱い(適用した件数を返す)
+  const applyBaseEdits = vi.fn((rects: readonly Rect[]) => rects.length);
   const notify = vi.fn();
+  const drawing = { current: false };
   const deps: AutoMaskDeps = {
     getImage: () => image.current,
     getImageSize: () => size,
+    isDrawing: () => drawing.current,
     commitPendingText: () => {
       calls.push("commit");
+    },
+    clearSelection: () => {
+      calls.push("deselect");
     },
     exportBase: async () => {
       calls.push("export");
@@ -113,7 +128,7 @@ function makeHarness(scanImpl: (png: Blob) => Promise<ScannedCandidate[]> = asyn
     applyBaseEdits,
     notify,
   };
-  return { deps, image, size, calls, scan, applyBaseEdits, notify };
+  return { deps, image, size, calls, scan, applyBaseEdits, notify, drawing };
 }
 
 beforeEach(() => {
@@ -132,6 +147,11 @@ describe("canStartScan(開始できる条件、FR-001・FR-014)", () => {
     const review: MaskSessionState = { status: "review", token: 1, image, candidates: [] };
     expect(canStartScan(true, scanning)).toBe(false);
     expect(canStartScan(true, review)).toBe(false);
+  });
+
+  it("ドラッグ中は開始しない(AM-T25-F1 SHOULD-1)", () => {
+    expect(canStartScan(true, { status: "idle" }, true)).toBe(false);
+    expect(canStartScan(true, { status: "idle" }, false)).toBe(true);
   });
 });
 
@@ -330,7 +350,7 @@ describe("createAutoMaskController(ARCH §7.1 の手順)", () => {
     const controller = createAutoMaskController(h.deps);
     await controller.start();
 
-    expect(h.calls).toEqual(["commit", "export", "scan"]);
+    expect(h.calls).toEqual(["commit", "deselect", "export", "scan"]);
     const session = getMaskSession();
     expect(session.status).toBe("review");
     if (session.status !== "review") return;
@@ -504,5 +524,148 @@ describe("createAutoMaskController(ARCH §7.1 の手順)", () => {
     createAutoMaskController(h.deps).cancel();
     expect(getMaskSession().status).toBe("idle");
     expect(h.notify).not.toHaveBeenCalled();
+  });
+});
+
+// AM-T25-F1: 画像の差し替えの途中に始めた場合・処理中/確認中の制限(レビュー指摘)。
+describe("画像の差し替えとの競合(AM-T25-F1 MUST-1)", () => {
+  it("処理中に画像が差し替わってから結果が届くと、捨てて idle に戻る(処理中のまま残らない)", async () => {
+    const pending = deferred<ScannedCandidate[]>();
+    const h = makeHarness(() => pending.promise);
+    const run = createAutoMaskController(h.deps).start();
+    await flush();
+    // `discardMaskSession()` を経ずに画像だけが変わった(差し替えの隙間に始めた)場合
+    h.image.current = makeImage();
+    pending.resolve(SCANNED);
+    await run;
+    expect(getMaskSession().status).toBe("idle");
+    // 古い画像の結果なので失敗としては知らせない
+    expect(h.notify).not.toHaveBeenCalled();
+  });
+
+  it("古い token の結果が届いても、今の処理は止めない", async () => {
+    const first = deferred<ScannedCandidate[]>();
+    const h = makeHarness(() => first.promise);
+    const controller = createAutoMaskController(h.deps);
+    const run = controller.start();
+    await flush();
+    // 破棄 → 同じ画像で次の処理を始めた(古い結果が後から届く)
+    discardMaskSession();
+    const image = h.image.current!;
+    const token = beginScan(image);
+    first.resolve(SCANNED);
+    await run;
+    const session = getMaskSession();
+    expect(session.status).toBe("scanning");
+    expect(session.status === "scanning" && session.token).toBe(token);
+  });
+});
+
+describe("bindMaskSessionToCanvasImage(表示中の画像が変わったら候補を捨てる、AM-T25-F1 MUST-1)", () => {
+  let unbind: () => void = () => {};
+
+  beforeEach(() => {
+    clearCanvasImage();
+    setDrawing(false);
+    unbind = bindMaskSessionToCanvasImage();
+  });
+
+  afterEach(() => {
+    unbind();
+    clearCanvasImage();
+    setActiveTool(null);
+  });
+
+  /** 表示中の画像で `review` まで進める。 */
+  function reviewOnCurrentImage(): void {
+    const image = getCanvasState().image!;
+    const token = beginScan(image);
+    expect(acceptScanResult(token!, image, [{ rect: { x: 0, y: 0, width: 5, height: 5 }, kind: "contact" }])).toBe(
+      true,
+    );
+  }
+
+  it("確認中に画像が差し替わると破棄する(古い印を新しい画像に残さない)", () => {
+    setCanvasImage(makeImage());
+    reviewOnCurrentImage();
+    setCanvasImage(makeImage());
+    expect(getMaskSession().status).toBe("idle");
+  });
+
+  it("処理中に画像が差し替わると破棄する", () => {
+    setCanvasImage(makeImage());
+    beginScan(getCanvasState().image!);
+    setCanvasImage(makeImage());
+    expect(getMaskSession().status).toBe("idle");
+  });
+
+  it("画像が消えたときも破棄する", () => {
+    setCanvasImage(makeImage());
+    reviewOnCurrentImage();
+    clearCanvasImage();
+    expect(getMaskSession().status).toBe("idle");
+  });
+
+  it("画像が同じままの変化(ツールの切替など)では破棄しない", () => {
+    setCanvasImage(makeImage());
+    reviewOnCurrentImage();
+    setActiveTool("arrow");
+    expect(getMaskSession().status).toBe("review");
+  });
+
+  it("解除後は購読しない", () => {
+    setCanvasImage(makeImage());
+    reviewOnCurrentImage();
+    unbind();
+    setCanvasImage(makeImage());
+    expect(getMaskSession().status).toBe("review");
+    discardMaskSession();
+  });
+});
+
+describe("開始時の制限(AM-T25-F1 SHOULD-1・SHOULD-2)", () => {
+  it("開始時に選択を外す(ベースを書き出す前)", async () => {
+    const h = makeHarness();
+    await createAutoMaskController(h.deps).start();
+    expect(h.calls.indexOf("deselect")).toBeGreaterThanOrEqual(0);
+    expect(h.calls.indexOf("deselect")).toBeLessThan(h.calls.indexOf("export"));
+  });
+
+  it("開始できないとき(画像なし・処理中)は選択を外さない", async () => {
+    const h = makeHarness();
+    h.image.current = null;
+    await createAutoMaskController(h.deps).start();
+    expect(h.calls).not.toContain("deselect");
+  });
+
+  it("ドラッグ中は開始しない", async () => {
+    const h = makeHarness();
+    h.drawing.current = true;
+    await createAutoMaskController(h.deps).start();
+    expect(h.calls).toEqual([]);
+    expect(getMaskSession().status).toBe("idle");
+  });
+});
+
+describe("まとめてモザイクの結果の知らせ(AM-T25-F1 C-1)", () => {
+  it("実際に適用した件数をトーストに出す", async () => {
+    const h = makeHarness();
+    h.applyBaseEdits.mockImplementation(() => 1);
+    const controller = createAutoMaskController(h.deps);
+    await controller.start();
+    controller.applyMosaic();
+    expect(h.notify).toHaveBeenCalledWith(AUTO_MASK_MESSAGES.applied(1), "info");
+    expect(getMaskSession().status).toBe("idle");
+  });
+
+  it("1 件も適用できなければ失敗のトーストを出す(完了のトーストは出さない)", async () => {
+    const h = makeHarness();
+    h.applyBaseEdits.mockImplementation(() => 0);
+    const controller = createAutoMaskController(h.deps);
+    await controller.start();
+    controller.applyMosaic();
+    expect(h.notify).toHaveBeenCalledTimes(1);
+    expect(h.notify).toHaveBeenCalledWith(AUTO_MASK_MESSAGES.failed, "error");
+    expect(getMaskSession().status).toBe("idle");
   });
 });

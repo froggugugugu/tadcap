@@ -8,6 +8,7 @@
 //! サイズの比)に合わせる。定義・算出は純粋関数としてユニットテストし、DOM結線はE2Eで検証する。
 
 import { setSelectedFontSize } from "../canvas/documentState";
+import { isMaskSessionActive } from "../canvas/maskSession";
 import {
   getToolSettings,
   setFontSize,
@@ -63,7 +64,10 @@ export function initFontSizePicker(mount: HTMLElement): void {
     button.addEventListener("click", () => {
       setFontSize(option.size);
       // T34: テキストを選択中なら、その文字サイズも変える(寸法を測り直す取り消せる操作)。
-      setSelectedFontSize(option.size);
+      // 自動マスキングの処理中・確認中は Canvas に効かせない(UI_auto-masking §6、AM-T25-F1 SHOULD-2)。
+      if (!isMaskSessionActive()) {
+        setSelectedFontSize(option.size);
+      }
     });
     mount.appendChild(button);
     return { size: option.size, button };

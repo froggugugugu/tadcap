@@ -436,7 +436,7 @@ describe("applyBaseEdits(複数矩形のベース加工を1手に、AM-T07)", ()
   it("矩形3件で group が1手だけ積まれ、1回の取り消しで3件とも戻り、やり直しで再びかかる", () => {
     fillPattern();
     const original = surface.base.slice();
-    expect(applyBaseEdits(rects, addTo(10))).toBe(true);
+    expect(applyBaseEdits(rects, addTo(10))).toBe(3);
     const edited = surface.base.slice();
     expect(edited).not.toEqual(original);
 
@@ -475,14 +475,14 @@ describe("applyBaseEdits(複数矩形のベース加工を1手に、AM-T07)", ()
 
   it("0件なら何も積まず、加工も再描画もしない", () => {
     const renders = surface.renders.length;
-    expect(applyBaseEdits([], addTo(10))).toBe(false);
+    expect(applyBaseEdits([], addTo(10))).toBe(0);
     expect(canUndo()).toBe(false);
     expect(surface.renders).toHaveLength(renders);
   });
 
-  it("幅・高さ0の矩形は飛ばし、残りだけを1手に積む", () => {
+  it("幅・高さ0の矩形は飛ばし、残りだけを1手に積む(戻り値は実際に適用した件数)", () => {
     const drawn: Rect[] = [];
-    applyBaseEdits(
+    const applied = applyBaseEdits(
       [
         { x: 0, y: 0, width: 0, height: 10 },
         { x: 5, y: 5, width: 10, height: 10 },
@@ -494,13 +494,14 @@ describe("applyBaseEdits(複数矩形のベース加工を1手に、AM-T07)", ()
       },
     );
     expect(drawn).toEqual([{ x: 5, y: 5, width: 10, height: 10 }]);
+    expect(applied).toBe(1);
     const undo = getUndoStackState().undo;
     expect(undo).toHaveLength(1);
     expect(undo[0]!.type === "group" && undo[0]!.commands).toHaveLength(1);
   });
 
   it("有効な矩形が1件も無ければ何も積まない", () => {
-    expect(applyBaseEdits([{ x: 0, y: 0, width: 0, height: 0 }], addTo(1))).toBe(false);
+    expect(applyBaseEdits([{ x: 0, y: 0, width: 0, height: 0 }], addTo(1))).toBe(0);
     expect(canUndo()).toBe(false);
   });
 
@@ -539,7 +540,7 @@ describe("applyBaseEdits(複数矩形のベース加工を1手に、AM-T07)", ()
 
   it("サーフェスが無ければ何もしない", () => {
     setDocumentSurface(null);
-    expect(applyBaseEdits(rects, addTo(1))).toBe(false);
+    expect(applyBaseEdits(rects, addTo(1))).toBe(0);
     expect(canUndo()).toBe(false);
   });
 });

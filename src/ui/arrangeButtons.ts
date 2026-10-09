@@ -10,12 +10,12 @@
 //! `shapeTools.ts`の「Canvas外クリックで選択解除」が働かないようにしている。テキスト入力欄に
 //! フォーカスがあるとき・ドラッグ中はキーを奪わない/実行しない。
 //!
-//! AM-T13: 自動マスキングの確認中(`maskSession` が `review`)はボタンを無効にし、⇧⌘F・⇧⌘B でも
+//! AM-T13・AM-T25-F1: 自動マスキングの処理中・確認中(`maskSession` が `idle` 以外)はボタンを無効にし、⇧⌘F・⇧⌘B でも
 //! 何もしない(ARCH_auto-masking §15 #4 A 案)。有効/無効は純粋関数 `arrangeEnabled()` で判定する。
 
 import { getCanvasState, subscribeCanvasState } from "../canvas/canvasState";
 import { arrangeSelected, getDocumentState, subscribeDocument } from "../canvas/documentState";
-import { getMaskSession, subscribeMaskSession } from "../canvas/maskSession";
+import { isMaskSessionActive, subscribeMaskSession } from "../canvas/maskSession";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
 
 export type ArrangeCommand = "front" | "back";
@@ -43,13 +43,13 @@ export function arrangeShortcutCommand(
 export interface ArrangeContext {
   hasSelection: boolean;
   isDrawing: boolean;
-  /** 自動マスキングの確認中(`maskSession` が `review`、AM-T13)。 */
-  isReviewing: boolean;
+  /** 自動マスキングの処理中・確認中(`maskSession` が `idle` 以外、AM-T13・AM-T25-F1)。 */
+  isMasking: boolean;
 }
 
-/** 重ね順を変えられるか: 選択中で、ドラッグ中でも自動マスキングの確認中でもないとき。 */
+/** 重ね順を変えられるか: 選択中で、ドラッグ中でも自動マスキングの処理中・確認中でもないとき。 */
 export function arrangeEnabled(context: ArrangeContext): boolean {
-  return context.hasSelection && !context.isDrawing && !context.isReviewing;
+  return context.hasSelection && !context.isDrawing && !context.isMasking;
 }
 
 export interface ArrangeButtonElements {
@@ -57,14 +57,18 @@ export interface ArrangeButtonElements {
   back: HTMLButtonElement;
 }
 
+/** 今のストア(`documentState`・`canvasState`・`maskSession`)から文脈を組み立てる。 */
+export function currentArrangeContext(): ArrangeContext {
+  return {
+    hasSelection: getDocumentState().selectedId !== null,
+    isDrawing: getCanvasState().isDrawing,
+    isMasking: isMaskSessionActive(),
+  };
+}
+
 /** ボタンとショートカットを結線する。戻り値は解除関数。 */
 export function initArrangeButtons(elements: ArrangeButtonElements): () => void {
-  const enabled = (): boolean =>
-    arrangeEnabled({
-      hasSelection: getDocumentState().selectedId !== null,
-      isDrawing: getCanvasState().isDrawing,
-      isReviewing: getMaskSession().status === "review",
-    });
+  const enabled = (): boolean => arrangeEnabled(currentArrangeContext());
 
   const run = (command: ArrangeCommand): void => {
     if (enabled()) {

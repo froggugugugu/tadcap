@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { beginScan, discardMaskSession } from "../canvas/maskSession";
 import {
+  currentUndoContext,
   resolveUndoCommand,
   undoAvailability,
   undoShortcutCommand,
@@ -81,21 +83,41 @@ describe("resolveUndoCommand", () => {
 // AM-T13: 自動マスキングの確認中(maskSession が `review`)は取り消し・やり直しを止める
 // (ARCH_auto-masking §15 #4 A 案、FR-012)。⌘Z の判定自体は変えず(WebView 既定へ流さない)、
 // 実行する操作を `null` にする。
-describe("確認中(isReviewing)の取り消し・やり直し", () => {
+describe("確認中(isMasking)の取り消し・やり直し", () => {
   const ready: UndoContext = { canUndo: true, canRedo: true, isDrawing: false };
 
   it("確認中は Cmd+Z・Cmd+Shift+Z で何もしない", () => {
-    expect(resolveUndoCommand("undo", { ...ready, isReviewing: true })).toBeNull();
-    expect(resolveUndoCommand("redo", { ...ready, isReviewing: true })).toBeNull();
+    expect(resolveUndoCommand("undo", { ...ready, isMasking: true })).toBeNull();
+    expect(resolveUndoCommand("redo", { ...ready, isMasking: true })).toBeNull();
   });
 
   it("確認中はボタンを両方無効にする", () => {
-    expect(undoAvailability({ ...ready, isReviewing: true })).toEqual({ undo: false, redo: false });
+    expect(undoAvailability({ ...ready, isMasking: true })).toEqual({ undo: false, redo: false });
   });
 
-  it("確認が終わる(isReviewing: false)と元どおり", () => {
-    expect(resolveUndoCommand("undo", { ...ready, isReviewing: false })).toBe("undo");
-    expect(resolveUndoCommand("redo", { ...ready, isReviewing: false })).toBe("redo");
-    expect(undoAvailability({ ...ready, isReviewing: false })).toEqual({ undo: true, redo: true });
+  it("確認が終わる(isMasking: false)と元どおり", () => {
+    expect(resolveUndoCommand("undo", { ...ready, isMasking: false })).toBe("undo");
+    expect(resolveUndoCommand("redo", { ...ready, isMasking: false })).toBe("redo");
+    expect(undoAvailability({ ...ready, isMasking: false })).toEqual({ undo: true, redo: true });
+  });
+});
+
+// AM-T25-F1 SHOULD-1: 処理中(`scanning`)も確認中と同じく取り消し・やり直しを止める。
+describe("currentUndoContext(ストアから組み立てる文脈)", () => {
+  afterEach(() => {
+    discardMaskSession();
+  });
+
+  it("idle では isMasking: false", () => {
+    expect(currentUndoContext().isMasking).toBe(false);
+  });
+
+  it("処理中は isMasking: true になり、取り消し・やり直しとも何もしない", () => {
+    beginScan({ assetUrl: "blob:undo", capture: null });
+    const context = { ...currentUndoContext(), canUndo: true, canRedo: true };
+    expect(context.isMasking).toBe(true);
+    expect(resolveUndoCommand("undo", context)).toBeNull();
+    expect(resolveUndoCommand("redo", context)).toBeNull();
+    expect(undoAvailability(context)).toEqual({ undo: false, redo: false });
   });
 });

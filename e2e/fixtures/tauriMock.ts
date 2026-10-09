@@ -161,12 +161,22 @@ const injectTauriMocks: InjectedMockScript = (config) => {
       textScanCalls: { byteLength: number; isPng: boolean }[];
       /** 保留中の `scan_sensitive_text` をすべて応答させる。 */
       releaseTextScans: () => void;
+      /**
+       * `true` の間、`read_capture_image` の応答を保留する(画像の差し替えの途中 =
+       * `discardMaskSession()` から `setCanvasImage()` までの隙間を作る、AM-T25-F1)。
+       */
+      holdCaptureImage: boolean;
+      /** 保留中の `read_capture_image` の数。 */
+      heldCaptureImageCount: () => number;
+      /** 保留中の `read_capture_image` をすべて応答させる。 */
+      releaseCaptureImages: () => void;
     };
   };
 
   w.__TAURI_INTERNALS__ = w.__TAURI_INTERNALS__ ?? {};
   w.__TAURI_EVENT_PLUGIN_INTERNALS__ = w.__TAURI_EVENT_PLUGIN_INTERNALS__ ?? {};
   const heldTextScans: (() => void)[] = [];
+  const heldCaptureImages: (() => void)[] = [];
   w.__tadcapE2E = {
     clipboardWriteCount: 0,
     activateAppCount: 0,
@@ -175,6 +185,13 @@ const injectTauriMocks: InjectedMockScript = (config) => {
     textScanCalls: [],
     releaseTextScans: () => {
       for (const release of heldTextScans.splice(0)) {
+        release();
+      }
+    },
+    holdCaptureImage: false,
+    heldCaptureImageCount: () => heldCaptureImages.length,
+    releaseCaptureImages: () => {
+      for (const release of heldCaptureImages.splice(0)) {
         release();
       }
     },
@@ -312,6 +329,9 @@ const injectTauriMocks: InjectedMockScript = (config) => {
       }
 
       case "read_capture_image": {
+        if (w.__tadcapE2E!.holdCaptureImage) {
+          await new Promise<void>((resolve) => heldCaptureImages.push(resolve));
+        }
         // Rust側は `tauri::ipc::Response` で生バイナリを返し、`invoke()` は
         // `ArrayBuffer` で解決する。`path`(sourcePath)ごとに異なる画像を返せるようにし、
         // 該当が無ければ既定の`captureImageBase64`にフォールバックする(後方互換)。
@@ -556,6 +576,35 @@ export async function releaseTextScans(page: Page): Promise<void> {
   await page.evaluate(() => {
     const w = window as unknown as { __tadcapE2E?: { releaseTextScans: () => void } };
     w.__tadcapE2E?.releaseTextScans();
+  });
+}
+
+/**
+ * `read_capture_image` の応答を保留するかを切り替える(画像の差し替えの途中を作る、AM-T25-F1)。
+ * `false` にしても保留中の呼び出しは応答しない({@link releaseCaptureImages} で応答させる)。
+ */
+export async function setCaptureImageHold(page: Page, hold: boolean): Promise<void> {
+  await page.evaluate((hold) => {
+    const w = window as unknown as { __tadcapE2E?: { holdCaptureImage: boolean } };
+    if (w.__tadcapE2E) {
+      w.__tadcapE2E.holdCaptureImage = hold;
+    }
+  }, hold);
+}
+
+/** 保留中の `read_capture_image` の数(AM-T25-F1)。 */
+export async function getHeldCaptureImageCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const w = window as unknown as { __tadcapE2E?: { heldCaptureImageCount: () => number } };
+    return w.__tadcapE2E?.heldCaptureImageCount() ?? 0;
+  });
+}
+
+/** 保留中の `read_capture_image` をすべて応答させる(AM-T25-F1)。 */
+export async function releaseCaptureImages(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __tadcapE2E?: { releaseCaptureImages: () => void } };
+    w.__tadcapE2E?.releaseCaptureImages();
   });
 }
 
