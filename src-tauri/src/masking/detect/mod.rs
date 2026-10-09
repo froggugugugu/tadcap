@@ -52,7 +52,7 @@ impl Line {
 type Detector = fn(&dyn RecognizedPage, &[Line]) -> Vec<Match>;
 
 /// 登録済みの検出器(①連絡先 → ②認証情報 → ③識別子 → ④金額・口座)。
-/// ③識別子は手がかり語付きの番号だけ(人名は AM-T21、会社名は AM-T22 で `identifier::detect` に足す)。
+/// ③識別子は手がかり語付きの番号と人名(会社名は AM-T22 で `identifier::detect` に足す)。
 const DETECTORS: [Detector; 4] = [contact::detect, credential::detect, identifier::detect, financial::detect];
 
 /// ページ全体に全検出器を当て、行の番号・範囲の順に並べた結果を返す(完全に同じ結果は 1 つにする)。
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn 行の番号とutf16範囲と種類を返す() {
-        let line0 = "担当: 山田";
+        let line0 = "件名: 定例会議";
         let line1 = "メール：ｔａｒｏ＠ｅｘａｍｐｌｅ．ｃｏｍ";
         let line2 = "電話 ０３－１２３４－５６７８ まで";
         let page = FakePage::new(&[line0, line1, line2]);

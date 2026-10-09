@@ -6,6 +6,14 @@
 //!   値は空白・日本語・記号の手前で終わる。英字の手がかり語(「ID」「User ID」)は語の一部でないこと、
 //!   値との間に空白か `:`・`=`・`#` があること
 //! - 手がかり語だけの観測(数字を含まない短いラベル)は、同じ行の右隣(無ければ直下の行)の観測の先頭の値を番号とする
+//!
+//! 人名(ARCH_auto-masking §5.3 の (a)〜(d))。見逃し回避の方針のため、誤検出はある程度許す。
+//!
+//! - (a) 敬称(「様」「さん」「氏」「殿」)の直前のかな漢字列。敬称の直後が漢字なら語の一部(「様式」「氏名」)とみなす。
+//!   漢字・カタカナより前のひらがなは助詞とみなして含めない。空白 1 つで区切られた「姓 名」まで
+//! - (b) ラベル(「氏名」「名前」「担当(者)」「宛名」「差出人」「Name」)+ 区切り + 値。ラベルだけの観測は同じ行の右隣の観測を値とする
+//! - (c) 手がかり語なし: 2 字以上の姓(辞書)+ 空白 0〜2 個 + かな漢字 1〜3 字。**1 字の姓は使わない**(辞書の承認時の決定)
+//! - (d) 英字: ローマ字の姓・名の辞書の語を含む大文字始まりの 2〜3 語、または「Mr.」「Ms.」「Mrs.」「Dear」の後の大文字始まりの 1〜3 語
 
 use std::ops::Range;
 use std::sync::LazyLock;
@@ -15,7 +23,10 @@ use regex::Regex;
 use super::super::layout::{next_line_below, right_neighbor};
 use super::super::text::{normalize, SensitiveText};
 use super::super::{Match, MatchDetail, RecognizedPage};
-use super::lexicon::{CUED_NUMBER_CUES_ASCII, CUED_NUMBER_CUES_JA};
+use super::lexicon::{
+    CUED_NUMBER_CUES_ASCII, CUED_NUMBER_CUES_JA, ENGLISH_NAME_TITLES, GIVEN_NAMES_ROMAJI, HONORIFICS,
+    HONORIFIC_NON_NAMES, PERSON_LABELS_ASCII, PERSON_LABELS_JA, SURNAMES_JA, SURNAMES_ROMAJI,
+};
 use super::Line;
 
 /// 手がかり語だけの観測(ラベル)とみなす文字数の上限。長い文は値を探さない。
@@ -85,7 +96,340 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
             matches.push(found);
         }
     }
+    matches.extend(detect_person_names(page, lines));
     matches
+}
+
+/// ③人名の検出(敬称・ラベル・姓の辞書・英字の人名)。同じ範囲は 1 つにする。
+fn detect_person_names(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
+    let mut matches = Vec::new();
+    for line in lines {
+        let text = line.as_str();
+        let mut ranges = names_before_honorifics(text);
+        ranges.extend(labeled_names(text));
+        ranges.extend(surname_names(text));
+        ranges.extend(english_names(text));
+        ranges.sort_by_key(|r| (r.start, r.end));
+        ranges.dedup();
+        matches.extend(ranges.into_iter().filter_map(|r| line.to_match(r, MatchDetail::PersonName)));
+    }
+
+    for line in lines.iter().filter(|line| is_person_label_only(line.as_str())) {
+        let Some(neighbor) = right_neighbor(page, line.index) else {
+            continue;
+        };
+        let Some(value) = lines.iter().find(|l| l.index == neighbor) else {
+            continue;
+        };
+        if is_person_label_only(value.as_str()) {
+            continue;
+        }
+        if let Some(found) = name_value(value.as_str(), 0).and_then(|r| value.to_match(r, MatchDetail::PersonName)) {
+            if !matches.contains(&found) {
+                matches.push(found);
+            }
+        }
+    }
+    matches
+}
+
+/// 人名とみなす文字列の長さの上限(空白を除く文字数)。
+const MAX_NAME_CHARS: usize = 10;
+
+/// (c) 手がかり語なしの規則で姓の後に続ける文字数の上限。
+const MAX_GIVEN_CHARS: usize = 3;
+
+/// (c) 姓と名の間に許す空白の数。
+const MAX_GAP_SPACES: usize = 2;
+
+/// (d) 英字の人名の語数の上限。
+const MAX_ENGLISH_WORDS: usize = 3;
+
+fn is_kanji(c: char) -> bool {
+    matches!(c, '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}' | '\u{f900}'..='\u{faff}' | '々' | '〆')
+}
+
+fn is_hiragana(c: char) -> bool {
+    matches!(c, '\u{3041}'..='\u{3096}' | '\u{309d}'..='\u{309e}')
+}
+
+/// カタカナ(半角を含む。長音 `ー` は `normalize` で `-` になるため別に扱う)。
+fn is_katakana(c: char) -> bool {
+    matches!(c, '\u{30a1}'..='\u{30fa}' | '\u{30fd}'..='\u{30ff}' | '\u{ff66}'..='\u{ff9d}')
+}
+
+fn is_kana_kanji(c: char) -> bool {
+    is_kanji(c) || is_hiragana(c) || is_katakana(c)
+}
+
+/// カタカナの後に続く長音(正規化後の `-`)・中黒。
+fn is_katakana_mark(c: char) -> bool {
+    matches!(c, '-' | '・')
+}
+
+fn starts_with_honorific(text: &str) -> bool {
+    HONORIFICS.iter().any(|h| text.starts_with(h))
+}
+
+/// (a) 敬称の直前のかな漢字列(バイト範囲)。
+fn names_before_honorifics(text: &str) -> Vec<Range<usize>> {
+    let mut found = Vec::new();
+    for (pos, _) in text.char_indices() {
+        let Some(honorific) = HONORIFICS.iter().find(|h| text[pos..].starts_with(*h)) else {
+            continue;
+        };
+        // 「様式」「氏名」「殿下」など、敬称の直後が漢字なら語の一部
+        if text[pos + honorific.len()..].chars().next().is_some_and(is_kanji) {
+            continue;
+        }
+        if let Some(range) = name_before(text, pos) {
+            found.push(range);
+        }
+    }
+    found
+}
+
+/// `end` の直前(空白を除く)から後ろ向きに集めた人名の範囲。
+fn name_before(text: &str, end: usize) -> Option<Range<usize>> {
+    let end = text[..end].trim_end_matches(' ').len();
+    let chars: Vec<(usize, char)> = text[..end].char_indices().collect();
+    let mut start = end;
+    let mut count = 0;
+    let mut has_non_hiragana = false;
+    let mut space_at = None;
+    let mut k = chars.len();
+    while k > 0 && count < MAX_NAME_CHARS {
+        let (i, c) = chars[k - 1];
+        let left = (k >= 2).then(|| chars[k - 2].1);
+        let accepted = if c == ' ' {
+            // 空白 1 つで区切られた「姓 名」まで
+            let next_ok = left.is_some_and(|l| is_kanji(l) || is_katakana(l) || (is_hiragana(l) && !has_non_hiragana));
+            if space_at.is_none() && count > 0 && next_ok {
+                space_at = Some(i);
+                k -= 1;
+                continue;
+            }
+            false
+        } else if is_kanji(c) || is_katakana(c) {
+            has_non_hiragana = true;
+            true
+        } else if is_hiragana(c) {
+            // 漢字・カタカナより前のひらがなは助詞とみなす
+            !has_non_hiragana
+        } else {
+            is_katakana_mark(c) && left.is_some_and(is_katakana)
+        };
+        if !accepted {
+            break;
+        }
+        start = i;
+        count += 1;
+        k -= 1;
+    }
+    // 空白の前の区切りがラベル(「ご担当 しおみ様」)なら含めない
+    if let Some(space) = space_at.filter(|&space| space > start) {
+        if PERSON_LABELS_JA.contains(&&text[start..space]) {
+            start = space + 1;
+        }
+    }
+    let name = text.get(start..end)?;
+    (!name.is_empty() && !name.starts_with(' ') && !HONORIFIC_NON_NAMES.contains(&name)).then_some(start..end)
+}
+
+/// 日本語のラベル(正規化済み・長いものを先)の正規表現の選択肢。
+fn person_label_ja_pattern() -> String {
+    let mut labels: Vec<String> = PERSON_LABELS_JA
+        .iter()
+        .map(|label| normalize(&SensitiveText::new((*label).to_string())).as_str().to_string())
+        .collect();
+    labels.sort_by_key(|label| std::cmp::Reverse(label.len()));
+    labels.iter().map(|label| regex::escape(label)).collect::<Vec<_>>().join("|")
+}
+
+/// (b) ラベル + 区切り。日本語のラベルは `:` か空白、英字のラベルは語の一部でなく `:` が要る。
+static PERSON_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"(?:{ja})(?:\x20*:\x20*|\x20+)|(?i:(?:^|[^a-z0-9_])(?:{en})\x20*:\x20*)",
+        ja = person_label_ja_pattern(),
+        en = PERSON_LABELS_ASCII.join("|"),
+    ))
+    .expect("固定の正規表現が不正")
+});
+
+/// (b) ラベルだけの観測(「担当者」「差出人:」「Name」)。前後の空白を除いた文字列に当てる。
+static PERSON_LABEL_ONLY: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^お?(?:{ja}|(?i:{en}))\x20*:?$",
+        ja = person_label_ja_pattern(),
+        en = PERSON_LABELS_ASCII.join("|"),
+    ))
+    .expect("固定の正規表現が不正")
+});
+
+fn is_person_label_only(text: &str) -> bool {
+    PERSON_LABEL_ONLY.is_match(text.trim())
+}
+
+/// (b) 同じ行のラベルの後の人名(バイト範囲)。
+fn labeled_names(text: &str) -> Vec<Range<usize>> {
+    PERSON_LABEL.find_iter(text).filter_map(|label| name_value(text, label.end())).collect()
+}
+
+/// `start` から始まる人名の値(空白を飛ばす)。英字なら大文字・小文字を問わず 1〜3 語、日本語ならかな漢字の列。
+fn name_value(text: &str, start: usize) -> Option<Range<usize>> {
+    let start = start + (text[start..].len() - text[start..].trim_start_matches(' ').len());
+    let first = text[start..].chars().next()?;
+    if first.is_ascii_alphabetic() {
+        let value = ENGLISH_VALUE.find(&text[start..])?;
+        Some(start..start + value.end())
+    } else if is_kana_kanji(first) {
+        japanese_name_after(text, start)
+    } else {
+        None
+    }
+}
+
+/// 英字の値(1〜3 語)。
+static ENGLISH_VALUE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(r"^[A-Za-z][A-Za-z'\-]*(?:\x20[A-Za-z][A-Za-z'\-]*){{0,{}}}", MAX_ENGLISH_WORDS - 1))
+        .expect("固定の正規表現が不正")
+});
+
+/// `start` から前向きに集めたかな漢字の人名(空白 1 つで区切られた「姓 名」まで。敬称の手前で終わる)。
+fn japanese_name_after(text: &str, start: usize) -> Option<Range<usize>> {
+    let mut end = start;
+    let mut count = 0;
+    let mut spaced = false;
+    let mut prev = None;
+    for (offset, c) in text[start..].char_indices() {
+        let i = start + offset;
+        if count >= MAX_NAME_CHARS || starts_with_honorific(&text[i..]) {
+            break;
+        }
+        if c == ' ' {
+            let next = text[i + 1..].chars().next();
+            if spaced || count == 0 || !next.is_some_and(is_kana_kanji) || starts_with_honorific(&text[i + 1..]) {
+                break;
+            }
+            spaced = true;
+            prev = Some(c);
+            continue;
+        }
+        if !(is_kana_kanji(c) || (is_katakana_mark(c) && prev.is_some_and(is_katakana))) {
+            break;
+        }
+        end = i + c.len_utf8();
+        count += 1;
+        prev = Some(c);
+    }
+    (end > start).then_some(start..end)
+}
+
+/// (c) 2 字以上の姓(辞書)+ 空白 0〜2 個 + かな漢字 1〜3 字(バイト範囲)。
+fn surname_names(text: &str) -> Vec<Range<usize>> {
+    let chars: Vec<(usize, char)> = text.char_indices().collect();
+    let byte_at = |k: usize| chars.get(k).map_or(text.len(), |&(i, _)| i);
+    let mut found = Vec::new();
+    let mut k = 0;
+    while k < chars.len() {
+        // 長い姓を先に試す。1 字の姓は使わない
+        let surname_end = (2..=3).rev().map(|n| k + n).find(|&e| {
+            e <= chars.len() && chars[k..e].iter().all(|&(_, c)| is_kanji(c) || c == 'ヶ' || c == 'ノ')
+                && SURNAMES_JA.contains(&text[byte_at(k)..byte_at(e)])
+        });
+        let Some(surname_end) = surname_end else {
+            k += 1;
+            continue;
+        };
+        let mut j = surname_end;
+        while j < chars.len() && j - surname_end < MAX_GAP_SPACES && chars[j].1 == ' ' {
+            j += 1;
+        }
+        let given_start = j;
+        while j < chars.len()
+            && j - given_start < MAX_GIVEN_CHARS
+            && is_kana_kanji(chars[j].1)
+            && !starts_with_honorific(&text[byte_at(j)..])
+        {
+            j += 1;
+        }
+        if j > given_start {
+            found.push(byte_at(k)..byte_at(j));
+            k = j;
+        } else {
+            k += 1;
+        }
+    }
+    found
+}
+
+/// (d) 大文字始まりの語の連なり(1 語 2 字以上)。
+static CAPITALIZED_RUN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?:^|[^A-Za-z0-9])(?P<run>[A-Z][A-Za-z'\-]+(?:\x20[A-Z][A-Za-z'\-]+)*)").expect("固定の正規表現が不正")
+});
+
+/// (d) 敬称・呼びかけの後の大文字始まりの 1〜3 語。
+static TITLED_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"(?:^|[^A-Za-z0-9])(?:{titles})\x20+(?P<name>[A-Z][A-Za-z'\-]+(?:\x20[A-Z][A-Za-z'\-]+){{0,{more}}})",
+        titles = ENGLISH_NAME_TITLES.join("|"),
+        more = MAX_ENGLISH_WORDS - 1,
+    ))
+    .expect("固定の正規表現が不正")
+});
+
+/// 語が敬称・呼びかけ(「Dear」「Mr」など。末尾の `.` を除いた形)か。
+fn is_title_word(word: &str) -> bool {
+    matches!(word, "Dear" | "Mr" | "Mrs" | "Ms")
+}
+
+/// 語がローマ字の姓・名の辞書にあるか(ASCII の大文字・小文字を区別しない)。
+fn is_romaji_name(word: &str) -> bool {
+    let lower = word.to_ascii_lowercase();
+    SURNAMES_ROMAJI.contains(lower.as_str()) || GIVEN_NAMES_ROMAJI.contains(lower.as_str())
+}
+
+/// (d) 英字の人名(バイト範囲)。
+fn english_names(text: &str) -> Vec<Range<usize>> {
+    let mut found: Vec<Range<usize>> =
+        TITLED_NAME.captures_iter(text).filter_map(|caps| caps.name("name").map(|m| m.range())).collect();
+    for caps in CAPITALIZED_RUN.captures_iter(text) {
+        let Some(run) = caps.name("run") else {
+            continue;
+        };
+        let mut offset = run.start();
+        let words: Vec<Range<usize>> = run
+            .as_str()
+            .split(' ')
+            .map(|word| {
+                let range = offset..offset + word.len();
+                offset += word.len() + 1;
+                range
+            })
+            .skip_while(|range| is_title_word(&text[range.clone()]))
+            .collect();
+        if let Some(span) = english_name_span(text, &words) {
+            found.push(span);
+        }
+    }
+    found
+}
+
+/// 大文字始まりの語の連なりのうち人名とする範囲。辞書の語を含む 2〜3 語。4 語以上なら辞書の語の周りの 2〜3 語。
+fn english_name_span(text: &str, words: &[Range<usize>]) -> Option<Range<usize>> {
+    if words.len() < 2 {
+        return None;
+    }
+    let first = words.iter().position(|w| is_romaji_name(&text[w.clone()]))?;
+    let last = words.iter().rposition(|w| is_romaji_name(&text[w.clone()]))?;
+    let (start, end) = if words.len() <= MAX_ENGLISH_WORDS {
+        (0, words.len() - 1)
+    } else if first == last {
+        if first + 1 < words.len() { (first, first + 1) } else { (first - 1, first) }
+    } else {
+        (first, last.min(first + MAX_ENGLISH_WORDS - 1))
+    };
+    Some(words[start].start..words[end].end)
 }
 
 /// 同じ行の手がかり語の後の番号(バイト範囲)。
@@ -267,5 +611,153 @@ mod tests {
         }
         let page = FakePage::new(&["社員番号の付け方については人事部の案内を参照してください", "E-551902"]);
         assert!(detect_page(&page).is_empty());
+    }
+
+    // ---- ③人名(AM-T21)。人名はすべて架空(辞書に無い姓も使う) ----
+
+    fn names(text: &str) -> Vec<Range<usize>> {
+        ranges_in(detect, text, MatchDetail::PersonName)
+    }
+
+    /// ページ全体に検出器を当て、人名の結果だけを返す。
+    fn detect_page_names(page: &dyn RecognizedPage) -> Vec<Match> {
+        let lines: Vec<Line> = (0..page.line_count()).map(|i| Line::new(i, page.line_text(i))).collect();
+        detect(page, &lines).into_iter().filter(|m| m.detail == MatchDetail::PersonName).collect()
+    }
+
+    #[test]
+    fn 敬称の直前のかな漢字列を人名とする() {
+        let cases = [
+            ("汐見様", "汐見"),
+            ("葛城 さん", "葛城"),
+            ("鳴海 千景 様", "鳴海 千景"),
+            ("霧ヶ峰氏によると", "霧ヶ峰"),
+            ("汐見殿", "汐見"),
+            ("お世話になっております。葛城さん", "葛城"),
+            ("林様", "林"),
+            ("ご担当 しおみ様", "しおみ"),
+            ("宛先: アサギリ様", "アサギリ"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+    }
+
+    #[test]
+    fn 敬称に見えても人名でないものは対象外() {
+        for line in ["お客様番号", "仕様書を参照", "様々な画面", "皆さん", "同様に", "氏名", "殿下", "様"] {
+            assert!(names(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn ラベルの後の値を人名とする() {
+        let cases = [
+            ("氏名: 汐見 千景", "汐見 千景"),
+            ("担当：葛城", "葛城"),
+            ("担当者 鳴海", "鳴海"),
+            ("宛名: アサギリ リオ", "アサギリ リオ"),
+            ("差出人: Tobias Brandt <t.brandt@example.com>", "Tobias Brandt"),
+            ("Name: Rin Kirishima", "Rin Kirishima"),
+            ("お名前：汐見", "汐見"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+    }
+
+    #[test]
+    fn ラベルに見えても値が無いものは対象外() {
+        for line in ["名前を入力してください", "担当部署: 営業部", "氏名", "Name", "Filename: report"] {
+            assert!(names(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn ラベルだけの観測の右隣の観測を人名とする() {
+        for (label, value) in [("担当者", "葛城 千景"), ("Name", "Rin Kirishima"), ("差出人:", "汐見")] {
+            let page = GridPage::new(&[(label, LEFT_CELL), (value, RIGHT_CELL)]);
+            assert_eq!(
+                detect_page_names(&page),
+                vec![Match::new(1, 0..value.encode_utf16().count(), MatchDetail::PersonName)]
+            );
+        }
+    }
+
+    #[test]
+    fn 姓の辞書と続くかな漢字1から3字を人名とする() {
+        let cases = [
+            ("山田太郎", "山田太郎"),
+            ("山田 太郎", "山田 太郎"),
+            ("参加者 高橋汐里", "高橋汐里"),
+            ("鈴木 ゆうひ 宛", "鈴木 ゆうひ"),
+            ("山田花子様", "山田花子"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+        let line = "高橋 一花、鈴木 二葉";
+        assert_eq!(names(line), vec![span(line, "高橋 一花"), span(line, "鈴木 二葉")]);
+    }
+
+    #[test]
+    fn 手がかり語なしでは姓だけ_一字の姓_辞書に無い姓を使わない() {
+        // 姓だけ / 1 字の姓(東・林)+ かな漢字 / 辞書に無い姓
+        for line in ["鈴木", "東京都の林道", "林 汐里", "汐見千景"] {
+            assert!(names(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn 辞書の語が文中の一部に現れると人名として拾う_既知の誤検出() {
+        // 見逃し回避の方針のため除外しない。件数を把握するための代表例(姓「石川」+「県金沢」)
+        let line = "石川県金沢市";
+        assert_eq!(names(line), vec![span(line, "石川県金沢")]);
+        // 英字: 2 字の名「go」を含む大文字始まりの 2 語
+        let line = "Go Back";
+        assert_eq!(names(line), vec![span(line, "Go Back")]);
+    }
+
+    #[test]
+    fn ローマ字の姓名の辞書を含む大文字始まりの2から3語を人名とする() {
+        let cases = [
+            ("Mio Sato", "Mio Sato"),
+            ("Hanako Suzuki", "Hanako Suzuki"),
+            ("SUZUKI HANAKO", "SUZUKI HANAKO"),
+            ("Reviewed by Kenta Brandt.", "Kenta Brandt"),
+            ("Weekly Sync With Mio Sato", "Mio Sato"),
+            ("Kenta Tobias Brandt", "Kenta Tobias Brandt"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+    }
+
+    #[test]
+    fn 英字の敬称と呼びかけの後を人名とする() {
+        let cases = [
+            ("Mr. Brandt", "Brandt"),
+            ("Ms. Tobias Brandt", "Tobias Brandt"),
+            ("Mrs Kirishima", "Kirishima"),
+            ("Dear Rin,", "Rin"),
+            ("Dear Mio Sato", "Mio Sato"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)]);
+        }
+    }
+
+    #[test]
+    fn 辞書に無い英字の語や1語だけは対象外() {
+        for line in ["Tobias Brandt", "Sato", "mio sato", "Meeting Room", "Dear customer", "Mr."] {
+            assert!(names(line).is_empty());
+        }
+    }
+
+    #[test]
+    fn 人名と手がかり語付きの番号を同じ行で両方返す() {
+        let line = "社員番号 E-204871 佐藤 美緒 Mio Sato";
+        assert_eq!(cued(line), vec![span(line, "E-204871")]);
+        assert_eq!(names(line), vec![span(line, "佐藤 美緒"), span(line, "Mio Sato")]);
     }
 }

@@ -1,6 +1,12 @@
 //! 手がかり語・接頭辞・敬称・会社の種類などの定数と、埋め込み辞書の読み込み(ARCH_auto-masking §5.3)。
-//! ①連絡先(AM-T11)・②認証情報(AM-T14)・③手がかり語付きの番号と④金額・口座(AM-T16)の定数を置く。
+//! ①連絡先(AM-T11)・②認証情報(AM-T14)・③手がかり語付きの番号と④金額・口座(AM-T16)・③人名(AM-T21)の定数を置く。
 //! 他の種類の定数は各検出器のタスクで足す。
+//!
+//! 辞書(`../lexicon/*.txt`)は `include_str!` でバイナリに埋め込み、実行時に何も読まない・取得しない。
+//! 中身は承認済みの報告書(`output/reports/security/SECURITY_auto-masking-lexicon_*.md`)の SHA-256 とバイト一致させる。
+
+use std::collections::HashSet;
+use std::sync::LazyLock;
 
 /// 郵便番号の前に付く記号。
 pub(super) const POSTAL_MARK: char = '〒';
@@ -52,3 +58,82 @@ pub(super) const CURRENCY_SUFFIXES: [&str; 3] = ["円", "USD", "JPY"];
 
 /// ④金額・口座: 「円」の前に付く数の単位。
 pub(super) const YEN_MULTIPLIERS: [&str; 3] = ["千", "万", "億"];
+
+/// ③識別子(人名): 名前の後に付く敬称。直前のかな漢字列を人名とする。
+pub(super) const HONORIFICS: [&str; 4] = ["様", "さん", "氏", "殿"];
+
+/// ③識別子(人名): 敬称の直前に来ても人名ではない語(「お客様」「皆さん」「仕様」「同様」など)。
+pub(super) const HONORIFIC_NON_NAMES: [&str; 12] =
+    ["客", "皆", "みな", "みんな", "仕", "同", "模", "多", "異", "一", "各", "両"];
+
+/// ③識別子(人名): 値が人名になる日本語のラベル。比較前に行と同じ `normalize` を通す。長いものを先に書く。
+pub(super) const PERSON_LABELS_JA: [&str; 6] = ["担当者", "差出人", "氏名", "名前", "担当", "宛名"];
+
+/// ③識別子(人名): 値が人名になる英字のラベル(大文字・小文字を区別しない)。
+pub(super) const PERSON_LABELS_ASCII: [&str; 1] = ["name"];
+
+/// ③識別子(人名): 英字の人名の前に付く敬称・呼びかけ(正規表現の断片・大文字小文字を区別する)。
+pub(super) const ENGLISH_NAME_TITLES: [&str; 4] = [r"Mrs\.?", r"Mr\.?", r"Ms\.?", "Dear"];
+
+/// 埋め込み辞書の 1 行 1 語を読む。`#` で始まる行(由来の注記)と空行を飛ばし、前後の空白を除く。
+fn lexicon_words(text: &'static str) -> HashSet<&'static str> {
+    text.lines().map(str::trim).filter(|line| !line.is_empty() && !line.starts_with('#')).collect()
+}
+
+/// 日本の姓(漢字)。1 字の姓は手がかり語なしの規則では使わない(SECURITY_auto-masking-lexicon の決定 #2)。
+pub(super) static SURNAMES_JA: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| lexicon_words(include_str!("../lexicon/surnames-ja.txt")));
+
+/// 日本の姓のローマ字(小文字)。
+pub(super) static SURNAMES_ROMAJI: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| lexicon_words(include_str!("../lexicon/surnames-romaji.txt")));
+
+/// 日本の名のローマ字(小文字)。
+pub(super) static GIVEN_NAMES_ROMAJI: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| lexicon_words(include_str!("../lexicon/given-names-romaji.txt")));
+
+/// 都道府県(47 件)。①住所の規則(AM-T22)で使う。
+#[cfg_attr(not(test), allow(dead_code))]
+pub(super) static PREFECTURES: LazyLock<HashSet<&'static str>> =
+    LazyLock::new(|| lexicon_words(include_str!("../lexicon/prefectures.txt")));
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::{lexicon_words, GIVEN_NAMES_ROMAJI, PREFECTURES, SURNAMES_JA, SURNAMES_ROMAJI};
+
+    // 失敗時に辞書の語を表示しないよう、比較は件数・真偽値だけで行う。
+
+    #[test]
+    fn 辞書の件数が承認済みの報告書の値と一致する() {
+        // SECURITY_auto-masking-lexicon_2026-10-09_1303.md の語数(先頭の注記行を除く)
+        assert_eq!(SURNAMES_JA.len(), 767);
+        assert_eq!(SURNAMES_ROMAJI.len(), 835);
+        assert_eq!(GIVEN_NAMES_ROMAJI.len(), 408);
+        assert_eq!(PREFECTURES.len(), 47);
+    }
+
+    #[test]
+    fn 注記の行と空行を飛ばし前後の空白を除く() {
+        let words = lexicon_words("# 由来の注記\n\n  alpha \nbeta\n\n");
+        assert!(words == HashSet::from(["alpha", "beta"]), "読み込んだ語が期待と違う");
+    }
+
+    #[test]
+    fn 辞書の語の文字種と長さが報告書の上限に収まる() {
+        let all = [&*SURNAMES_JA, &*SURNAMES_ROMAJI, &*GIVEN_NAMES_ROMAJI, &*PREFECTURES];
+        assert!(all.iter().all(|words| words.iter().all(|w| !w.is_empty() && !w.starts_with('#'))));
+        assert!(SURNAMES_JA.iter().all(|w| (1..=4).contains(&w.chars().count())));
+        for words in [&*SURNAMES_ROMAJI, &*GIVEN_NAMES_ROMAJI] {
+            assert!(words.iter().all(|w| w.len() <= 16 && w.bytes().all(|b| b.is_ascii_lowercase())));
+        }
+        assert!(PREFECTURES.iter().all(|w| ["都", "道", "府", "県"].iter().any(|s| w.ends_with(s))));
+    }
+
+    #[test]
+    fn 一字の姓を含む() {
+        // 1 字の姓は辞書に残し、敬称・ラベルの規則では使う(手がかり語なしの規則でだけ除く)
+        assert!(SURNAMES_JA.iter().any(|w| w.chars().count() == 1));
+    }
+}

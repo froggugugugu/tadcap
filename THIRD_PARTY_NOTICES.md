@@ -8,6 +8,10 @@ Tadcap 本体は MIT License（[LICENSE](LICENSE)）です。
 
 配布アプリ（DMG / zip）には、このファイル・THIRD_PARTY_LICENSES.md・[LICENSE](LICENSE) を `Tadcap.app/Contents/Resources/licenses/` に同梱しています。
 
+## 検出用の語の一覧
+
+自動マスキングが使う姓・名(ローマ字を含む)・都道府県の一覧(`src-tauri/src/masking/lexicon/`)は、Tadcap の開発者が独自に作成したもので、Tadcap 本体と同じ MIT License です。都道府県名は総務省「全国地方公共団体コード」(https://www.soumu.go.jp/denshijiti/code.html)と照合しています。
+
 ## 紹介ページ（.github/pages/assets/）
 
 紹介ページ（GitHub Pages）は、次のスクリプトを同じサイトから配信しています。
