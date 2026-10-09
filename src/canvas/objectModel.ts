@@ -6,12 +6,14 @@
 
 import type { Point, Rect } from "./coords";
 import { hitTestShape, type EditableShape } from "./shapeEdit";
+import { hitStamp, isNumberStamp } from "./tools/stampShape";
 import { computeEllipseCenterAndRadii, ellipseLineWidth } from "./tools/ellipseTool";
 import { rectangleCornerRadius, rectangleLineWidth } from "./tools/rectangleTool";
 
 /**
- * 1画像あたりのオブジェクト上限(人間決定 2026-09-24)。超えた分は最も古いものから
+ * 1画像あたりのオブジェクト上限(人間決定 2026-09-24)。超えた分は重ね順の奥から
  * ベース(元画像)へ焼き込み、編集不可にする(`documentState.ts::addShapeObject()`)。
+ * 焼き込む先の選び方は`pickBurnTarget()`(番号スタンプは焼き込まない、QE-T11)。
  */
 export const OBJECT_LIMIT = 50;
 
@@ -61,6 +63,19 @@ export function findObject(
 }
 
 /**
+ * 上限を超えたときに焼き込むオブジェクトの位置(ARCH_quick-edits §15 #2・#3)。重ね順の奥
+ * (配列の先頭)から、番号スタンプを飛ばして最初の注釈。焼き込めるものが無ければ`null`
+ * (呼び出し側は新しい注釈を追加しない)。
+ *
+ * 【設計判断】番号スタンプを焼き込むと番号(`stampNumbers()`の`id`の順位)が飛び・重複しうるため
+ * 対象から外す。記号スタンプは番号を持たないので焼き込む。
+ */
+export function pickBurnTarget(objects: readonly AnnotationObject[]): number | null {
+  const index = objects.findIndex((object) => !isNumberStamp(object.shape));
+  return index < 0 ? null : index;
+}
+
+/**
  * 未選択のオブジェクトを掴める範囲か。矩形・円は線(枠線)の付近だけ、矢印は胴体。
  *
  * 【設計判断】選択中のオブジェクト(`shapeEdit.ts::hitTestShape()`)と違い内側は含めない。
@@ -74,6 +89,10 @@ export function hitTestObjectOutline(
   canvasWidth: number,
   canvasHeight: number,
 ): boolean {
+  if (shape.kind === "stamp") {
+    // スタンプは円の内側(小さく、内側に別の図形を描くことも無いため、QE-T11)。
+    return hitStamp(shape, point, canvasWidth, canvasHeight);
+  }
   if (shape.kind === "arrow" || shape.kind === "text") {
     // 矢印は胴体、テキストは行ボックス全体(文字の隙間でも掴めるように、T33)。
     return hitTestShape(shape, point, tolerance, canvasWidth, canvasHeight)?.type === "body";

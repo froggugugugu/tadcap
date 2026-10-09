@@ -214,6 +214,7 @@ export function bindTextTool(canvas: HTMLCanvasElement, options: TextToolOptions
     const outcome = decideTextEdit(reason, current.input.value, target ? target.original.text : null);
     switch (outcome.type) {
       case "add":
+        // 上限で追加されなければ`null`(ARCH_quick-edits §15 #3)。入力欄は閉じ、何も残さない(通知は QE-T12)。
         addShapeObject(buildTextShape(canvas, current, outcome.text));
         break;
       case "update":

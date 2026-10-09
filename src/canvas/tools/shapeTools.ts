@@ -250,6 +250,9 @@ export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
       case "deselect":
         selectObject(null);
         return;
+      case "place":
+        // スタンプを置く操作(下書き・確定)は QE-T12 で結ぶ。それまでは何もしない。
+        return;
       case "create":
         selectObject(null);
         editId = null;
@@ -287,9 +290,8 @@ export function bindShapeTools(canvas: HTMLCanvasElement): () => void {
     if (isSameCanvasImage(getCanvasState().image, imageAtDragStart)) {
       const shape = applyEditDrag(session, toCanvasPoint(event), event.shiftKey, canvas.width, canvas.height);
       if (session.mode === "create") {
-        if (shape) {
-          addShapeObject(shape);
-        } else {
+        // 上限で追加されなかった(`null`、ARCH_quick-edits §15 #3)ときも下書きは消す。通知は QE-T12。
+        if (!shape || !addShapeObject(shape)) {
           setDraft(null);
         }
       } else if (editId !== null && shape) {

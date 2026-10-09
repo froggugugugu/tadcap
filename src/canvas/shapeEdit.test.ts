@@ -13,8 +13,10 @@ import {
   shapeUndoRect,
   type ArrowShape,
   type BoxShape,
+  type StampShape,
   type TextShape,
 } from "./shapeEdit";
+import { stampShapeDiameter } from "./tools/stampShape";
 import { textShapeBoundingRect } from "./tools/textLayout";
 import { computeTaperArrowBoundingRect, computeTaperArrowPolygon } from "./tools/arrowTool";
 import { computeRectangleBoundingRect, rectangleLineWidth } from "./tools/rectangleTool";
@@ -380,5 +382,93 @@ describe("cursorForHit", () => {
     expect(cursorForHit({ type: "handle", handle: "end" })).toBe("crosshair");
     expect(cursorForHit({ type: "body" })).toBe("move");
     expect(cursorForHit(null)).toBeNull();
+  });
+});
+
+describe("スタンプ(QE-T11、ARCH_quick-edits §5.3)", () => {
+  const stamp: StampShape = {
+    kind: "stamp",
+    center: { x: 200, y: 150 },
+    glyph: "number",
+    color: COLOR,
+    fontSize: "medium",
+  };
+  const radius = stampShapeDiameter(stamp, W, H) / 2;
+  const stampObj = { id: 5, shape: stamp };
+  const textObj = {
+    id: 6,
+    shape: {
+      kind: "text",
+      text: "Hi",
+      x: 180,
+      top: 140,
+      fontSize: "medium",
+      color: COLOR,
+      metrics: { width: 40, left: 0, right: 38, ascent: 13, descent: 1, fontAscent: 17, fontDescent: 4 },
+    } satisfies TextShape,
+  };
+  const decideBase = { tolerance: 8, canvasWidth: W, canvasHeight: H, color: COLOR, selectedId: null };
+
+  it("ハンドルを持たない(リサイズしない)", () => {
+    expect(getShapeHandles(stamp)).toEqual([]);
+    expect(resizeShape(stamp, "se", { x: 300, y: 250 }, W, H, false)).toBe(stamp);
+  });
+
+  it("当たり判定は円の内側(中心・縁の内側は本体、外側は外れ)", () => {
+    expect(hitTestShape(stamp, stamp.center, 0, W, H)).toEqual({ type: "body" });
+    expect(hitTestShape(stamp, { x: 200 + radius - 1, y: 150 }, 0, W, H)).toEqual({ type: "body" });
+    expect(hitTestShape(stamp, { x: 200 + radius + 1, y: 150 }, 0, W, H)).toBeNull();
+  });
+
+  it("移動は中心を半径の分だけ画像の内側に収める(画像の外へ出ない)", () => {
+    const left = moveShape(stamp, { x: -1000, y: -1000 }, W, H) as StampShape;
+    expect(left.center).toEqual({ x: radius, y: radius });
+    const right = moveShape(stamp, { x: 1000, y: 1000 }, W, H) as StampShape;
+    expect(right.center).toEqual({ x: W - radius, y: H - radius });
+    const inside = moveShape(stamp, { x: 10, y: -5 }, W, H) as StampShape;
+    expect(inside).toEqual({ ...stamp, center: { x: 210, y: 145 } });
+  });
+
+  it("shapeUndoRect は影込みの外接矩形(円を含み、下へ広い影も含む。整数・画像内)", () => {
+    const rect = shapeUndoRect(stamp, W, H);
+    expect(Number.isInteger(rect.x) && Number.isInteger(rect.y)).toBe(true);
+    expect(Number.isInteger(rect.width) && Number.isInteger(rect.height)).toBe(true);
+    expect(rect.x).toBeLessThan(200 - radius);
+    expect(rect.y).toBeLessThan(150 - radius);
+    expect(rect.x + rect.width).toBeGreaterThan(200 + radius);
+    // 影は下へ D × 0.04 ずれ、ぼかしは D × 0.08(余白はぼかしの 2 倍 + ずれ)
+    expect(rect.y + rect.height).toBeGreaterThanOrEqual(150 + radius + radius * 2 * (0.08 * 2 + 0.04));
+    const corner = shapeUndoRect({ ...stamp, center: { x: 0, y: 0 } }, W, H);
+    expect(corner.x).toBe(0);
+    expect(corner.y).toBe(0);
+  });
+
+  it("スタンプツールではスタンプだけを掴み、テキストは掴まない。空白は place", () => {
+    expect(
+      decidePointerDown({ ...decideBase, point: stamp.center, objects: [stampObj], activeTool: "stamp" }),
+    ).toEqual({ type: "edit", id: 5, session: { mode: "move", origin: stamp.center, initial: stamp } });
+    // テキストが最前面でも、スタンプツールではテキストを掴まずその下のスタンプを掴む
+    expect(
+      decidePointerDown({ ...decideBase, point: stamp.center, objects: [stampObj, textObj], activeTool: "stamp" }),
+    ).toMatchObject({ type: "edit", id: 5 });
+    expect(
+      decidePointerDown({ ...decideBase, point: { x: 190, y: 145 }, objects: [textObj], activeTool: "stamp" }),
+    ).toEqual({ type: "place", point: { x: 190, y: 145 } });
+    expect(
+      decidePointerDown({ ...decideBase, point: { x: 20, y: 20 }, objects: [stampObj], selectedId: 5, activeTool: "stamp" }),
+    ).toEqual({ type: "place", point: { x: 20, y: 20 } });
+  });
+
+  it("矢印・矩形・円ツールとツール未選択ではスタンプも掴める。テキスト・モザイクツールでは掴まない", () => {
+    for (const activeTool of ["arrow", "rectangle", "ellipse", null] as const) {
+      expect(
+        decidePointerDown({ ...decideBase, point: stamp.center, objects: [stampObj], activeTool }),
+      ).toMatchObject({ type: "edit", id: 5 });
+    }
+    for (const activeTool of ["text", "mosaic"] as const) {
+      expect(
+        decidePointerDown({ ...decideBase, point: stamp.center, objects: [stampObj], activeTool }),
+      ).toEqual({ type: "ignore" });
+    }
   });
 });

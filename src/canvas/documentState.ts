@@ -21,6 +21,7 @@ import {
   findObject,
   insertObject,
   moveObjectToIndex,
+  pickBurnTarget,
   removeObject,
   replaceObjectShape,
   type AnnotationObject,
@@ -118,23 +119,38 @@ export function setDraft(draft: ShapeDraft | null): void {
 }
 
 /**
- * 新しいオブジェクトを最前面に追加して選択する。上限を超えたら最も古いものからベースへ
- * 焼き込んで外し、追加と同じ1コマンド(`group`)にする(1回の取り消しで両方戻る、ARCH §5.2 T32)。
+ * 新しいオブジェクトを最前面に追加して選択する。上限を超えたら重ね順の奥から焼き込める注釈
+ * (`pickBurnTarget()`。番号スタンプは飛ばす)をベースへ焼き込んで外し、追加と同じ1コマンド(`group`)
+ * にする(1回の取り消しで両方戻る、ARCH §5.2 T32)。
+ *
+ * 焼き込める注釈が足りなければ追加せず`null`を返す(状態・取り消しスタック・描画は変えない、
+ * ARCH_quick-edits §15 #3)。通知は呼び出し側(QE-T12)。新しい注釈自身は焼き込みの候補にしない。
  */
-export function addShapeObject(shape: EditableShape): AnnotationObject {
+export function addShapeObject(shape: EditableShape): AnnotationObject | null {
+  let remaining: readonly AnnotationObject[] = state.objects;
+  const targets: { object: AnnotationObject; index: number }[] = [];
+  // サーフェスが無ければ焼き込めないため、上限を超えても追加だけ行う(既存の振る舞い)。
+  while (surface && remaining.length + 1 > OBJECT_LIMIT) {
+    const index = pickBurnTarget(remaining);
+    if (index === null) {
+      return null;
+    }
+    targets.push({ object: remaining[index]!, index });
+    remaining = removeObject(remaining, remaining[index]!.id);
+  }
   const object: AnnotationObject = { id: nextId, shape };
   nextId += 1;
   const commands: DocumentCommand[] = [{ type: "add", object, index: state.objects.length }];
-  let objects = insertObject(state.objects, object, state.objects.length);
-  while (objects.length > OBJECT_LIMIT && surface) {
-    const oldest = objects[0]!;
+  if (surface) {
     const { width, height } = surface.size();
-    const rect = shapeUndoRect(oldest.shape, width, height);
-    const before = surface.read(rect);
-    surface.burn(oldest.shape);
-    commands.push({ type: "flatten", object: oldest, index: 0, rect, image: before });
-    objects = objects.slice(1);
+    for (const target of targets) {
+      const rect = shapeUndoRect(target.object.shape, width, height);
+      const before = surface.read(rect);
+      surface.burn(target.object.shape);
+      commands.push({ type: "flatten", object: target.object, index: target.index, rect, image: before });
+    }
   }
+  const objects = insertObject(remaining, object, remaining.length);
   state = { ...state, objects, selectedId: object.id, draft: null };
   pushCommand(commands.length === 1 ? commands[0]! : { type: "group", commands });
   commit();
@@ -276,13 +292,20 @@ export function previewSelectedColor(color: string): void {
 }
 
 /**
- * 選択中のテキストの文字サイズを変える(寸法を測り直した`update`、T34)。左上の位置は保つ。
- * テキスト以外・同じサイズ・測る手段が無ければ`false`。
+ * 選択中のテキスト・スタンプの文字サイズを変える(1手の`update`、T34・QE-T11)。
+ * テキストは寸法を測り直して左上の位置を保つ。スタンプは中心を保ち、直径が変わる(測らない)。
+ * それ以外・同じサイズ・(テキストで)測る手段が無ければ`false`。
  */
 export function setSelectedFontSize(fontSize: FontSize): boolean {
   const selected = findObject(state.objects, state.selectedId);
-  if (!selected || selected.shape.kind !== "text" || selected.shape.fontSize === fontSize) {
+  if (!selected || (selected.shape.kind !== "text" && selected.shape.kind !== "stamp")) {
     return false;
+  }
+  if (selected.shape.fontSize === fontSize) {
+    return false;
+  }
+  if (selected.shape.kind === "stamp") {
+    return commitShapeEdit(selected.id, { ...selected.shape, fontSize });
   }
   if (!surface || !measureText) {
     return false;

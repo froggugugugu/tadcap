@@ -6,12 +6,14 @@ import {
   hitTestObjectOutline,
   insertObject,
   moveObjectToIndex,
+  pickBurnTarget,
   pickObjectAt,
   removeObject,
   replaceObjectShape,
   type AnnotationObject,
 } from "./objectModel";
-import type { ArrowShape, BoxShape } from "./shapeEdit";
+import type { ArrowShape, BoxShape, StampShape } from "./shapeEdit";
+import { stampShapeDiameter } from "./tools/stampShape";
 
 const W = 400;
 const H = 300;
@@ -129,5 +131,50 @@ describe("pickObjectAt(最前面から当たり判定)", () => {
   it("どれにも当たらなければnull", () => {
     expect(pickObjectAt([obj(1, rect), obj(2, arrow)], { x: 350, y: 20 }, 6, W, H)).toBeNull();
     expect(pickObjectAt([], { x: 0, y: 0 }, 6, W, H)).toBeNull();
+  });
+});
+
+describe("スタンプ(QE-T11)", () => {
+  const numberStamp: StampShape = {
+    kind: "stamp",
+    center: { x: 200, y: 150 },
+    glyph: "number",
+    color: COLOR,
+    fontSize: "medium",
+  };
+
+  it("未選択のスタンプは円の内側で掴める(外側は掴まない)", () => {
+    const radius = stampShapeDiameter(numberStamp, W, H) / 2;
+    expect(hitTestObjectOutline(numberStamp, numberStamp.center, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(numberStamp, { x: 200, y: 150 + radius - 1 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(numberStamp, { x: 200, y: 150 + radius + 1 }, 6, W, H)).toBe(false);
+    expect(pickObjectAt([obj(1, numberStamp)], numberStamp.center, 6, W, H)?.id).toBe(1);
+  });
+});
+
+describe("pickBurnTarget(上限の焼き込み先、ARCH_quick-edits §15 #2)", () => {
+  const numberStamp: StampShape = {
+    kind: "stamp",
+    center: { x: 50, y: 50 },
+    glyph: "number",
+    color: COLOR,
+    fontSize: "medium",
+  };
+
+  it("重ね順の奥(配列の先頭)から最初の注釈の位置を返す", () => {
+    expect(pickBurnTarget([obj(1, rect), obj(2, arrow)])).toBe(0);
+  });
+
+  it("番号スタンプは飛ばす", () => {
+    expect(pickBurnTarget([obj(1, numberStamp), obj(2, numberStamp), obj(3, ellipse)])).toBe(2);
+  });
+
+  it("記号スタンプは焼き込みの対象", () => {
+    expect(pickBurnTarget([obj(1, numberStamp), obj(2, { ...numberStamp, glyph: "question" })])).toBe(1);
+  });
+
+  it("焼き込めるものが無ければ null(空・番号スタンプだけ)", () => {
+    expect(pickBurnTarget([])).toBeNull();
+    expect(pickBurnTarget([obj(1, numberStamp), obj(2, numberStamp)])).toBeNull();
   });
 });

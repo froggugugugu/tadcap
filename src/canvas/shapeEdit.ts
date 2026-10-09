@@ -36,8 +36,11 @@ import {
   computeRectangleGeometry,
   rectangleLineWidth,
 } from "./tools/rectangleTool";
+import { stampShapeDiameter, type StampShape } from "./tools/stampShape";
 import { textShapeBoundingRect, textShapeBox } from "./tools/textLayout";
 import type { FontSize } from "./toolSettings";
+
+export type { StampShape } from "./tools/stampShape";
 
 /** 編集中にできる図形の種類(モザイクは即焼き込みのため対象外)。 */
 export type ShapeKind = "arrow" | "rectangle" | "ellipse";
@@ -86,7 +89,8 @@ export interface TextMetricsSnapshot {
   fontDescent: number;
 }
 
-export type EditableShape = ArrowShape | BoxShape | TextShape;
+/** 注釈オブジェクトの形。QE-T11でスタンプ(`tools/stampShape.ts`)を加えた。 */
+export type EditableShape = ArrowShape | BoxShape | TextShape | StampShape;
 
 /** 矢印は始点・終点、矩形・円は四隅(北西・北東・南西・南東)。 */
 export type HandleId = "start" | "end" | "nw" | "ne" | "sw" | "se";
@@ -135,7 +139,8 @@ export function createShapeFromDrag(
 }
 
 export function getShapeHandles(shape: EditableShape): ShapeHandle[] {
-  if (shape.kind === "text") {
+  // テキスト・スタンプはハンドルを持たない(移動のみ。スタンプの大きさは文字サイズで変える、QE-T11)。
+  if (shape.kind === "text" || shape.kind === "stamp") {
     return [];
   }
   if (shape.kind === "arrow") {
@@ -180,6 +185,13 @@ export function hitTestShape(
       point.y <= box.y + box.height + tolerance;
     return inside ? { type: "body" } : null;
   }
+  if (shape.kind === "stamp") {
+    // 円の内側(QE-T11)。選択中は他の形と同じく`tolerance`の分だけ広げて掴みやすくする。
+    const radius = stampShapeDiameter(shape, canvasWidth, canvasHeight) / 2;
+    return Math.hypot(point.x - shape.center.x, point.y - shape.center.y) <= radius + tolerance
+      ? { type: "body" }
+      : null;
+  }
   if (shape.kind === "arrow") {
     const halfWidth = arrowLineWidth(canvasWidth, canvasHeight) / 2;
     return distanceToSegment(point, shape.start, shape.end) <= halfWidth + tolerance
@@ -214,7 +226,7 @@ export function resizeShape(
   canvasHeight: number,
   shiftKey: boolean,
 ): EditableShape {
-  if (shape.kind === "text") {
+  if (shape.kind === "text" || shape.kind === "stamp") {
     return shape;
   }
   const p = clampPoint(pointer, canvasWidth, canvasHeight);
@@ -246,6 +258,14 @@ export function moveShape(
     const dx = clamp(delta.x, -box.x, canvasWidth - (box.x + box.width));
     const dy = clamp(delta.y, -box.y, canvasHeight - (box.y + box.height));
     return { ...shape, x: shape.x + dx, top: shape.top + dy };
+  }
+  if (shape.kind === "stamp") {
+    // 中心を半径の分だけ画像の内側に収める(円が画像の外へはみ出さない、QE-T11)。
+    const radius = stampShapeDiameter(shape, canvasWidth, canvasHeight) / 2;
+    const { center } = shape;
+    const dx = clamp(delta.x, radius - center.x, canvasWidth - radius - center.x);
+    const dy = clamp(delta.y, radius - center.y, canvasHeight - radius - center.y);
+    return { ...shape, center: { x: center.x + dx, y: center.y + dy } };
   }
   const bounds =
     shape.kind === "arrow"
@@ -322,6 +342,8 @@ export type PointerDownDecision =
   | { type: "edit"; id: number; session: EditSession }
   /** 選択を外して新しい図形の作成を始める。 */
   | { type: "create"; session: EditSession }
+  /** スタンプツールで空白を押した: その位置にスタンプを置く(下書き・確定はUI側、QE-T12)。 */
+  | { type: "place"; point: Point }
   | { type: "deselect" }
   | { type: "ignore" };
 
@@ -329,17 +351,19 @@ export type PointerDownDecision =
  * Canvas上のpointerdownをどう扱うかを決める(T32【改訂 2026-09-24】)。
  * ①選択中のオブジェクトのハンドル・内側 → リサイズ/移動 ②未選択のオブジェクトを最前面から
  * 当たり判定(線の付近のみ)→ 選択して移動 ③外れたら、図形ツール選択中なら新規作成、
- * それ以外は選択解除。モザイク・テキストツール中はオブジェクトを掴まない(各ツールが処理する)。
+ * それ以外は選択解除。モザイクツール中はオブジェクトを掴まない(ツールが処理する)。
+ * ツールごとに掴める注釈は`grabbableObjects()`(ARCH_quick-edits §5.3 の表)。スタンプツールで
+ * 空白を押したら`place`(QE-T11)。
  */
 export function decidePointerDown(input: PointerDownInput): PointerDownDecision {
   const { objects, activeTool, point, tolerance, canvasWidth, canvasHeight } = input;
   const selected = findObject(objects, input.selectedId);
-  const blank: PointerDownDecision = selected ? { type: "deselect" } : { type: "ignore" };
+  const blank: PointerDownDecision =
+    activeTool === "stamp" ? { type: "place", point } : selected ? { type: "deselect" } : { type: "ignore" };
   if (activeTool === "mosaic") {
     return blank;
   }
-  // T33: テキストツール中はテキストだけを掴む(矢印・矩形・円の上にも文字を置けるように)。
-  const grabbable = activeTool === "text" ? objects.filter((o) => o.shape.kind === "text") : objects;
+  const grabbable = grabbableObjects(objects, activeTool);
   const selectedGrabbable = selected && grabbable.includes(selected) ? selected : undefined;
   if (selectedGrabbable) {
     const hit = hitTestShape(selectedGrabbable.shape, point, tolerance, canvasWidth, canvasHeight);
@@ -369,12 +393,30 @@ export function decidePointerDown(input: PointerDownInput): PointerDownDecision 
 }
 
 /**
+ * 選択中のツールで掴める注釈(ARCH_quick-edits §5.3)。テキストツールはテキストだけ(T33: 図形の上にも
+ * 文字を置けるように)、スタンプツールはスタンプだけ(QE-T11: テキストの上にも置けるように)、
+ * 矢印・矩形・円・ツール無しはすべて。
+ */
+function grabbableObjects(
+  objects: readonly AnnotationObject[],
+  activeTool: ToolId | null,
+): readonly AnnotationObject[] {
+  if (activeTool === "text" || activeTool === "stamp") {
+    return objects.filter((o) => o.shape.kind === activeTool);
+  }
+  return objects;
+}
+
+/**
  * 確定時にUndoステップへ積む外接矩形(線の太さ・影の余白込み、整数、Canvas内クリップ済み)。
  * 各ツールの既存`compute*BoundingRect()`をそのまま使う(確定前の旧実装と同じ範囲)。
  */
 export function shapeUndoRect(shape: EditableShape, canvasWidth: number, canvasHeight: number): Rect {
   if (shape.kind === "text") {
     return textShapeBoundingRect(shape, canvasWidth, canvasHeight);
+  }
+  if (shape.kind === "stamp") {
+    return stampBoundingRect(shape, canvasWidth, canvasHeight);
   }
   if (shape.kind === "arrow") {
     const polygon = computeTaperArrowPolygon(shape.start, shape.end, canvasWidth, canvasHeight);
@@ -399,6 +441,30 @@ export function shapeUndoRect(shape: EditableShape, canvasWidth: number, canvasH
     canvasWidth,
     canvasHeight,
   );
+}
+
+/**
+ * スタンプの影の比率(`tools/stampShape.ts::drawStamp()`の影と同じ値: ぼかし D × 0.08、下へ D × 0.04)。
+ * 外接矩形の余白はテキストと同じ考え方で「ぼかし × 2 + 下へのずれ + アンチエイリアスの余白」。
+ * 【設計判断】`stampShape.ts`は QE-T10 で確定済みのため値をここに持つ(描画側を変えたら合わせる)。
+ */
+const STAMP_SHADOW_BLUR_RATIO = 0.08;
+const STAMP_SHADOW_OFFSET_Y_RATIO = 0.04;
+const STAMP_ANTIALIAS_MARGIN = 2;
+
+/** スタンプの影込みの外接矩形(整数、Canvas内クリップ済み。上限の焼き込みの退避範囲)。 */
+function stampBoundingRect(shape: StampShape, canvasWidth: number, canvasHeight: number): Rect {
+  const diameter = stampShapeDiameter(shape, canvasWidth, canvasHeight);
+  const reach =
+    diameter / 2 +
+    diameter * STAMP_SHADOW_BLUR_RATIO * 2 +
+    diameter * STAMP_SHADOW_OFFSET_Y_RATIO +
+    STAMP_ANTIALIAS_MARGIN;
+  const left = Math.max(0, Math.floor(shape.center.x - reach));
+  const top = Math.max(0, Math.floor(shape.center.y - reach));
+  const right = Math.min(canvasWidth, Math.ceil(shape.center.x + reach));
+  const bottom = Math.min(canvasHeight, Math.ceil(shape.center.y + reach));
+  return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
 }
 
 /** ホバー中の当たり判定に応じたCSSカーソル。当たっていなければ`null`(既定カーソル)。 */

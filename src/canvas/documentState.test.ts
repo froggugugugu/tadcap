@@ -28,9 +28,20 @@ import {
   type ShapeDraft,
 } from "./documentState";
 import { OBJECT_LIMIT, type AnnotationObject } from "./objectModel";
-import { shapeUndoRect, type BoxShape, type EditableShape, type TextShape } from "./shapeEdit";
+import {
+  shapeUndoRect,
+  type BoxShape,
+  type EditableShape,
+  type StampShape,
+  type TextShape,
+} from "./shapeEdit";
 import { canRedo, canUndo, getUndoStackState } from "./undoStack";
-import { commandPixelBytes } from "../history/documentArchive";
+import {
+  commandPixelBytes,
+  deleteArchivedDocument,
+  getArchivedDocument,
+  saveArchivedDocument,
+} from "../history/documentArchive";
 
 function last<T>(items: readonly T[]): T | undefined {
   return items[items.length - 1];
@@ -102,6 +113,15 @@ function createFakeSurface(): FakeSurface {
   return surface;
 }
 
+/** 上限に当たらない追加(戻り値が `null` でないことを確かめて返す)。 */
+function add(shape: EditableShape): AnnotationObject {
+  const object = addShapeObject(shape);
+  if (!object) {
+    throw new Error("addShapeObject が null を返した");
+  }
+  return object;
+}
+
 function sumRegion(surface: FakeSurface, r: Rect): number {
   let total = 0;
   for (const v of surface.read(r).data) {
@@ -132,8 +152,8 @@ describe("resetDocument", () => {
 
 describe("addShapeObject", () => {
   it("オブジェクトを最前面に追加して選択し、1コマンドとして取り消し・やり直しできる", () => {
-    const first = addShapeObject(box(10));
-    const second = addShapeObject(box(60));
+    const first = add(box(10));
+    const second = add(box(60));
     expect(getDocumentState().objects).toEqual([first, second]);
     expect(getDocumentState().selectedId).toBe(second.id);
     expect(first.id).not.toBe(second.id);
@@ -176,13 +196,13 @@ describe("上限(OBJECT_LIMIT)と焼き込み", () => {
   it("51個目で最古をベースへ焼き込んで配列から外し、同じ1回の取り消しで元へ戻る", () => {
     const added: AnnotationObject[] = [];
     for (let i = 0; i < OBJECT_LIMIT; i += 1) {
-      added.push(addShapeObject(box(i * 5)));
+      added.push(add(box(i * 5)));
     }
     const oldest = added[0]!;
     const oldestRect = shapeUndoRect(oldest.shape, W, H);
     expect(sumRegion(surface, oldestRect)).toBe(0);
 
-    const newest = addShapeObject(box(300, 200));
+    const newest = add(box(300, 200));
 
     const { objects, selectedId } = getDocumentState();
     expect(objects).toHaveLength(OBJECT_LIMIT);
@@ -217,7 +237,7 @@ describe("上限(OBJECT_LIMIT)と焼き込み", () => {
 
 describe("commitShapeEdit(移動・リサイズの確定)", () => {
   it("形が変わればupdateコマンドを積み、取り消しで元の形へ戻る", () => {
-    const o = addShapeObject(box(10));
+    const o = add(box(10));
     setDraft({ id: o.id, shape: box(100) });
     expect(commitShapeEdit(o.id, box(100))).toBe(true);
     expect(getDocumentState().objects).toEqual([{ id: o.id, shape: box(100) }]);
@@ -232,7 +252,7 @@ describe("commitShapeEdit(移動・リサイズの確定)", () => {
   });
 
   it("形が変わらない(クリックだけ)ならコマンドを積まない", () => {
-    const o = addShapeObject(box(10));
+    const o = add(box(10));
     const depth = getUndoStackState().undo.length;
     expect(commitShapeEdit(o.id, box(10))).toBe(false);
     expect(getUndoStackState().undo.length).toBe(depth);
@@ -246,9 +266,9 @@ describe("commitShapeEdit(移動・リサイズの確定)", () => {
 
 describe("removeShapeObject(テキストを空にして確定、T33。T34の削除キーも使う)", () => {
   it("元の位置から除去してremoveコマンドを積み、取り消しで同じ位置へ戻る", () => {
-    const a = addShapeObject(box(10));
-    const b = addShapeObject(box(60));
-    const c = addShapeObject(box(110));
+    const a = add(box(10));
+    const b = add(box(60));
+    const c = add(box(110));
     expect(removeShapeObject(b.id)).toBe(true);
     expect(getDocumentState().objects).toEqual([a, c]);
     expect(getDocumentState().selectedId).toBe(c.id);
@@ -259,7 +279,7 @@ describe("removeShapeObject(テキストを空にして確定、T33。T34の削�
   });
 
   it("選択中を消したら選択を外し、存在しないidは何もしない", () => {
-    const a = addShapeObject(box(10));
+    const a = add(box(10));
     removeShapeObject(a.id);
     expect(getDocumentState().selectedId).toBeNull();
     const depth = getUndoStackState().undo.length;
@@ -270,8 +290,8 @@ describe("removeShapeObject(テキストを空にして確定、T33。T34の削�
 
 describe("setHiddenObject(再編集中のテキストを入力欄と二重に描かない、T33)", () => {
   it("隠したオブジェクトは描画に渡さず、解除すると戻る。モデル・取り消しには影響しない", () => {
-    const a = addShapeObject(box(10));
-    const b = addShapeObject(box(60));
+    const a = add(box(10));
+    const b = add(box(60));
     const depth = getUndoStackState().undo.length;
     setHiddenObject(a.id);
     expect(getDocumentState().hiddenId).toBe(a.id);
@@ -283,7 +303,7 @@ describe("setHiddenObject(再編集中のテキストを入力欄と二重に描
   });
 
   it("画像の差し替えで解除される", () => {
-    const a = addShapeObject(box(10));
+    const a = add(box(10));
     setHiddenObject(a.id);
     resetDocument();
     expect(getDocumentState().hiddenId).toBeNull();
@@ -303,7 +323,7 @@ describe("選択中のオブジェクトの操作(T34)", () => {
 
   it("setSelectedColor: 選択中の色を変えるupdateを積み、取り消せる。選択が無い・同じ色なら何もしない", () => {
     expect(setSelectedColor("#007AFF")).toBe(false);
-    const o = addShapeObject(box(10));
+    const o = add(box(10));
     expect(setSelectedColor(COLOR)).toBe(false);
     expect(setSelectedColor("#007AFF")).toBe(true);
     expect(getDocumentState().objects[0]?.shape.color).toBe("#007AFF");
@@ -313,7 +333,7 @@ describe("選択中のオブジェクトの操作(T34)", () => {
   });
 
   it("previewSelectedColor: 下書きで色だけを見せ、モデル・取り消しは変えない", () => {
-    const o = addShapeObject(box(10));
+    const o = add(box(10));
     const depth = getUndoStackState().undo.length;
     previewSelectedColor("#34C759");
     expect(getDocumentState().draft).toEqual({ id: o.id, shape: { ...box(10), color: "#34C759" } });
@@ -329,7 +349,7 @@ describe("選択中のオブジェクトの操作(T34)", () => {
     });
     addShapeObject(box(10));
     expect(setSelectedFontSize("large")).toBe(false); // 矩形は対象外
-    const t = addShapeObject(text);
+    const t = add(text);
     expect(setSelectedFontSize("medium")).toBe(false); // 同じサイズ
     expect(setSelectedFontSize("large")).toBe(true);
     const resized = getDocumentState().objects.find((o) => o.id === t.id)!.shape as TextShape;
@@ -342,9 +362,9 @@ describe("選択中のオブジェクトの操作(T34)", () => {
   });
 
   it("arrangeSelected: 最前面・最背面へ動かすreorderを積み、端にあれば何もしない", () => {
-    const a = addShapeObject(box(10));
-    const b = addShapeObject(box(60));
-    const c = addShapeObject(box(110));
+    const a = add(box(10));
+    const b = add(box(60));
+    const c = add(box(110));
     selectObject(a.id);
     expect(arrangeSelected("back")).toBe(false);
     expect(arrangeSelected("front")).toBe(true);
@@ -362,7 +382,7 @@ describe("選択中のオブジェクトの操作(T34)", () => {
 
 describe("snapshotDocument / restoreDocument(履歴ごとの保持、T34)", () => {
   it("オブジェクト・次のid・取り消しスタックを退避し、別の画像を挟んで戻すと再調整・取り消しできる", async () => {
-    const a = addShapeObject(box(10));
+    const a = add(box(10));
     commitShapeEdit(a.id, box(40));
     const snapshot = snapshotDocument();
     expect(await exportDocumentBase()).toBeInstanceOf(Blob);
@@ -378,7 +398,7 @@ describe("snapshotDocument / restoreDocument(履歴ごとの保持、T34)", () =
     undoDocument();
     expect(getDocumentState().objects).toEqual([{ id: a.id, shape: box(10) }]);
     // idは戻した後も重ならない。
-    expect(addShapeObject(box(90)).id).toBeGreaterThan(a.id);
+    expect(add(box(90)).id).toBeGreaterThan(a.id);
   });
 
   it("退避した内容は戻した後の操作で変わらない(別々の値)", () => {
@@ -392,7 +412,7 @@ describe("snapshotDocument / restoreDocument(履歴ごとの保持、T34)", () =
 
 describe("applyBaseEdit(モザイク・テキストのベース加工)", () => {
   it("ベースだけを変えてpixelsコマンドを積み、取り消し・やり直しでベースを戻す", () => {
-    const o = addShapeObject(box(10));
+    const o = add(box(10));
     const rect: Rect = { x: 0, y: 0, width: 50, height: 50 };
     applyBaseEdit(rect, () => {
       surface.write(rect, { data: new Uint8ClampedArray(50 * 50).fill(7), width: 50, height: 50 });
@@ -547,7 +567,7 @@ describe("applyBaseEdits(複数矩形のベース加工を1手に、AM-T07)", ()
 
 describe("selectObject / setDraft / subscribeDocument", () => {
   it("選択は取り消し対象にならず、存在しないidは選べない", () => {
-    const o = addShapeObject(box(10));
+    const o = add(box(10));
     selectObject(null);
     expect(getDocumentState().selectedId).toBeNull();
     selectObject(12345);
@@ -560,7 +580,7 @@ describe("selectObject / setDraft / subscribeDocument", () => {
   it("下書きは描画に渡され、変更は購読者へ通知される", () => {
     const seen: (number | null)[] = [];
     const unsubscribe = subscribeDocument((state) => seen.push(state.selectedId));
-    const o = addShapeObject(box(10));
+    const o = add(box(10));
     const draft: ShapeDraft = { id: o.id, shape: box(30) };
     setDraft(draft);
     expect(last(surface.renders)).toEqual({ objects: [o], draft });
@@ -576,5 +596,103 @@ describe("selectObject / setDraft / subscribeDocument", () => {
     expect(undoDocument()).toBe(false);
     setDocumentSurface(surface);
     expect(undoDocument()).toBe(true);
+  });
+});
+
+describe("スタンプと上限の焼き込みの選び方(QE-T11、ARCH_quick-edits §15 #2・#3)", () => {
+  const stamp = (x: number, glyph: StampShape["glyph"] = "number"): StampShape => ({
+    kind: "stamp",
+    center: { x, y: 150 },
+    glyph,
+    color: COLOR,
+    fontSize: "medium",
+  });
+
+  it("50 個 + 1 で最も奥が番号スタンプなら、次の注釈を焼き込む(1 回の取り消しで戻る)", () => {
+    const added: AnnotationObject[] = [add(stamp(50))];
+    for (let i = 1; i < OBJECT_LIMIT; i += 1) {
+      added.push(add(box(i * 5)));
+    }
+    const newest = add(box(300, 200));
+    const { objects } = getDocumentState();
+    expect(objects).toHaveLength(OBJECT_LIMIT);
+    expect(surface.burned).toEqual([added[1]!.shape]);
+    expect(objects[0]).toBe(added[0]); // 番号スタンプは残る
+    expect(objects).not.toContain(added[1]);
+    expect(last(objects)).toBe(newest);
+
+    undoDocument();
+    expect(getDocumentState().objects).toEqual(added);
+    redoDocument();
+    expect(getDocumentState().objects[0]).toBe(added[0]);
+    expect(getDocumentState().objects).not.toContainEqual(added[1]);
+  });
+
+  it("全部が番号スタンプなら 51 個目は追加せず null を返し、状態・取り消しを変えない", () => {
+    for (let i = 0; i < OBJECT_LIMIT; i += 1) {
+      add(stamp(10 + i * 7));
+    }
+    const before = getDocumentState();
+    const undoBefore = getUndoStackState();
+    const rendersBefore = surface.renders.length;
+
+    expect(addShapeObject(box(300, 200))).toBeNull();
+    expect(addShapeObject(stamp(20))).toBeNull();
+
+    expect(getDocumentState()).toBe(before);
+    expect(getUndoStackState()).toEqual(undoBefore);
+    expect(surface.burned).toEqual([]);
+    expect(surface.renders.length).toBe(rendersBefore);
+    // 取り消しは直前の 50 個目の追加を戻す(51 個目の手は積まれていない)
+    undoDocument();
+    expect(getDocumentState().objects).toHaveLength(OBJECT_LIMIT - 1);
+  });
+
+  it("記号スタンプは焼き込まれる", () => {
+    const added: AnnotationObject[] = [];
+    for (let i = 0; i < OBJECT_LIMIT; i += 1) {
+      added.push(add(stamp(10 + i * 7, "check")));
+    }
+    add(stamp(300, "cross"));
+    expect(surface.burned).toEqual([added[0]!.shape]);
+    expect(getDocumentState().objects).toHaveLength(OBJECT_LIMIT);
+  });
+
+  it("setSelectedFontSize: スタンプは中心を保って文字サイズを変え、1 回の取り消しで戻る(測る手段は要らない)", () => {
+    setTextMeasurer(null);
+    const s = add(stamp(100));
+    expect(setSelectedFontSize("medium")).toBe(false); // 同じサイズ
+    const depth = getUndoStackState().undo.length;
+    expect(setSelectedFontSize("large")).toBe(true);
+    const resized = getDocumentState().objects.find((o) => o.id === s.id)!.shape as StampShape;
+    expect(resized).toEqual({ ...stamp(100), fontSize: "large" });
+    expect(resized.center).toEqual(stamp(100).center);
+    expect(getUndoStackState().undo.length).toBe(depth + 1);
+    undoDocument();
+    expect(getDocumentState().objects.find((o) => o.id === s.id)!.shape).toEqual(stamp(100));
+  });
+
+  it("setSelectedColor: スタンプの色の変更は 1 手", () => {
+    const s = add(stamp(100, "exclamation"));
+    const depth = getUndoStackState().undo.length;
+    expect(setSelectedColor("#007AFF")).toBe(true);
+    expect(getDocumentState().objects[0]?.shape.color).toBe("#007AFF");
+    expect(getUndoStackState().undo.length).toBe(depth + 1);
+    undoDocument();
+    expect(getDocumentState().objects[0]?.shape).toEqual(stamp(100, "exclamation"));
+    expect(getDocumentState().selectedId).toBe(s.id);
+  });
+
+  it("履歴への退避(documentArchive)・復元でスタンプが保たれ、取り消しもできる", () => {
+    const s = add(stamp(100));
+    setSelectedFontSize("small");
+    saveArchivedDocument("qe-t11", { base: new Blob(["base"]), snapshot: snapshotDocument() });
+    resetDocument();
+    const archived = getArchivedDocument("qe-t11")!;
+    restoreDocument(archived.snapshot, { width: W, height: H } as unknown as ImageBitmap, null);
+    deleteArchivedDocument("qe-t11");
+    expect(getDocumentState().objects).toEqual([{ id: s.id, shape: { ...stamp(100), fontSize: "small" } }]);
+    undoDocument();
+    expect(getDocumentState().objects).toEqual([s]);
   });
 });

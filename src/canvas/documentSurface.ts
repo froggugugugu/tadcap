@@ -10,6 +10,7 @@
 //! (状態遷移は`documentState.test.ts`が偽のサーフェスで検証済み)。
 
 import type { Rect } from "./coords";
+import { drawStamp } from "./tools/stampShape";
 import type { DocumentSurface, ShapeDraft } from "./documentState";
 import type { AnnotationObject } from "./objectModel";
 import type { EditableShape } from "./shapeEdit";
@@ -39,6 +40,12 @@ export function drawEditableShape(
   }
   if (shape.kind === "rectangle") {
     drawRectangleOutline(ctx, shape.rect, rectangleLineWidth(canvasWidth, canvasHeight), shape.color);
+    return;
+  }
+  if (shape.kind === "stamp") {
+    // 番号はここでは描かない(番号の割り当てと表示は QE-T12 で stampNumbers() から渡す)。
+    // 上限で焼き込まれるのは記号スタンプだけなので、焼き込みの経路でも番号は要らない。
+    drawStamp(ctx, shape, null, canvasWidth, canvasHeight);
     return;
   }
   drawEllipseOutline(
