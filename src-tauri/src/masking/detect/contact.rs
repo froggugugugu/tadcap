@@ -100,7 +100,9 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
             continue;
         };
         let range = trimmed(value.as_str());
-        let tail = &value.as_str()[range.clone()];
+        let Some(tail) = value.as_str().get(range.clone()) else {
+            continue;
+        };
         let continues = if english { ADDRESS_TAIL_ASCII.is_match(tail) } else { is_wrapped_japanese(tail) };
         if continues {
             if let Some(found) = value.to_match(range, MatchDetail::Address) {
@@ -138,7 +140,7 @@ fn address_reaching_end(line: &Line) -> Option<bool> {
         .chain(block_addresses(text))
         .collect();
     let reaching = ranges.into_iter().find(|r| r.end == end && r.start < r.end)?;
-    Some(!text[reaching].chars().any(is_kana_kanji))
+    Some(!text.get(reaching)?.chars().any(is_kana_kanji))
 }
 
 /// 続きの行とみなす縦の間隔の上限(住所の行の高さに対する倍率)。
@@ -193,7 +195,8 @@ const PREFECTURE_CHAR_LENS: [usize; 2] = [4, 3];
 fn prefecture_len(text: &str) -> Option<usize> {
     PREFECTURE_CHAR_LENS.iter().find_map(|&n| {
         let end = text.char_indices().nth(n).map_or(text.len(), |(i, _)| i);
-        (text[..end].chars().count() == n && PREFECTURES.contains(&text[..end])).then_some(end)
+        let head = text.get(..end)?;
+        (head.chars().count() == n && PREFECTURES.contains(&head)).then_some(end)
     })
 }
 
@@ -201,8 +204,8 @@ fn prefecture_len(text: &str) -> Option<usize> {
 fn prefecture_address(text: &str) -> Option<Range<usize>> {
     let end = text.trim_end_matches(' ').len();
     text.char_indices().find_map(|(pos, _)| {
-        let len = prefecture_len(&text[pos..])?;
-        text[pos + len..].chars().next().is_some_and(is_kana_kanji).then_some(pos..end)
+        let len = prefecture_len(text.get(pos..)?)?;
+        text.get(pos + len..)?.chars().next().is_some_and(is_kana_kanji).then_some(pos..end)
     })
 }
 
@@ -331,7 +334,7 @@ fn block_addresses(text: &str) -> Vec<Range<usize>> {
         .filter_map(|caps| caps.name("addr"))
         .filter(|m| {
             let bare_aza = m.as_str().starts_with('字');
-            let after_kanji = text[..m.start()].chars().next_back().is_some_and(is_kanji);
+            let after_kanji = text.get(..m.start()).and_then(|s| s.chars().next_back()).is_some_and(is_kanji);
             !(bare_aza && after_kanji)
         })
         .map(|m| m.range());
@@ -351,14 +354,16 @@ fn find_emails(text: &str) -> impl Iterator<Item = Range<usize>> + '_ {
 
 fn find_postal_codes(text: &str) -> impl Iterator<Item = Range<usize>> + '_ {
     POSTAL.find_iter(text).map(|m| m.range()).filter(|r| {
-        let marked = text[r.clone()].starts_with(POSTAL_MARK);
+        let marked = text.get(r.clone()).is_some_and(|s| s.starts_with(POSTAL_MARK));
         (marked || !continues_number_before(text, r.start)) && !continues_number_after(text, r.end)
     })
 }
 
 /// `start` の直前が数字、または「数字 + ハイフン/点」なら、もっと長い数字の並びの途中とみなす。
 fn continues_number_before(text: &str, start: usize) -> bool {
-    let before = &text.as_bytes()[..start];
+    let Some(before) = text.as_bytes().get(..start) else {
+        return false;
+    };
     match before.last() {
         Some(b) if b.is_ascii_digit() => true,
         Some(b'-' | b'.') => before.len() >= 2 && before[before.len() - 2].is_ascii_digit(),
@@ -369,7 +374,9 @@ fn continues_number_before(text: &str, start: usize) -> bool {
 /// `end` の直後が数字、または「ハイフン + 数字」なら、もっと長い数字の並びの途中とみなす。
 /// 空白の後の数字は別の語として扱う(表の隣の列など)。
 fn continues_number_after(text: &str, end: usize) -> bool {
-    let after = &text.as_bytes()[end..];
+    let Some(after) = text.as_bytes().get(end..) else {
+        return false;
+    };
     match after.first() {
         Some(b) if b.is_ascii_digit() => true,
         Some(b'-') => after.get(1).is_some_and(u8::is_ascii_digit),
@@ -416,7 +423,7 @@ fn find_phones(text: &str) -> Vec<Range<usize>> {
         }
     }
     for range in &mut found {
-        range.end += extension_len(&text[range.end..]);
+        range.end += text.get(range.end..).map_or(0, extension_len);
     }
     found.sort_by_key(|r| r.start);
     found
@@ -498,6 +505,8 @@ fn phone_at(text: &str, start: usize) -> Option<usize> {
         while pos < bytes.len() && matches!(bytes[pos], b'-' | b' ' | b'(' | b')' | b'.') {
             pos += 1;
         }
+        // バイト列の切り出し(`separator_start <= pos <= bytes.len()` はこのループの条件で決まる)。
+        // 文字列の切り出しではないため、境界を誤ってもパニックの文言に文字列は入らない
         if pos == separator_start || !is_valid_separator(&bytes[separator_start..pos]) {
             break;
         }
@@ -1142,5 +1151,23 @@ mod tests {
         let line = "\u{1f4de} 03-1234-5678 \u{1f4e7} a@example.com";
         assert_eq!(phones(line), vec![3..15]);
         assert_eq!(emails(line), vec![span(line, "a@example.com")]);
+    }
+
+    // ---- 多バイト文字の境界(AM-T25-F2。切り出しを `str::get` にした箇所の回帰) ----
+
+    #[test]
+    fn 絵文字や結合文字に隣り合っても電話番号と住所の範囲は変わらない() {
+        // 内線の長さ(`extension_len`)は番号の直後の文字列から測る
+        for line in ["電話 03-1234-5678😀", "電話 03-1234-5678 内線 12👍"] {
+            let plain = line.trim_end_matches(['😀', '👍']);
+            assert_eq!(phones(line), phones(plain), "case {}", line.len());
+            assert_eq!(phones(line).len(), 1, "case {}", line.len());
+        }
+        // 都道府県名の後(`prefecture_len`・`prefecture_address`)
+        let line = "😀東京都千代田区丸の内";
+        assert_eq!(addresses(line), vec![span(line, "東京都千代田区丸の内")]);
+        for line in ["東京都😀", "東京都\u{3099}", "😀"] {
+            assert!(addresses(line).is_empty(), "case {}", line.len());
+        }
     }
 }

@@ -328,4 +328,75 @@ mod tests {
         );
         assert!(matches.iter().all(|m| m.kind == MaskKind::Financial));
     }
+
+    // ---- 多バイト文字の境界(AM-T25-F2)。切り出しの境界の誤りでパニックしないこと ----
+
+    /// 各規則の手がかりを含む行(すべて架空)。
+    const BOUNDARY_BASES: [&str; 20] = [
+        "汐見 千景様 お世話になっております",
+        "ご担当 しおみ様",
+        "氏名: 汐見 千景 様",
+        "Name: Chikage Shiomi",
+        "参加者 山田太郎、鈴木 二葉",
+        "株式会社 Kumoyuki Systems",
+        "やまびこ醸造合資会社 御中",
+        "会社名: ソラノワ技研 / Company: Kirinoha Systems",
+        "〒100-0001 東京都千代田区丸の内1丁目2-3",
+        "電話 03-1234-5678 内線 12 / +81 90 1234 5678",
+        "メール: taro@example.com",
+        "https://example.com/a?id=1 x=2&k=v",
+        "https://example.com/a/b/token=abc123",
+        "api_key=AbCdEf1234567890abcdefXYZ 12ab",
+        "postgres://user:pa55word@db.example.com",
+        "カード 9111 1111 1111 1111",
+        "口座番号 1234567 記号番号 10180-35781291",
+        "IBAN GB82 WEST 1234 5698 7654 32",
+        "合計 ¥12,000.- 也 USD 1,200- JPY 300",
+        "社員番号: AB-12345 / VAT GB 000 4417 26",
+    ];
+
+    /// 挟む文字(日本語・絵文字・結合文字・ZWJ の並び・全角空白)。
+    const BOUNDARY_INSERTS: [&str; 6] = ["漢", "😀", "\u{3099}", "e\u{301}", "👨\u{200d}👩\u{200d}👧", "\u{3000}"];
+
+    #[test]
+    fn 多バイト文字をどの位置に挟んでも検出はパニックしない() {
+        for base in BOUNDARY_BASES {
+            let positions = base.char_indices().map(|(i, _)| i).chain([base.len()]);
+            for pos in positions {
+                let (head, tail) = base.split_at(pos);
+                for insert in BOUNDARY_INSERTS {
+                    let line = format!("{head}{insert}{tail}");
+                    // 同じ行を前後の行にも置き、隣の観測・直下の観測を見る規則も通す
+                    let page = FakePage::new(&[base, &line, insert]);
+                    let _ = run(&page);
+                }
+            }
+        }
+    }
+
+    /// 決定論的な疑似乱数(線形合同法)。外部の依存を足さないため。
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn next(&mut self, bound: usize) -> usize {
+            self.0 = self.0.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            ((self.0 >> 33) as usize) % bound
+        }
+    }
+
+    #[test]
+    fn 多バイト文字と手がかりを混ぜた任意の行でも検出はパニックしない() {
+        const PIECES: [&str; 40] = [
+            " ", "-", ".", ":", "=", "?", "/", "@", "¥", "$", "(", ")", "0", "1", "9", "123", "10180-", "a", "Z", "Ab",
+            "様", "さん", "氏名", "株式会社", "会社", "東京都", "〒", "内線", "口座番号", "也", "山田", "しおみ", "ア",
+            "ー", "😀", "\u{3099}", "e\u{301}", "\u{200d}", "\u{3000}", "https://x.example/",
+        ];
+        let mut rng = Lcg(0x5eed);
+        for _ in 0..3000 {
+            let len = 1 + rng.next(16);
+            let line: String = (0..len).map(|_| PIECES[rng.next(PIECES.len())]).collect();
+            let page = FakePage::new(&[&line]);
+            let _ = run(&page);
+        }
+    }
 }

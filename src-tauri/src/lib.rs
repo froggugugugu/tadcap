@@ -12,8 +12,24 @@ mod window_front;
 
 use tauri::Manager;
 
+/// パニックの報告の 1 行。パニックの文言(payload)は出さず、発生場所(ファイル:行:列)だけにする
+/// (AM-T25-F2。文字列の切り出しの標準パニックは、読み取った文字列の一部を文言に含むため。CWE-209/532)。
+fn panic_report(info: &std::panic::PanicHookInfo<'_>) -> String {
+    match info.location() {
+        Some(location) => format!("[tadcap:panic] at {}:{}:{}", location.file(), location.line(), location.column()),
+        None => "[tadcap:panic] at <unknown>".to_string(),
+    }
+}
+
+/// 標準のパニックの表示(文言を含む)を、発生場所だけを標準エラーに出すフックに置き換える。
+fn install_panic_hook() {
+    std::panic::set_hook(Box::new(|info| eprintln!("{}", panic_report(info))));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 何より先に入れる(以降のどのスレッドのパニックにも効く)
+    install_panic_hook();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -91,4 +107,38 @@ pub fn run() {
             }
             _ => {}
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use std::panic;
+    use std::sync::Mutex;
+
+    use super::panic_report;
+
+    /// テストのパニックのフックが受け取った報告。
+    static REPORTS: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+    #[test]
+    fn パニックの報告は文言を含まず発生場所だけを含む() {
+        const SECRET: &str = "架空の機密 taro@example.com 03-1234-5678";
+        let previous = panic::take_hook();
+        panic::set_hook(Box::new(|info| {
+            if let Ok(mut reports) = REPORTS.lock() {
+                reports.push(panic_report(info));
+            }
+        }));
+        let line = line!() + 1;
+        let result = panic::catch_unwind(|| panic!("{}", SECRET));
+        panic::set_hook(previous);
+        assert!(result.is_err());
+
+        let reports = REPORTS.lock().map(|r| r.clone()).unwrap_or_default();
+        let expected = format!("src/lib.rs:{line}:");
+        let report = reports.iter().find(|r| r.contains(&expected)).expect("このテストのパニックの報告が無い");
+        assert!(report.starts_with("[tadcap:panic] at "), "形式: {} 文字", report.len());
+        for part in [SECRET, "架空の機密", "taro@example.com", "03-1234-5678"] {
+            assert!(reports.iter().all(|r| !r.contains(part)), "報告に文言が入っている");
+        }
+    }
 }

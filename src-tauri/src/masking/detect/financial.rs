@@ -13,7 +13,7 @@
 //!   手がかり語だけの観測(数字を含まない短いラベル)は、同じ行の右隣(無ければ直下の行)の観測の先頭の数字を値とする。
 //!   その値の前の預金の種類が誤読されていても(空白の前の数字・空白以外の 1〜3 文字)、続く数字を値とする。
 //!   ラベルが表の見出しの行にあるなら、列の下に並ぶ値を口座番号の形の間だけ値とする
-//! - ゆうちょ銀行の記号・番号(`1NNN0-NNNNNN1`: 記号 5 桁は 1 で始まり 0 で終わり、番号 6〜8 桁は 1 で終わる)は
+//! - 郵便貯金の記号-番号形式(`1NNN0-NNNNNN1`: 記号 5 桁は 1 で始まり 0 で終わり、番号 6〜8 桁は 1 で終わる)は
 //!   手がかり語なしで口座番号とする
 //! - IBAN: 国コード + チェックディジット 2 桁 + 英数字(4 文字ごとの空白は任意)で、桁数が国ごとの桁数(`IBAN_LENGTHS`)に
 //!   合うもの。チェックディジット(mod-97)が正しければ手がかり語なし、合わなければ同じ行(同じ高さの観測を含む)に
@@ -127,8 +127,8 @@ static ACCOUNT_VALUE: LazyLock<Regex> = LazyLock::new(|| {
         .expect("固定の正規表現が不正")
 });
 
-/// ゆうちょ銀行の記号(5 桁・1 で始まり 0 で終わる)- 番号(6〜8 桁・1 で終わる)。前後は英数字・`-` でないこと。
-static YUCHO: LazyLock<Regex> = LazyLock::new(|| {
+/// 郵便貯金の記号-番号形式。記号(5 桁・1 で始まり 0 で終わる)- 番号(6〜8 桁・1 で終わる)。前後は英数字・`-` でないこと。
+static POSTAL_SAVINGS_NUMBER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:^|[^0-9A-Za-z\-])(?P<number>1[0-9]{3}0-[0-9]{5,7}1)(?:$|[^0-9A-Za-z\-])").expect("固定の正規表現が不正")
 });
 
@@ -334,6 +334,8 @@ fn find_cards(text: &str) -> Vec<Range<usize>> {
         let mut i = 0;
         while i < groups.len() {
             // 最も長い組の連続を優先する
+            // 組の配列(`Vec<Range<usize>>`)の切り出し。`i < j <= groups.len()` はループの範囲で決まり、
+            // 文字列の切り出しではないため、パニックの文言に文字列は入らない
             match (i + 1..=groups.len()).rev().find(|&j| is_card(text, &groups[i..j])) {
                 Some(j) => {
                     found.push(groups[i].start..groups[j - 1].end);
@@ -382,6 +384,7 @@ fn is_card(text: &str, groups: &[Range<usize>]) -> bool {
             return true;
         }
     }
+    // バイト列の切り出し。組は `digit_groups` が数字の並び(正規表現の一致)の内側に作る
     let digits: Vec<u8> = groups.iter().flat_map(|g| bytes[g.clone()].iter().map(|b| b - b'0')).collect();
     luhn_valid(&digits)
 }
@@ -410,7 +413,7 @@ fn is_word_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
 
-/// 同じ行の口座番号(バイト範囲)。日本語の手がかり語の後の数字・英字の手がかり語の後の値・ゆうちょの記号番号。
+/// 同じ行の口座番号(バイト範囲)。日本語の手がかり語の後の数字・英字の手がかり語の後の値・郵便貯金の記号-番号形式。
 fn find_accounts(text: &str) -> Vec<Range<usize>> {
     let mut found: Vec<Range<usize>> = ACCOUNT
         .captures_iter(text)
@@ -425,7 +428,7 @@ fn find_accounts(text: &str) -> Vec<Range<usize>> {
             found.push(number.range());
         }
     }
-    for number in YUCHO.captures_iter(text).filter_map(|caps| caps.name("number")) {
+    for number in POSTAL_SAVINGS_NUMBER.captures_iter(text).filter_map(|caps| caps.name("number")) {
         if !overlaps_any(&number.range(), &found) {
             found.push(number.range());
         }
@@ -459,7 +462,7 @@ fn find_ibans(text: &str) -> Vec<(Range<usize>, bool)> {
             if candidate.as_bytes().get(end).is_some_and(u8::is_ascii_alphanumeric) {
                 return None;
             }
-            let compact: String = candidate[..end].chars().filter(|c| *c != ' ').collect();
+            let compact: String = candidate.get(..end)?.chars().filter(|c| *c != ' ').collect();
             Some((m.start()..m.start() + end, iban_checksum_ok(&compact)))
         })
         .collect()
@@ -493,11 +496,11 @@ fn is_account_label(text: &str) -> bool {
 }
 
 /// ラベルの値の観測の先頭の口座番号(バイト範囲)。後ろが英数字・ハイフンに続く数字は対象外。
-/// 観測の先頭がゆうちょの記号番号なら、その全体を返す。
+/// 観測の先頭が郵便貯金の記号-番号形式なら、その全体を返す。
 fn leading_account(text: &str, digits: std::ops::RangeInclusive<usize>) -> Option<Range<usize>> {
     let offset = text.len() - text.trim_start().len();
     let trimmed = text.trim();
-    if let Some(number) = YUCHO.captures(trimmed).and_then(|caps| caps.name("number")).filter(|m| m.start() == 0) {
+    if let Some(number) = POSTAL_SAVINGS_NUMBER.captures(trimmed).and_then(|caps| caps.name("number")).filter(|m| m.start() == 0) {
         return Some(offset..offset + number.end());
     }
     let number = ACCOUNT_VALUE.captures(trimmed)?.name("number")?;
@@ -529,7 +532,7 @@ fn find_amounts(text: &str) -> Vec<Range<usize>> {
                     start += 1;
                 }
             }
-            Some(start..amount.end() + trailer_len(&text[amount.end()..]))
+            Some(start..amount.end() + text.get(amount.end()..).map_or(0, trailer_len))
         })
         .collect()
 }
@@ -539,9 +542,9 @@ fn trailer_len(rest: &str) -> usize {
     let not_continued = |after: &str| !after.bytes().next().is_some_and(|b| b.is_ascii_alphanumeric());
     if rest.starts_with('也') {
         '也'.len_utf8()
-    } else if rest.starts_with(".-") && not_continued(&rest[2..]) {
+    } else if rest.starts_with(".-") && rest.get(2..).is_some_and(not_continued) {
         2
-    } else if rest.starts_with('-') && not_continued(&rest[1..]) {
+    } else if rest.starts_with('-') && rest.get(1..).is_some_and(not_continued) {
         1
     } else {
         0
@@ -607,7 +610,7 @@ mod tests {
         let mut parts = Vec::new();
         let mut start = 0;
         for &len in groups {
-            parts.push(&digits[start..start + len]);
+            parts.push(digits.get(start..start + len).expect("組の長さの合計が数字の数を超えた"));
             start += len;
         }
         assert_eq!(start, digits.len());
@@ -958,7 +961,7 @@ mod tests {
     }
 
     #[test]
-    fn ゆうちょの記号と番号の形を検出する() {
+    fn 郵便貯金の記号_番号形式を検出する() {
         // 記号 5 桁(1 で始まり 0 で終わる)- 番号 6〜8 桁(1 で終わる)
         for line in ["10180-35781291", "記号番号 12340-1234561", "振込先 13570-246811"] {
             let expected = line.split(' ').next_back().unwrap_or(line);
@@ -1000,7 +1003,8 @@ mod tests {
     fn チェックディジットが合わないibanは同じ行に手がかり語があるときだけ検出する() {
         let valid = iban("GB", "ZZZZ00000041926370");
         // チェックディジットを 1 つずらした値(読み取りの誤りなど)
-        let wrong = format!("GB{:02}{}", (valid[2..4].parse::<u32>().unwrap_or(0) + 1) % 100, &valid[4..]);
+        let check = valid.get(2..4).and_then(|d| d.parse::<u32>().ok()).unwrap_or(0);
+        let wrong = format!("GB{:02}{}", (check + 1) % 100, valid.get(4..).unwrap_or_default());
         let shown = spaced4(&wrong);
         assert!(accounts(&shown).is_empty());
         let line = format!("IBAN {shown}");
@@ -1039,7 +1043,7 @@ mod tests {
             .enumerate()
             .map(|(i, v)| Match::new(3 + i, 0..v.len(), MatchDetail::AccountNumber))
             .collect();
-        // ゆうちょの形は行ごとの規則で先に見つかるため、行の順に並べて比べる
+        // 郵便貯金の記号-番号形式は行ごとの規則で先に見つかるため、行の順に並べて比べる
         let mut found = detect_page(&page, MatchDetail::AccountNumber);
         found.sort_by_key(|m| m.line);
         assert_eq!(found, expected);
@@ -1141,5 +1145,23 @@ mod tests {
         for line in ["48,000", "合計 1,249.99", "3 個", "USD", "円", "¥", "JPYX 100", "2026-10-09"] {
             assert!(amounts(line).is_empty());
         }
+    }
+
+    // ---- 多バイト文字の境界(AM-T25-F2。切り出しを `str::get` にした箇所の回帰) ----
+
+    #[test]
+    fn 絵文字や結合文字に隣り合っても金額と口座の範囲は変わらない() {
+        // 金額の末尾の「也」「.-」「-」(`trailer_len`)
+        let cases = [
+            ("合計 ¥12,000😀", "¥12,000"),
+            ("合計 ¥12,000.-😀", "¥12,000.-"),
+            ("合計 ¥12,000-👍", "¥12,000-"),
+            ("合計 ¥12,000也\u{3099}", "¥12,000也"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(amounts(line), vec![span(line, expected)], "case {}", line.len());
+        }
+        let line = "記号番号 10180-35781291😀";
+        assert_eq!(accounts(line), vec![span(line, "10180-35781291")]);
     }
 }

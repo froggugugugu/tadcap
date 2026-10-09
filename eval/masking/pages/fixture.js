@@ -37,13 +37,13 @@
 
   /**
    * 接頭辞の一覧(断片の配列。連結して使う)。サービス名は書かない。
-   * 各要素: [断片..., 本体の文字種]。文字種は "alnum" | "upper" | "slack"(数字-数字-英数字)
+   * 各要素: [断片..., 本体の文字種]。文字種は "alnum" | "upper" | "dashed_digits"(数字-数字-英数字)
    */
   const PREFIXES = [
     [["sk", "_li", "ve_"], "alnum"],
     [["gh", "p_"], "alnum"],
     [["gh", "o_"], "alnum"],
-    [["xo", "xb-"], "slack"],
+    [["xo", "xb-"], "dashed_digits"],
     [["AK", "IA"], "upper"],
     [["gl", "pat-"], "alnum"],
     [["np", "m_"], "alnum"],
@@ -72,7 +72,7 @@
     const prefix = parts.join("");
     const len = Number(el.dataset.len ?? 32);
     if (body === "upper") return prefix + mixed(rand, len, UPPER + DIGITS);
-    if (body === "slack") {
+    if (body === "dashed_digits") {
       let digits1 = "";
       let digits2 = "";
       for (let i = 0; i < 12; i++) digits1 += pick(rand, DIGITS);

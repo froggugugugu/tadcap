@@ -187,7 +187,7 @@ pub(super) fn detect(page: &dyn RecognizedPage, lines: &[Line]) -> Vec<Match> {
             continue;
         }
         let range = trimmed_range(value.as_str());
-        if !is_secret_like(&value.as_str()[range.clone()]) {
+        if !value.as_str().get(range.clone()).is_some_and(is_secret_like) {
             continue;
         }
         if let Some(found) = value.to_match(range, MatchDetail::LabeledSecret) {
@@ -216,7 +216,9 @@ fn column_secrets(lines: &[Line], cells: &[usize], has_own_value: &[bool]) -> Ve
     for &pos in cells {
         let text = lines[pos].as_str();
         let range = trimmed_range(text);
-        let value = &text[range.clone()];
+        let Some(value) = text.get(range.clone()) else {
+            break;
+        };
         if !is_secret_like(value) || has_own_value[pos] || is_label_only(value) {
             break;
         }
@@ -236,7 +238,7 @@ fn find_urls(text: &str) -> Vec<(Range<usize>, Option<Range<usize>>)> {
         }
         let url = m.start()..extend_across_space(text, m.end());
         // `://` の後(ホストの先頭)から `?` を探す
-        let host = text[url.clone()].find("://").map_or(url.start, |p| url.start + p + 3);
+        let host = text.get(url.clone()).and_then(|u| u.find("://")).map_or(url.start, |p| url.start + p + 3);
         let query = query_of(text, &url, host);
         urls.push((url, query));
     }
@@ -259,8 +261,8 @@ fn find_urls(text: &str) -> Vec<(Range<usize>, Option<Range<usize>>)> {
 /// URL の続きにする(何か所でも)。続けた後の終わりの位置を返す。
 fn extend_across_space(text: &str, mut end: usize) -> usize {
     while text.as_bytes().get(end) == Some(&b' ') {
-        let len = ascii_chunk_len(&text[end + 1..]);
-        if len == 0 || !text[end + 1..end + 1 + len].contains(['=', '?']) {
+        let len = text.get(end + 1..).map_or(0, ascii_chunk_len);
+        if len == 0 || !text.get(end + 1..end + 1 + len).is_some_and(|chunk| chunk.contains(['=', '?'])) {
             break;
         }
         end += 1 + len;
@@ -272,14 +274,15 @@ fn extend_across_space(text: &str, mut end: usize) -> usize {
 /// `?` の後が空なら `None`。`?` が無ければ誤読とみなし、最初の `/` より後の最初の `=` の前のキー
 /// (英字・`_`)と、その直前の 1 文字(`/` 以外。誤読された `?`)からをクエリとする。
 fn query_of(text: &str, url: &Range<usize>, from: usize) -> Option<Range<usize>> {
-    let body = &text[from..url.end];
+    let body = text.get(from..url.end)?;
     if let Some(q) = body.find('?') {
         let start = from + q;
         return (start + 1 < url.end).then_some(start..url.end);
     }
     let slash = from + body.find('/')?;
-    let eq = slash + text[slash..url.end].find('=')?;
-    let key_start = text[slash + 1..eq]
+    let eq = slash + text.get(slash..url.end)?.find('=')?;
+    let key_start = text
+        .get(slash + 1..eq)?
         .rfind(|c: char| !(c.is_ascii_alphabetic() || c == '_'))
         .map_or(slash + 1, |p| slash + 1 + p + 1);
     if key_start == eq {
@@ -307,7 +310,9 @@ fn find_prefixed_tokens(text: &str, urls: &[Range<usize>]) -> Vec<Range<usize>> 
         }
         let mut end = body.end();
         while let Some(next) = chunk_after_single_space(text, end) {
-            let next_text = &text[next.clone()];
+            let Some(next_text) = text.get(next.clone()) else {
+                break;
+            };
             if !continues_chunk(next_text) || TOKEN_PREFIXES.iter().any(|p| next_text.starts_with(p)) {
                 break;
             }
@@ -317,7 +322,9 @@ fn find_prefixed_tokens(text: &str, urls: &[Range<usize>]) -> Vec<Range<usize>> 
         if matches!(text.as_bytes().get(end), Some(b']' | b'|')) {
             end += 1;
         }
-        let body_text = &text[body.start()..end];
+        let Some(body_text) = text.get(body.start()..end) else {
+            continue;
+        };
         // 本体は英字と数字を含むか、英字だけでも大文字・小文字の切り替わりが多いこと(数字の無いランダムな本体)
         let random_body = is_token_like(body_text) || class_changes(body_text) >= MIN_CLASS_CHANGES;
         if non_space_len(body_text) >= MIN_PREFIXED_BODY_LEN && random_body {
@@ -338,13 +345,14 @@ fn find_random_strings(text: &str, excluded: &[Range<usize>]) -> Vec<Range<usize
         let mut last = i;
         while let Some(next) = chunks.get(last + 1) {
             let current = &chunks[last];
-            let single_space = next.start == current.end + 1 && text.as_bytes()[current.end] == b' ';
-            if !(single_space && continues_chunk(&text[current.clone()]) && continues_chunk(&text[next.clone()])) {
+            let single_space = next.start == current.end + 1 && text.as_bytes().get(current.end) == Some(&b' ');
+            let continues = |r: &Range<usize>| text.get(r.clone()).is_some_and(continues_chunk);
+            if !(single_space && continues(current) && continues(next)) {
                 break;
             }
             last += 1;
         }
-        match (i..=last).rev().find(|&j| is_random(&text[chunks[i].start..chunks[j].end])) {
+        match (i..=last).rev().find(|&j| text.get(chunks[i].start..chunks[j].end).is_some_and(is_random)) {
             Some(j) => {
                 found.push(chunks[i].start..chunks[j].end);
                 i = j + 1;
@@ -391,7 +399,10 @@ fn find_labeled_values(text: &str) -> Vec<Range<usize>> {
             }
             // 値の途中に読み取りで入った空白: 続く塊が英数字と英字以外(数字・記号)を含み、次のキーでない
             while text.as_bytes().get(end) == Some(&b' ') {
-                let next = &text[end + 1..end + 1 + ascii_chunk_len(&text[end + 1..])];
+                let len = text.get(end + 1..).map_or(0, ascii_chunk_len);
+                let Some(next) = text.get(end + 1..end + 1 + len) else {
+                    break;
+                };
                 let continues = next.bytes().any(|b| b.is_ascii_alphanumeric())
                     && next.bytes().any(|b| !b.is_ascii_alphabetic())
                     && !next.contains([':', '=']);
@@ -401,7 +412,7 @@ fn find_labeled_values(text: &str) -> Vec<Range<usize>> {
                 end += 1 + next.len();
             }
             // 末尾の開き括弧(続く日本語の注記の始まり。「604918(毎月…」)は値に含めない
-            let end = value.start() + text[value.start()..end].trim_end_matches(['(', '[', '{', '<']).len();
+            let end = value.start() + text.get(value.start()..end)?.trim_end_matches(['(', '[', '{', '<']).len();
             (end > value.start()).then_some(value.start()..end)
         })
         .collect()
@@ -1137,5 +1148,28 @@ mod tests {
         // 全角の英数字・コロンは正規化してから判定し、範囲は正規化前の位置で返す
         let line = "パスワード：ａｂｃ１２３＃";
         assert_eq!(labeled(line), vec![span(line, "ａｂｃ１２３＃")]);
+    }
+
+    // ---- 多バイト文字の境界(AM-T25-F2。切り出しを `str::get` にした箇所の回帰) ----
+
+    #[test]
+    fn 絵文字や結合文字に隣り合ってもurlのクエリの範囲は変わらない() {
+        // URL の後の空白の続き(`extend_across_space`)・クエリの切り出し(`query_of`)
+        let cases = [
+            ("https://example.com/a?id=1 😀=b", "?id=1"),
+            ("😀https://example.com/a?id=1&k=v", "?id=1&k=v"),
+            ("https://example.com/a?id=1 x=2\u{3099}", "?id=1 x=2"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(url_query(line), vec![span(line, expected)], "case {}", line.len());
+        }
+    }
+
+    #[test]
+    fn 絵文字に隣り合っても手がかり語の値の範囲は変わらない() {
+        // 値の後の空白の続き(`labeled_values` の `ascii_chunk_len`)
+        let value = secret_value();
+        let line = format!("password: {value} 😀");
+        assert_eq!(labeled(&line), vec![span(&line, &value)]);
     }
 }

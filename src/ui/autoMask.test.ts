@@ -248,6 +248,7 @@ describe("文言(UI_auto-masking §5.2、NFR-005)", () => {
     expect(AUTO_MASK_MESSAGES.apply).toBe("まとめてモザイク");
     expect(AUTO_MASK_MESSAGES.close).toBe("閉じる");
     expect(AUTO_MASK_MESSAGES.failed).toBe("文字を読み取れませんでした。画像は変更していません。");
+    expect(AUTO_MASK_MESSAGES.applyFailed).toBe("モザイクをかけられませんでした。画像は変更していません。");
     expect(AUTO_MASK_MESSAGES.applied(3)).toBe("候補 3 件にモザイクをかけました。⌘Z で戻せます。");
   });
 
@@ -658,14 +659,14 @@ describe("まとめてモザイクの結果の知らせ(AM-T25-F1 C-1)", () => {
     expect(getMaskSession().status).toBe("idle");
   });
 
-  it("1 件も適用できなければ失敗のトーストを出す(完了のトーストは出さない)", async () => {
+  it("1 件も適用できなければ一括モザイクの失敗のトーストを出す(読み取りの失敗の文言・完了のトーストは出さない)", async () => {
     const h = makeHarness();
     h.applyBaseEdits.mockImplementation(() => 0);
     const controller = createAutoMaskController(h.deps);
     await controller.start();
     controller.applyMosaic();
     expect(h.notify).toHaveBeenCalledTimes(1);
-    expect(h.notify).toHaveBeenCalledWith(AUTO_MASK_MESSAGES.failed, "error");
+    expect(h.notify).toHaveBeenCalledWith(AUTO_MASK_MESSAGES.applyFailed, "error");
     expect(getMaskSession().status).toBe("idle");
   });
 });

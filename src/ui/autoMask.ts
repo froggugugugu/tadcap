@@ -45,6 +45,7 @@ export const AUTO_MASK_MESSAGES = {
   apply: "まとめてモザイク",
   close: "閉じる",
   failed: "文字を読み取れませんでした。画像は変更していません。",
+  applyFailed: "モザイクをかけられませんでした。画像は変更していません。",
   applied: (count: number): string => `候補 ${count} 件にモザイクをかけました。⌘Z で戻せます。`,
 } as const;
 
@@ -276,11 +277,11 @@ export function createAutoMaskController(deps: AutoMaskDeps): AutoMaskController
     const applied = deps.applyBaseEdits(rects, (ctx, rect) => pixelateRect(ctx, rect, width, height));
     discardMaskSession();
     // 件数は実際に加工した数。1 件も加工できなければ(サーフェスが無い等)画像は変わっていないので
-    // 失敗として知らせる(AM-T25-F1 C-1)
+    // 失敗として知らせる(AM-T25-F1 C-1)。読み取りの失敗とは別の文言にする(AM-T25-F2)
     if (applied > 0) {
       deps.notify(AUTO_MASK_MESSAGES.applied(applied), "info");
     } else {
-      deps.notify(AUTO_MASK_MESSAGES.failed, "error");
+      deps.notify(AUTO_MASK_MESSAGES.applyFailed, "error");
     }
   };
 

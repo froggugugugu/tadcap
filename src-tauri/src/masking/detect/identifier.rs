@@ -288,7 +288,7 @@ fn japanese_companies(text: &str) -> Vec<Range<usize>> {
             continue;
         }
         // 種類と名前の間の空白 1 つまで(読み取りで入った空白)
-        let name_start = company_type.end() + usize::from(text[company_type.end()..].starts_with(' '));
+        let name_start = company_type.end() + usize::from(text.as_bytes().get(company_type.end()) == Some(&b' '));
         let name_end = extend_english_words(text, name_start, company_name_after(text, name_start));
         if name_end > name_start {
             found.push(company_type.start()..name_end);
@@ -320,7 +320,10 @@ const MIN_LEADING_HIRAGANA: usize = 2;
 /// ただし、その前のひらがなの列(2 字以上・漢字側の端が助詞でない)が語の区切り(行頭・空白・記号)から
 /// 始まるなら、名前の前半(「やまびこ醸造合資会社」)として含める。
 fn company_name_before(text: &str, end: usize) -> usize {
-    let chars: Vec<(usize, char)> = text[..end].char_indices().collect();
+    let Some(head) = text.get(..end) else {
+        return end;
+    };
+    let chars: Vec<(usize, char)> = head.char_indices().collect();
     let mut start = end;
     let mut has_non_hiragana = false;
     let mut k = chars.len();
@@ -358,10 +361,10 @@ fn company_name_before(text: &str, end: usize) -> usize {
 /// 前置の会社の種類の後の名前が英字だけなら、空白 1 つで続く大文字・数字始まりの語を 3 語まで含める
 /// (「株式会社 Kumoyuki Systems」)。続かなければ `end` のまま。
 fn extend_english_words(text: &str, start: usize, end: usize) -> usize {
-    if end == start || !text[start..end].bytes().all(|b| b.is_ascii_alphanumeric()) {
+    if end == start || !text.get(start..end).is_some_and(|name| name.bytes().all(|b| b.is_ascii_alphanumeric())) {
         return end;
     }
-    ENGLISH_NAME_WORDS.find(&text[end..]).map_or(end, |m| end + m.end())
+    text.get(end..).and_then(|rest| ENGLISH_NAME_WORDS.find(rest)).map_or(end, |m| end + m.end())
 }
 
 /// 前置の会社の種類の後に続く英字の語(空白 1 つ + 大文字・数字始まり。3 語まで)。
@@ -372,7 +375,10 @@ static ENGLISH_NAME_WORDS: LazyLock<Regex> =
 fn company_name_after(text: &str, start: usize) -> usize {
     let mut end = start;
     let mut prev = None;
-    for (offset, c) in text[start..].chars().take(MAX_COMPANY_NAME_CHARS).enumerate() {
+    let Some(rest) = text.get(start..) else {
+        return start;
+    };
+    for (offset, c) in rest.chars().take(MAX_COMPANY_NAME_CHARS).enumerate() {
         if offset == 0 && COMPANY_NAME_PARTICLES.contains(&c) {
             break;
         }
@@ -437,10 +443,12 @@ static ENGLISH_COMPANY_VALUE: LazyLock<Regex> = LazyLock::new(|| {
 
 /// `start` から始まる会社名の値(空白を飛ばす)。英字なら 1〜5 語、日本語なら名前の列。
 fn company_value(text: &str, start: usize) -> Option<Range<usize>> {
-    let start = start + (text[start..].len() - text[start..].trim_start_matches(' ').len());
-    let first = text[start..].chars().next()?;
+    let rest = text.get(start..)?;
+    let start = start + (rest.len() - rest.trim_start_matches(' ').len());
+    let rest = text.get(start..)?;
+    let first = rest.chars().next()?;
     let end = if first.is_ascii_alphanumeric() {
-        let value = ENGLISH_COMPANY_VALUE.find(&text[start..])?;
+        let value = ENGLISH_COMPANY_VALUE.find(rest)?;
         start + value.as_str().trim_end_matches(',').len()
     } else {
         company_name_after(text, start)
@@ -508,7 +516,7 @@ fn names_before_readings(text: &str) -> Vec<Range<usize>> {
         .filter_map(|caps| {
             let (whole, reading) = (caps.get(0)?, caps.name("reading")?);
             let range = name_before(text, whole.start())?;
-            let name = &text[range.clone()];
+            let name = text.get(range.clone())?;
             (name.chars().any(is_kanji) && (name.contains(' ') || reading.as_str().contains(' '))).then_some(range)
         })
         .collect()
@@ -673,6 +681,8 @@ fn repeated_names(lines: &[Line], found: &[(usize, Range<usize>)]) -> Vec<(usize
         let compact: Vec<(usize, char)> = text.char_indices().filter(|&(_, c)| c != ' ').collect();
         for key in &keys {
             for start in 0..compact.len().saturating_sub(key.len() - 1) {
+                // 文字の配列(`Vec<(usize, char)>`)の切り出し。`start + key.len() <= compact.len()` は
+                // ループの範囲で決まり、文字列の切り出しではないため、パニックの文言に文字列は入らない
                 let window = &compact[start..start + key.len()];
                 if !window.iter().map(|&(_, c)| c).eq(key.iter().copied()) {
                     continue;
@@ -681,8 +691,8 @@ fn repeated_names(lines: &[Line], found: &[(usize, Range<usize>)]) -> Vec<(usize
                 let end = last + last_char.len_utf8();
                 // 英字の名前は語の一部でないこと
                 let bounded = !key[0].is_ascii()
-                    || (!text[..begin].chars().next_back().is_some_and(|c| c.is_ascii_alphanumeric())
-                        && !text[end..].chars().next().is_some_and(|c| c.is_ascii_alphanumeric()));
+                    || (!text.get(..begin).and_then(|s| s.chars().next_back()).is_some_and(|c| c.is_ascii_alphanumeric())
+                        && !text.get(end..).and_then(|s| s.chars().next()).is_some_and(|c| c.is_ascii_alphanumeric()));
                 if bounded {
                     repeated.push((pos, begin..end));
                 }
@@ -712,11 +722,14 @@ fn starts_with_honorific(text: &str) -> bool {
 fn names_before_honorifics(text: &str) -> Vec<Range<usize>> {
     let mut found = Vec::new();
     for (pos, _) in text.char_indices() {
-        let Some(honorific) = HONORIFICS.iter().find(|h| text[pos..].starts_with(*h)) else {
+        let Some(rest) = text.get(pos..) else {
+            continue;
+        };
+        let Some(honorific) = HONORIFICS.iter().find(|h| rest.starts_with(*h)) else {
             continue;
         };
         // 「様式」「氏名」「殿下」など、敬称の直後が漢字なら語の一部
-        if text[pos + honorific.len()..].chars().next().is_some_and(is_kanji) {
+        if rest.get(honorific.len()..).and_then(|after| after.chars().next()).is_some_and(is_kanji) {
             continue;
         }
         if let Some(range) = name_before(text, pos) {
@@ -728,8 +741,8 @@ fn names_before_honorifics(text: &str) -> Vec<Range<usize>> {
 
 /// `end` の直前(空白を除く)から後ろ向きに集めた人名の範囲。
 fn name_before(text: &str, end: usize) -> Option<Range<usize>> {
-    let end = text[..end].trim_end_matches(' ').len();
-    let chars: Vec<(usize, char)> = text[..end].char_indices().collect();
+    let end = text.get(..end)?.trim_end_matches(' ').len();
+    let chars: Vec<(usize, char)> = text.get(..end)?.char_indices().collect();
     let mut start = end;
     let mut count = 0;
     let mut has_non_hiragana = false;
@@ -765,7 +778,7 @@ fn name_before(text: &str, end: usize) -> Option<Range<usize>> {
     }
     // 空白の前の区切りがラベル(「ご担当 しおみ様」)なら含めない
     if let Some(space) = space_at.filter(|&space| space > start) {
-        if PERSON_LABELS_JA.contains(&&text[start..space]) {
+        if text.get(start..space).is_some_and(|label| PERSON_LABELS_JA.contains(&label)) {
             start = space + 1;
         }
     }
@@ -814,13 +827,15 @@ fn labeled_names(text: &str) -> Vec<Range<usize>> {
 
 /// `start` から始まる人名の値(空白を飛ばす)。英字なら大文字・小文字を問わず 1〜3 語、日本語ならかな漢字の列。
 fn name_value(text: &str, start: usize) -> Option<Range<usize>> {
-    let start = start + (text[start..].len() - text[start..].trim_start_matches(' ').len());
-    let first = text[start..].chars().next()?;
+    let rest = text.get(start..)?;
+    let start = start + (rest.len() - rest.trim_start_matches(' ').len());
+    let rest = text.get(start..)?;
+    let first = rest.chars().next()?;
     if first.is_ascii_alphabetic() {
-        let value = ENGLISH_VALUE.find(&text[start..])?;
+        let value = ENGLISH_VALUE.find(rest)?;
         let end = start + value.end();
         // メールアドレス・ドメインの一部(直後が `@`、または `.` + 英数字)は名前にしない
-        let mut rest = text[end..].chars();
+        let mut rest = text.get(end..)?.chars();
         let next = rest.next();
         if next == Some('@') || (next == Some('.') && rest.next().is_some_and(|c| c.is_ascii_alphanumeric())) {
             return None;
@@ -845,14 +860,18 @@ fn japanese_name_after(text: &str, start: usize) -> Option<Range<usize>> {
     let mut count = 0;
     let mut spaced = false;
     let mut prev = None;
-    for (offset, c) in text[start..].char_indices() {
+    let rest = text.get(start..)?;
+    for (offset, c) in rest.char_indices() {
         let i = start + offset;
-        if count >= MAX_NAME_CHARS || starts_with_honorific(&text[i..]) {
+        // `offset` は `char_indices` の位置なので `rest[offset..]` は文字の境界から始まる
+        let here = rest.get(offset..).unwrap_or_default();
+        if count >= MAX_NAME_CHARS || starts_with_honorific(here) {
             break;
         }
         if c == ' ' {
-            let next = text[i + 1..].chars().next();
-            if spaced || count == 0 || !next.is_some_and(is_kana_kanji) || starts_with_honorific(&text[i + 1..]) {
+            let after = here.get(1..).unwrap_or_default();
+            let next = after.chars().next();
+            if spaced || count == 0 || !next.is_some_and(is_kana_kanji) || starts_with_honorific(after) {
                 break;
             }
             spaced = true;
@@ -878,8 +897,9 @@ fn surname_names(text: &str) -> Vec<Range<usize>> {
     while k < chars.len() {
         // 長い姓を先に試す。1 字の姓は使わない
         let surname_end = (2..=3).rev().map(|n| k + n).find(|&e| {
+            // `chars` は文字の配列(`Vec<(usize, char)>`)で、`e <= chars.len()` を先に確かめる
             e <= chars.len() && chars[k..e].iter().all(|&(_, c)| is_kanji(c) || c == 'ヶ' || c == 'ノ')
-                && SURNAMES_JA.contains(&text[byte_at(k)..byte_at(e)])
+                && text.get(byte_at(k)..byte_at(e)).is_some_and(|surname| SURNAMES_JA.contains(&surname))
         });
         let Some(surname_end) = surname_end else {
             k += 1;
@@ -893,7 +913,7 @@ fn surname_names(text: &str) -> Vec<Range<usize>> {
         while j < chars.len()
             && j - given_start < MAX_GIVEN_CHARS
             && is_kana_kanji(chars[j].1)
-            && !starts_with_honorific(&text[byte_at(j)..])
+            && !text.get(byte_at(j)..).is_some_and(starts_with_honorific)
         {
             j += 1;
         }
@@ -971,7 +991,7 @@ fn english_names(text: &str) -> Vec<Range<usize>> {
                 offset += word.len() + 1;
                 range
             })
-            .skip_while(|range| is_title_word(&text[range.clone()]))
+            .skip_while(|range| text.get(range.clone()).is_some_and(is_title_word))
             .collect();
         if let Some(span) = english_name_span(text, &words) {
             found.push(span);
@@ -994,8 +1014,9 @@ fn english_name_span(text: &str, words: &[Range<usize>]) -> Option<Range<usize>>
     if words.len() < 2 {
         return None;
     }
-    let first = words.iter().position(|w| is_uncued_romaji_name(&text[w.clone()]))?;
-    let last = words.iter().rposition(|w| is_uncued_romaji_name(&text[w.clone()]))?;
+    let is_name = |w: &Range<usize>| text.get(w.clone()).is_some_and(is_uncued_romaji_name);
+    let first = words.iter().position(is_name)?;
+    let last = words.iter().rposition(is_name)?;
     let (start, end) = if words.len() <= MAX_ENGLISH_WORDS {
         (0, words.len() - 1)
     } else if first == last {
@@ -1025,7 +1046,9 @@ fn find_cued_numbers(text: &str) -> Vec<Range<usize>> {
 /// 値が数字だけ、または大文字 2 字(国コード)なら、空白 1 つずつで続く 2〜6 桁の数字の組を値に含める
 /// (VAT 番号の「GB 000 4417 26」・4 桁区切りの番号。2026-10-09 の書式の拡張)。組は数字だけで、後が英数字でないこと。
 fn extend_spaced_groups(text: &str, value: Range<usize>) -> Range<usize> {
-    let token = &text[value.clone()];
+    let Some(token) = text.get(value.clone()) else {
+        return value;
+    };
     let extendable = token.bytes().all(|b| b.is_ascii_digit())
         || (token.len() == 2 && token.bytes().all(|b| b.is_ascii_uppercase()));
     if !extendable {
@@ -1034,6 +1057,7 @@ fn extend_spaced_groups(text: &str, value: Range<usize>) -> Range<usize> {
     let bytes = text.as_bytes();
     let mut end = value.end;
     while bytes.get(end) == Some(&b' ') {
+        // バイト列の切り出し。`bytes[end]` が空白なので `end + 1 <= bytes.len()`
         let digits = bytes[end + 1..].iter().take_while(|b| b.is_ascii_digit()).count();
         let after = bytes.get(end + 1 + digits);
         if !SPACED_GROUP_DIGITS.contains(&digits) || after.is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_') {
@@ -1046,7 +1070,7 @@ fn extend_spaced_groups(text: &str, value: Range<usize>) -> Range<usize> {
 
 /// 値の末尾の `-`・`_` を除き、数字を含むときだけ範囲を返す。
 fn number_range(text: &str, range: Range<usize>) -> Option<Range<usize>> {
-    let trimmed = text[range.clone()].trim_end_matches(['-', '_']);
+    let trimmed = text.get(range.clone())?.trim_end_matches(['-', '_']);
     let range = range.start..range.start + trimmed.len();
     trimmed.bytes().any(|b| b.is_ascii_digit()).then_some(range)
 }
@@ -1989,5 +2013,55 @@ mod tests {
         for line in cases {
             assert!(companies(line).is_empty());
         }
+    }
+
+    // ---- 多バイト文字の境界(AM-T25-F2。切り出しを `str::get` にした箇所の回帰) ----
+
+    #[test]
+    fn 絵文字や結合文字に隣り合っても人名の範囲は変わらない() {
+        let cases = [
+            // 敬称の直前(`name_before`)
+            ("😀汐見様", "汐見"),
+            ("ご担当 しおみ様👍", "しおみ"),
+            // ラベルの後(`name_value`・`japanese_name_after`)
+            ("氏名: 汐見 千景😀", "汐見 千景"),
+            ("氏名: 汐見\u{3099}千景", "汐見"),
+            ("Name: Chikage Shiomi👍", "Chikage Shiomi"),
+            // 姓の辞書(`surname_names`)
+            ("山田太郎😀", "山田太郎"),
+            ("👨\u{200d}👩\u{200d}👧山田 太郎", "山田 太郎"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(names(line), vec![span(line, expected)], "case {}", line.len());
+        }
+    }
+
+    #[test]
+    fn 絵文字や結合文字に隣り合っても会社名の範囲は変わらない() {
+        let cases = [
+            // 前置の種類の後(`company_name_after`・`extend_english_words`)
+            ("株式会社ユズリハ物産😀", "株式会社ユズリハ物産"),
+            ("株式会社 Kumoyuki Systems👍", "株式会社 Kumoyuki Systems"),
+            // 後置の種類の前(`company_name_before`)
+            ("😀やまびこ醸造合資会社", "やまびこ醸造合資会社"),
+            // ラベルの後(`company_value`)
+            ("会社名: ソラノワ技研😀", "ソラノワ技研"),
+            ("Company: Kirinoha Systems👍", "Kirinoha Systems"),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(companies(line), vec![span(line, expected)], "case {}", line.len());
+        }
+        // ラベルの直後が絵文字・結合文字だけなら値にしない
+        for line in ["会社名: 😀", "会社名: \u{3099}"] {
+            assert!(companies(line).is_empty(), "case {}", line.len());
+        }
+    }
+
+    #[test]
+    fn 絵文字に隣り合っても手がかり語付きの番号の範囲は変わらない() {
+        // 空白区切りの数字の組を値に含める(`extend_spaced_groups`)
+        let line = "VAT: GB 000 4417 26😀";
+        let plain = "VAT: GB 000 4417 26";
+        assert_eq!(cued(line), cued(plain), "case {}", line.len());
     }
 }
