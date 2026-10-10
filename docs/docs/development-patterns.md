@@ -200,6 +200,12 @@ Presentational/Container分離パターン(`docs/development-patterns.md` §1参
 - フロントエンドがエラー種別を判別する必要があるバリアントは、`Display`(`#[error("...")]`)の出力を固定の識別子文字列にする(例: `PermissionDenied` → `"permission_denied"`)。`AppError` はシリアライズ時に文字列化されるだけなので(上記)、動的なメッセージを持つ `Internal(String)` と混同しない固定値を選ぶ
 - Tauriコマンド本体(`AppHandle` 等ランタイム型を引数に取る関数)は薄く保ち、変換・構築ロジック(エラー変換、レスポンス組み立て等)はランタイムに依存しない純粋関数へ切り出してユニットテストする(例: `commands::app_error_from_run_error`、`commands::capture_result_for`)。コマンド本体は実機/実プロセスに依存するため自動テスト対象外とし、純粋関数側でロジックの分岐網羅を担保する
 
+### 9.1.1 設定ファイルは `SettingsStore` だけが書く(QE-T05)
+
+- `settings.json` への書き込みは `settings::SettingsStore::update(|s| ...)` だけで行う(`save_settings()` を他のモジュールから直接呼ばない。確認: `rg -n 'save_settings' src-tauri/src` が `settings.rs` の中だけ)
+- `update()` は `Mutex` を握ったまま「今の設定の写しに 1 項目だけ当てる → 保存 → 成功したらメモリへ反映」を行う。保存に失敗したらメモリの値は変えない
+- `SettingsStore` は `lib.rs` の `setup()` の最初で `manage()` する(ショートカットの登録が保存値を読むため)。設定の項目を足すときは `AppSettings` にフィールドを足し、既定値ではキーを書かない(`skip_serializing_if`)
+
 ### 9.2 macOSフレームワークへのFFI(CoreGraphics等)
 
 - 第三者プラグインではなく直接 `extern "C"` 宣言でOS標準フレームワークを呼ぶ場合、`#[link(name = "<フレームワーク名>", kind = "framework")]` を `extern "C"` ブロックに付ける(追加クレート不要)

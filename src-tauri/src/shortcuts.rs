@@ -40,8 +40,8 @@
 //! 途中で失敗したら元のキーを登録し直す(キャプチャできない状態を作らない)。登録処理は
 //! [`ShortcutRegistrar`] 越しに呼ぶので、巻き戻しは偽の登録器で `cargo test` する。
 //! 起動時は設定ファイルのキーを登録し、登録できなくても保存値は変えない(設定画面で知らせる)。
+//! 設定の読み書きは [`SettingsStore`] 経由で、保存はキーの 1 項目だけを変える(QE-T05。他の項目を消さない)。
 
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Mutex;
 use std::time::Instant;
@@ -53,7 +53,7 @@ use tauri_plugin_global_shortcut::{
 };
 
 use crate::error::AppError;
-use crate::settings::{self, AppSettings};
+use crate::settings::SettingsStore;
 use crate::tray;
 
 /// 既定のグローバルショートカットキーを構築する純粋関数(cargo testで検証可能)。設定画面の
@@ -272,7 +272,6 @@ pub(crate) struct CaptureShortcutManager {
     /// 変更を1つずつ行うためのロック(登録処理の間は`state`をロックしない。押下のハンドラが
     /// メインスレッドで`state`を読むため、登録待ちの間に握ると固まる)。
     change_lock: tauri::async_runtime::Mutex<()>,
-    settings_path: Option<PathBuf>,
 }
 
 impl CaptureShortcutManager {
@@ -320,6 +319,16 @@ pub(crate) fn set_recording(app: &AppHandle, recording: bool) {
         .update(|state| state.recording = recording);
 }
 
+/// キャプチャのキーを保存する(既定キーなら項目を書かない)。[`SettingsStore`] で
+/// この 1 項目だけを変えるので、他の項目(縮めてコピーなど)は消えない(QE-T05)。
+fn save_capture_shortcut(store: &SettingsStore, shortcut: &Shortcut) -> Result<(), String> {
+    let capture_shortcut = (*shortcut != default_capture_shortcut()).then(|| shortcut.into_string());
+    store
+        .update(|settings| settings.capture_shortcut = capture_shortcut)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 /// キャプチャのキーを `next` に変えて保存する(`set_capture_shortcut` / `reset_capture_shortcut`)。
 /// 失敗したら元のキーに戻し、エラーの固定文字列を返す。
 pub(crate) async fn apply_capture_shortcut(
@@ -329,16 +338,10 @@ pub(crate) async fn apply_capture_shortcut(
     let manager = app.state::<CaptureShortcutManager>();
     let _guard = manager.change_lock.lock().await;
     let before = manager.snapshot();
-    let settings_path = manager.settings_path.clone();
     let handle = app.clone();
     // 登録はメインスレッドでの処理を待つブロッキング呼び出しなので、専用スレッドで行う。
     let result = tauri::async_runtime::spawn_blocking(move || {
-        let save = |shortcut: &Shortcut| -> Result<(), String> {
-            let path = settings_path.ok_or("設定の保存先がありません")?;
-            let capture_shortcut =
-                (*shortcut != default_capture_shortcut()).then(|| shortcut.into_string());
-            settings::save_settings(&path, &AppSettings { capture_shortcut }).map_err(|e| e.to_string())
-        };
+        let save = |shortcut: &Shortcut| save_capture_shortcut(&handle.state::<SettingsStore>(), shortcut);
         change_shortcut(
             &mut PluginRegistrar(&handle),
             before.current,
@@ -377,8 +380,8 @@ pub(crate) async fn apply_capture_shortcut(
 pub(crate) fn register_capture_shortcut(app: &App) -> tauri::Result<()> {
     // KS-T4: 設定ファイルのキーで起動する。管理状態はプラグインの初期化より先に置く
     // (初期化に失敗してもコマンドが状態を読めるように)。
-    let settings_path = settings::settings_path(app.handle());
-    let saved = settings_path.as_deref().map(settings::load_settings).unwrap_or_default();
+    // 設定は `lib.rs` の `setup()` の最初に `manage()` した `SettingsStore` から読む(QE-T05)。
+    let saved = app.state::<SettingsStore>().get();
     let shortcut = initial_capture_shortcut(saved.capture_shortcut.as_deref());
     app.manage(CaptureShortcutManager {
         state: Mutex::new(CaptureShortcutState {
@@ -387,7 +390,6 @@ pub(crate) fn register_capture_shortcut(app: &App) -> tauri::Result<()> {
             recording: false,
         }),
         change_lock: tauri::async_runtime::Mutex::new(()),
-        settings_path,
     });
 
     let plugin_result = app.handle().plugin(
@@ -709,4 +711,20 @@ mod tests {
         );
     }
 
+    #[test]
+    fn キーの保存は縮めてコピーの設定を消さない() {
+        let dir = std::env::temp_dir().join(format!("tadcap-shortcuts-test-{}-keep", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("settings.json");
+        std::fs::write(&path, r#"{ "version": 1, "shrinkCopy": true }"#).unwrap();
+        let store = SettingsStore::load(Some(path.clone()));
+
+        save_capture_shortcut(&store, &sc("alt+super+KeyK")).unwrap();
+
+        let saved = crate::settings::load_settings(&path);
+        assert_eq!(saved.capture_shortcut.as_deref(), Some("alt+super+KeyK"));
+        assert!(saved.shrink_copy, "キーの保存で shrinkCopy が消えた");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

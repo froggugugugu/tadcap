@@ -205,10 +205,12 @@ IPC `scan_sensitive_text` の応答(Rust `MaskCandidate` → TS `ScannedCandidat
 | ---------- | -- | ---- |
 | `version` | number | 形式の版(現在 1)。無ければ 1 として読む |
 | `captureShortcut` | string(省略可) | キャプチャのショートカット(`global-hotkey`の文字列形式。例 `"alt+super+KeyK"`)。省略 = 既定(`shift+super+Digit2` = ⌘⇧2) |
+| `shrinkCopy` | boolean(省略可) | 縮めてコピー(コピーのとき画面の倍率ぶん縮める、QE-T05)。省略 = オフ。オフのときはキーを書かない |
 
 - 読込: ファイル無し・壊れたJSON → 既定値。解釈できない・使えないキー → 既定キーで起動(保存値は次の変更まで残る)
 - 書込: 一時ファイル(`settings.json.tmp`)に書いてから `rename`。既定キーに戻したら `captureShortcut` を書かない
-- 未知のフィールドは無視する(後方互換)
+- 書くのは `SettingsStore`(`Mutex` で今の設定を持つ)だけ。今の設定から 1 項目だけ変えて書くので、他の項目は消えない(QE-T05)
+- 未知のフィールドは読込を妨げず、保存し直しても残す(`AppSettings.extra`。新しい版が書いた項目を消さない、QE-T05)
 
 ### CaptureShortcutInfo(`src-tauri/src/shortcuts.rs` / `src/ipc/settings.ts`、KS-T3・T4)
 

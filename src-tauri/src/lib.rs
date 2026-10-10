@@ -34,6 +34,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
+            // 設定ファイルの読み書きの窓口(QE-T05)。ショートカットの登録が保存値を読むので最初に置く。
+            app.manage(settings::SettingsStore::load(settings::settings_path(app.handle())));
             // 起動時に前回セッションの一時キャプチャファイルを削除する(PJM追加指示)。
             // 表示中の画像はcanvas/履歴側がメモリに保持しているためUIには影響しない。
             // 削除失敗はログのみで起動を妨げない(`cleanup_capture_files` 内部の方針)。
@@ -82,7 +84,9 @@ pub fn run() {
             commands::set_capture_shortcut,
             commands::reset_capture_shortcut,
             commands::set_shortcut_recording,
-            commands::scan_sensitive_text
+            commands::scan_sensitive_text,
+            commands::get_shrink_copy,
+            commands::set_shrink_copy
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

@@ -10,13 +10,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use tauri::ipc::{InvokeBody, Request, Response};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::capture::{self, CaptureKind, CaptureOutcome, CaptureResult, RunError, ScreenRecordingPermission};
 use crate::clipboard;
 use crate::error::AppError;
 use crate::masking::{self, MaskCandidate};
+use crate::settings::SettingsStore;
 use crate::shortcuts::{self, CaptureShortcutInfo};
 use crate::window_front::{self, ActivationOrigin};
 
@@ -462,6 +463,27 @@ pub async fn reset_capture_shortcut(app: AppHandle) -> Result<CaptureShortcutInf
 pub async fn set_shortcut_recording(app: AppHandle, recording: bool) -> Result<(), AppError> {
     shortcuts::set_recording(&app, recording);
     Ok(())
+}
+
+/// 縮めてコピー(コピーのとき画面の倍率ぶん縮める)がオンかを返す(QE-T05、FR-011)。
+#[tauri::command]
+pub async fn get_shrink_copy(app: AppHandle) -> Result<bool, AppError> {
+    Ok(app.state::<SettingsStore>().get().shrink_copy)
+}
+
+/// 縮めてコピーのオン・オフを変えて保存し、保存後の値を返す(QE-T05)。設定ファイルの他の項目は
+/// 変えない。保存に失敗したら値を変えずに `settings_save_failed` を返す。
+#[tauri::command]
+pub async fn set_shrink_copy(app: AppHandle, enabled: bool) -> Result<bool, AppError> {
+    // ファイルの書き込みはブロッキングなので専用スレッドで行う(`apply_capture_shortcut` と同じ作法)
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<SettingsStore>()
+            .update(|settings| settings.shrink_copy = enabled)
+            .map(|settings| settings.shrink_copy)
+            .map_err(|_| AppError::SettingsSaveFailed)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
 }
 
 /// 文字の読み取り(`scan_sensitive_text`)の実行中フラグ(AM-T18、ARCH_auto-masking §12)。
