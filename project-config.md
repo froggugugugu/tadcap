@@ -461,6 +461,7 @@ output/reports/                ← 人間向けサマリー（Git管理）
 | ⌥ を押しながらのキーは `KeyboardEvent.key` が特殊文字(⌥K → `˚`)になり、キーを判別できない(KS-T2) | macOS のキーボード配列で ⌥ は別の文字を入力するため | 記録には `event.code`(`KeyK` など、配列に依存しない物理キー名)を使う。`global-hotkey` の文字列形式もこの名前を使う |
 | 既定のアプリメニュー(v0.3.1 から表示)の ⌘Q・⌘W・⌘H などは、webview の `keydown` より先にメニューが処理しうる(KS-T6) | アプリメニューのキー割り当ては AppKit が先に見るため | 設定画面では ⌘ と 1 キーだけの組み合わせを受け付けない(`shortcut_cmd_only`)。記録中に ⌘Q を押すと終了しうる点は手動確認で見る |
 | 注釈の大きさ(線の太さ・文字の大きさ・スタンプの直径)を画像の今の大きさから毎回計算していたため、画像の大きさが変わる操作(トリミング)で描いた注釈が細く・小さく変わる(QE-T17、ADR-002) | 太さ・文字の大きさの関数が今の画像の幅・高さから対角線を直接求めていた | 大きさが変わる操作に関わる計算では `styleBasis.ts::shapeStyleDiagonal(shape, 幅, 高さ)` を通し、各ツールの `*ForDiagonal()`(`arrowLineWidthForDiagonal()`・`rectangleLineWidthForDiagonal()`・`ellipseLineWidthForDiagonal()`・`fontSizePxForDiagonal()`)へ渡す。幅・高さを受け取る版(`arrowLineWidth()` など)は `styleBasis` の無い、これから描く注釈だけに使う。モザイクの粗さは `captureSize`(QE-T18) |
+| E2E でモザイクのブロックの大きさを画素から読もうとすると、既定のフィクスチャでは境目が出ず読めない(QE-T23) | 既定のチェッカーボードはタイル 6px(周期 12px)で、12 の倍数のブロックは全部同じ色、23px などでも平均がほぼ同じ色に丸まる | ブロックの大きさを読むテストは `createFixtureCapturePng(…, tileSize)` で周期を変え(`e2e/crop.spec.ts` は 7px)、色の切り替わりの間隔の最頻値を読む |
 
 ### フレームワーク固有パターン
 

@@ -70,12 +70,17 @@ function pngChunk(type: string, data: Uint8Array): Buffer {
  * `colorA`/`colorB`(省略時は既定の緑寄り/青寄り)を渡すと配色を変えられる
  * (MUST-1回帰テスト用。2枚の異なるキャプチャ画像を見分けられるようにするため、
  * `capture-race.spec.ts`が既定と異なる配色のフィクスチャを生成するのに使う)。
+ *
+ * `tileSize`(省略時は`TILE_SIZE`)を変えると周期を変えられる(QE-T23。6px のタイルは周期 12px で、
+ * 12 の倍数でないブロックでも平均がほぼ同じ色になるため、ブロックの大きさを画素から読む
+ * `crop.spec.ts`は 7px のタイルを使う)。
  */
 export function createFixtureCapturePng(
   width: number = FIXTURE_WIDTH,
   height: number = FIXTURE_HEIGHT,
   colorA: readonly [number, number, number, number] = COLOR_A,
   colorB: readonly [number, number, number, number] = COLOR_B,
+  tileSize: number = TILE_SIZE,
 ): Buffer {
   const bytesPerPixel = 4;
   const stride = 1 + width * bytesPerPixel;
@@ -85,8 +90,8 @@ export function createFixtureCapturePng(
     const rowStart = y * stride;
     raw[rowStart] = 0; // フィルタタイプ: None
     for (let x = 0; x < width; x++) {
-      const tileX = Math.floor(x / TILE_SIZE);
-      const tileY = Math.floor(y / TILE_SIZE);
+      const tileX = Math.floor(x / tileSize);
+      const tileY = Math.floor(y / tileSize);
       const color = (tileX + tileY) % 2 === 0 ? colorA : colorB;
       const offset = rowStart + 1 + x * bytesPerPixel;
       raw[offset] = color[0];

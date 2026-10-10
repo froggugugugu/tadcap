@@ -339,3 +339,22 @@ Presentational/Container分離パターン(`docs/development-patterns.md` §1参
 
 - 1 色の地(白に近くない色)の画像にし、コピーされた RGBA を「穴の中は地のまま・外は地 × 0.5 ±1」で 1 画素ずつ比べる。穴の縁は端数の座標で半端に塗られるので数 px 外す(`e2e/spotlight.spec.ts`)
 - 開けた直後の穴は選択中で内側も掴めるため、重なる穴を続けて開けるときは Esc で選択を外してからドラッグする
+
+## 14. トリミング(`src/canvas/crop.ts`・`cropSession.ts`・`tools/cropTool.ts`・`ui/cropBar.ts` ほか、QE-T17〜T23、ADR-002)
+
+### 14.1 大きさは `shapeStyleDiagonal()`、モザイクの粗さは `captureSize`
+
+- 注釈の線の太さ・文字の大きさ・スタンプの直径は、画像の今の幅・高さから直接計算しない。`shapeStyleDiagonal(shape, 幅, 高さ)`(`styleBasis ?? 今の対角線`)を通す(`styleBasis.ts`)。新しい形・新しい大きさの関数を足すときも同じ。描画範囲(`shapeUndoRect()`)の見積もりも同じ対角線で行う
+- モザイクのブロックの大きさは今の画像の大きさではなく `documentState.getCaptureSize()` で決める(`mosaicTool.ts::applyMosaicToBase()`、自動マスキングの一括モザイクは `AutoMaskDeps.getCaptureSize`)。切った後に細かくなって読めてしまうのを防ぐ
+- 画像の大きさを変える操作は、取り消しの手にベース全体を持たせて `swapAll()` で入れ替える(`crop`)。トリミングより前の手(`pixels`・`flatten`)は元の大きさの座標のまま持ち、`crop` の取り消しで元の大きさに戻ってから適用される
+
+### 14.2 確定前の範囲は合成に描かない
+
+- 範囲の外の暗さ・枠・ハンドルは Canvas に重ねた `.crop-overlay`(`pointer-events: none`)にだけ描く。合成(`documentSurface.ts`)に描くと確定前の ⌘C・履歴に写る
+- 確定前の範囲 `cropSession` を捨てる条件(ツールの変化・自動マスキングの開始・ドキュメントの大きさの変化)は `cropTool.ts::bindCropCancelConditions()` がまとめて購読し、画像の差し替え(新規キャプチャ・履歴の切替・消去)は `main.ts` が `discardMaskSession()` の隣で `cancelCrop()` する。範囲の指定中の ⌘Z / ⇧⌘Z は範囲をやめるだけ(`undoButton.ts`)
+- 範囲がある間の Enter / Esc を先に受けるため、`bindCropTool()` は `bindSelectionKeys()` より前に結線する。大きさが変わったら自動マスキングの候補を捨てる防御は `ui/autoMask.ts::bindMaskSessionToDocumentSize()`(`maskSession` は `documentState` を購読しない)
+
+### 14.3 E2E でトリミングを確かめる
+
+- 切り詰める範囲の左上をフィクスチャのチェッカーボードの周期(既定 12px)の倍数にすると、切った後の Canvas は「切る前の Canvas の範囲の部分」と画素まで一致する。注釈のずれ・大きさ・範囲外の注釈の削除をこの 1 回の比較で確かめる(`e2e/crop.spec.ts`)。範囲の境界をまたぐ注釈の影は、Canvas の外にあった部分のぼかしが切れるため数階調違う(許容の幅で吸収する)
+- モザイクのブロックの大きさを画素から読むときは、6px のタイル(周期 12px)を使わない。12 の倍数でないブロックでも平均がほぼ同じ色になり境目が出ない。`createFixtureCapturePng(…, tileSize: 7)` のように周期を変え、色の切り替わりの間隔の最頻値を読む

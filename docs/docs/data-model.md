@@ -137,6 +137,7 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 | `objects` | `AnnotationObject[]` | 配列順=重ね順(末尾が最前面)。最大`OBJECT_LIMIT`=50 |
 | `selectedId` | `number \| null` | 選択中のオブジェクト。取り消し対象外 |
 | `draft` | `{ id: number \| null, shape } \| null` | ドラッグ中の下書き(`id`がnullなら作成中)。確定までモデルは変えない |
+| `captureSize`(QE-T18) | `{ width, height } \| null`(モジュール変数、`getCaptureSize()`) | 撮った時点の画像の大きさ。モザイク(`mosaicTool.ts::applyMosaicToBase()`)と自動マスキングの一括モザイク(`AutoMaskDeps.getCaptureSize`)のブロックの大きさはこれで決める。`resetDocument()` で画像の大きさ、`restoreDocument()` で退避の値(無い古い退避は戻した画像の大きさ)。トリミングでは変えない(ADR-002)。メモリだけ |
 
 `AnnotationObject = { id: number, shape: EditableShape }`(`EditableShape`は`shapeEdit.ts`: 矢印`{kind:"arrow", start, end, color}`、
 矩形・円`{kind:"rectangle"|"ellipse", rect, color}`、【T33】テキスト`{kind:"text", text, x, top, fontSize, color, metrics}`、
@@ -153,16 +154,28 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 `width`・`actualBoundingBox{Left,Right,Ascent,Descent}`・`fontBoundingBox{Ascent,Descent}`)。
 `hiddenId`(T33): 再編集中で描画から一時的に外しているテキストのid(取り消し対象外)。
 
+【QE-T17・T19】全種類の形に任意の`styleBasis?: number`(大きさの基準の対角線、px)。線の太さ・文字の大きさ・スタンプの直径は
+`shapeStyleDiagonal(shape, 幅, 高さ)` = `styleBasis ?? hypot(今の幅, 今の高さ)` から決める。トリミングの確定で残った注釈にだけ切る前の対角線が付き
+(既にあれば変えない)、切る前に描いた注釈の大きさが変わらない。切った後に描く注釈は付かず、今の画像の大きさで決まる。メモリだけ。
+
+【QE-T21】確定前のトリミング範囲`CropSession = { rect: Rect }`(`cropSession.ts`、無ければ`null`)。画像の内側に収めた小数のまま持ち、
+確定時に`crop.ts::normalizeCropRect()`が各辺を四捨五入して整数にする(幅・高さ 0・画像全体と同じなら何もしない)。取り消し対象外・メモリだけ。
+
 `DocumentCommand`に`reorder {id, from, to}`(T34、最前面・最背面)を追加。
+【QE-T20】`crop {rect, image}`(トリミング): `image`は反対側のベース全体(取り消し用は切る前、やり直し用は切った後)で、
+`PixelStore.swapAll(image)`(`documentSurface.ts`)がベースと表示 canvas をその大きさに入れ替えて前のベース全体を返す。
+確定は`applyCrop(rect)`が`group[crop, update…(配列順。ずらし + styleBasis), remove…(範囲の外へ完全に出た注釈。先頭から、消した時点の index)]`を 1 手で積む
+(1 回の取り消しで大きさ・位置・消えた注釈が戻り、トリミングより前の手はその後も元の大きさの座標のまま戻せる)。
 
 ### ArchivedDocument(`src/history/documentArchive.ts`、T34、FR-010改訂)
 
-履歴id → `{ base: Blob(ベースのPNG), snapshot: { objects, nextId, undo: UndoStackState } }`。別の画像へ切り替える直前に退避し、
+履歴id → `{ base: Blob(ベースのPNG), snapshot: { objects, nextId, undo: UndoStackState, captureSize? } }`(`DocumentSnapshot`。`captureSize`は QE-T18)。別の画像へ切り替える直前に退避し、
 戻ったときに復元する。永続化しない。`snapshot.undo`は保存時にピクセルの合計を`ARCHIVED_UNDO_BYTES_LIMIT`(8MB)以下にする
 (古い取り消しから捨てる)。履歴の上限(`HISTORY_LIMIT`・`HISTORY_BYTES_LIMIT`)・削除(×・すべて削除)で消えた項目の退避は削除する。合計バイト数の判定には`archivedDocumentBytes()`(ベースPNGの`Blob.size`+取り消しのピクセル)を使う。
+`commandPixelBytes()`は`crop`の`image`も数える(QE-T20)。`crop`が上限で捨てられるとそれより古い手も捨てられ、後の手は残る(切り替えて戻った後はトリミング後の画像で続きの操作ができる)。
 
 `DocumentCommand`(取り消し・やり直しの1操作): `add {object, index}` / `update {id, before, after}` / `remove {object, index}`(T34で結線) /
-`pixels {rect, image}` / `flatten {object, index, rect, image}` / `group {commands}`。51個目の追加は`group[add, flatten]`になり、
+`pixels {rect, image}` / `flatten {object, index, rect, image}` / `crop {rect, image}`(QE-T20) / `group {commands}`。51個目の追加は`group[add, flatten]`になり、
 1回の取り消しで両方戻る。
 
 派生型: なし

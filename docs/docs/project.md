@@ -95,12 +95,13 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 
 | ストア | 責務 |
 | ------ | ---- |
-| `canvasState`(`src/canvas/canvasState.ts`、T07) | Canvasに表示中の画像(`CanvasImage \| null`)の保持・購読通知(ARCH §6.1)。T09で選択中ツール(`activeTool: "arrow" \| "mosaic" \| "rectangle" \| null`)・描画中フラグ(`isDrawing`)を追加。T25で`"rectangle"`を追加 |
+| `canvasState`(`src/canvas/canvasState.ts`、T07) | Canvasに表示中の画像(`CanvasImage \| null`)の保持・購読通知(ARCH §6.1)。T09で選択中ツール(`activeTool: "arrow" \| "mosaic" \| "rectangle" \| null`)・描画中フラグ(`isDrawing`)を追加。T25で`"rectangle"`を追加。今の `ToolId` は `"arrow" \| "mosaic" \| "rectangle" \| "ellipse" \| "text" \| "stamp" \| "spotlight" \| "crop"`(QE-T13・T16・T21 でスタンプ・スポットライト・トリミングを追加) |
 | `permissionState`(`src/ipc/permissions.ts` の `PermissionState` 型、T08) | 画面収録権限の状態(`"unconfirmed" \| "granted" \| "notGranted"` の3値、ARCH §6.1)。Rust側は `Granted`/`NotGranted` の2値のみ(PJM決定 2026-09-23)。専用のシングルトンストアは持たず、`src/main.ts` がボタンの `invoke` reject・`capture://error` イベント・起動時チェックの3入口から `src/ui/permissionBanner.ts` の表示/非表示を直接呼び出す |
 | `historyStore`(`src/history/historyStore.ts`、T14) | セッション内 `HistoryItem[]`(`id`/`thumbnail`/`image`/`createdAt`)の保持・購読通知(ARCH §6.1、FR-010)。永続化なし(アプリ終了で破棄)。`capture://completed`受信時に追加・選択、履歴切替直前・クリップボードコピー成功時に選択中項目のimage/thumbnailを上書き(PJM決定 2026-09-23)。上限は件数`HISTORY_LIMIT`(20件)と合計バイト数`HISTORY_BYTES_LIMIT`(300MB、履歴画像・サムネイル+退避の実測値)。超えたら表示中以外の古いものから破棄(v0.2.0後フィードバック、旧【仮定】50件) |
 | `toolSettings`(`src/canvas/toolSettings.ts`、T21) | 矢印/矩形/円/テキスト共通の現在色(`color: string`、既定`#FF5C8A`)・テキストのフォントサイズ段階(`fontSize: "small" \| "medium" \| "large"`、既定`"medium"`)の保持・購読通知(ARCH §6.1、FR-013)。QE-T12 でこれから置くスタンプの種類 `stampKind`(`StampGlyph`、既定 `"number"`、取り消し対象外)を追加し、QE-T13 で `ui/stampKindPicker.ts` から切り替える。永続化なし(アプリ起動中のみ)。モザイクは参照しない |
 | `undoStack`(`src/canvas/undoStack.ts`、T23) | 焼き込み操作(矢印/矩形/円/テキスト/モザイク)ごとの差分(変更矩形+ピクセル)を保持するUndo/Redoスタックの保持・購読通知(ARCH §6.1・§6.4、FR-014)。永続化なし。件数上限`UNDO_STACK_LIMIT`(30件、Undo・Redo双方)超過時は最も古いものから破棄。`clearUndoStack()`は新規Capture読込・履歴項目再読込の完了後に呼ぶ想定(呼び出しは`main.ts`側、T24以降)。T32で要素を`DocumentCommand`に変更し、クリアは`documentState.ts::resetDocument()`経由 |
-| `documentState`(`src/canvas/documentState.ts`、T32) | 表示中画像のドキュメント(ベース・オブジェクト配列・選択中id・ドラッグ中の下書き)の保持・操作・購読通知。永続化なし。新規Capture読込・履歴項目再読込で`resetDocument()` |
+| `documentState`(`src/canvas/documentState.ts`、T32) | 表示中画像のドキュメント(ベース・オブジェクト配列・選択中id・ドラッグ中の下書き)の保持・操作・購読通知。永続化なし。新規Capture読込・履歴項目再読込で`resetDocument()`。QE-T18 で撮った時点の画像の大きさ `captureSize`(`getCaptureSize()`。モザイクの粗さの基準。`resetDocument()` で画像の大きさ、`restoreDocument()` で退避の値、トリミングでは変えない)、QE-T20 で `applyCrop(rect)`(切り詰めを取り消し 1 手の `group` で積む) |
+| `cropSession`(`src/canvas/cropSession.ts`、QE-T21) | 確定前のトリミング範囲(`{ rect } \| null`、画像の内側に収めた小数のまま。整数化は確定時の `normalizeCropRect()`)。取り消し対象外・永続化なし。書き換えるのは `tools/cropTool.ts`(開始・範囲の変更・Enter / Esc・やめる条件の購読: ツールの変化・自動マスキングの開始・ドキュメントの大きさの変化)・`ui/cropBar.ts`(確定・やめる)・`main.ts`(画像を差し替える前の `cancelCrop()`)・`ui/undoButton.ts`(範囲の指定中の ⌘Z)だけ |
 | `maskSession`(`src/canvas/maskSession.ts`、AM-T06) | 自動マスキングの処理の状態(`idle`/`scanning`/`review`)・token・対象の画像の参照・候補(矩形・種類・外したか)。永続化なし(メモリのみ)。読み取った文字列は持たない。書き換えるのは `ui/autoMask.ts`(開始・結果・一括モザイク・やめる)・`ui/maskOverlay.ts`(外す/戻す)・`main.ts`(画像を差し替える前の `discardMaskSession()`)だけ |
 
 ## アプリ内のキー操作(ツールの 1 キー切替)
@@ -117,10 +118,12 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 | `T` | テキスト |
 | `N` | スタンプ(番号・✓・×・!・?。種類はスタンプツールの間だけ出る切替で選ぶ、QE-T13) |
 | `M` | モザイク |
+| `S` | スポットライト(QE-T16) |
+| `C` | トリミング(QE-T21) |
 
 - 選んでいるツールのキーをもう一度押すと選択が外れる(ボタンと同じ `toggleActiveTool()`)
 - 効かないとき: 修飾キー付き(⌘C・⌘Z など)・押しっぱなしの繰り返し・IME の変換中・入力欄への入力中・画像が無いとき・ツールボタンが押せないとき(描画中・自動マスキングの処理中/確認中)・設定画面を開いている間
-- スポットライト(`S`)・トリミング(`C`)はツールを追加するタスクで `TOOL_KEYS` に足す(それまでは何もしない)。スタンプ(`N`)は QE-T13 で追加済み
+- トリミングの範囲がある間(QE-T22): `Enter` で確定(`applyCrop()`。トースト「切り抜きました。⌘Z で戻せます。」)、`Esc` でやめる。範囲が無いときの `Enter` / `Esc` は既存の選択の操作へ渡す(`bindCropTool()` を `bindSelectionKeys()` より前に結線)。範囲の指定中の ⌘Z / ⇧⌘Z と取り消しボタンは範囲をやめるだけ(`ui/undoButton.ts::resolveUndoCommand()` の `cancelCrop`)
 
 ## 制約事項
 
