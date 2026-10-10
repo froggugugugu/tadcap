@@ -6,14 +6,16 @@ import {
   isValidColorCode,
   setColor,
   setFontSize,
+  setStampKind,
   subscribeToolSettings,
   withColor,
   withFontSize,
+  withStampKind,
 } from "./toolSettings";
 
 describe("createToolSettings", () => {
-  it("既定色はピンク(#FF5C8A)・既定フォントサイズは中(medium)である", () => {
-    expect(createToolSettings()).toEqual({ color: "#FF5C8A", fontSize: "medium" });
+  it("既定色はピンク(#FF5C8A)・既定フォントサイズは中(medium)・既定のスタンプの種類は番号である", () => {
+    expect(createToolSettings()).toEqual({ color: "#FF5C8A", fontSize: "medium", stampKind: "number" });
   });
 });
 
@@ -22,8 +24,8 @@ describe("withColor", () => {
     const state = createToolSettings();
     const next = withColor(state, "#3366FF");
 
-    expect(next).toEqual({ color: "#3366FF", fontSize: "medium" });
-    expect(state).toEqual({ color: "#FF5C8A", fontSize: "medium" });
+    expect(next).toEqual({ color: "#3366FF", fontSize: "medium", stampKind: "number" });
+    expect(state).toEqual({ color: "#FF5C8A", fontSize: "medium", stampKind: "number" });
   });
 });
 
@@ -32,8 +34,19 @@ describe("withFontSize", () => {
     const state = createToolSettings();
     const next = withFontSize(state, "large");
 
-    expect(next).toEqual({ color: "#FF5C8A", fontSize: "large" });
-    expect(state).toEqual({ color: "#FF5C8A", fontSize: "medium" });
+    expect(next).toEqual({ color: "#FF5C8A", fontSize: "large", stampKind: "number" });
+    expect(state).toEqual({ color: "#FF5C8A", fontSize: "medium", stampKind: "number" });
+  });
+});
+
+// QE-T12: これから置くスタンプの種類(UI_quick-edits §2.1。取り消し対象外・永続化しない)。
+describe("withStampKind", () => {
+  it("スタンプの種類を変更した新しい状態を返す(イミュータブル、色・文字サイズは変えない)", () => {
+    const state = createToolSettings();
+    const next = withStampKind(state, "check");
+
+    expect(next).toEqual({ color: "#FF5C8A", fontSize: "medium", stampKind: "check" });
+    expect(state).toEqual({ color: "#FF5C8A", fontSize: "medium", stampKind: "number" });
   });
 });
 
@@ -69,7 +82,23 @@ describe("isValidColorCode", () => {
 
 describe("getToolSettings / setColor / setFontSize / subscribeToolSettings(シングルトンストア)", () => {
   it("初期値は既定色・既定フォントサイズである", () => {
-    expect(getToolSettings()).toEqual({ color: "#FF5C8A", fontSize: "medium" });
+    expect(getToolSettings()).toEqual({ color: "#FF5C8A", fontSize: "medium", stampKind: "number" });
+  });
+
+  it("setStampKind()は状態を更新し購読者へ通知する", () => {
+    const received: string[] = [];
+    const unsubscribe = subscribeToolSettings((state) => {
+      received.push(state.stampKind);
+    });
+
+    setStampKind("question");
+
+    expect(getToolSettings().stampKind).toBe("question");
+    expect(getToolSettings().color).toBe("#FF5C8A");
+    expect(received).toEqual(["question"]);
+
+    unsubscribe();
+    setStampKind("number");
   });
 
   it("setColor()は状態を更新し購読者へ通知する", () => {

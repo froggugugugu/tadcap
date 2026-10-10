@@ -4,11 +4,18 @@
 //! `canvasState.ts`(ARCH §1.3 決定#1)と同じ作法(純粋関数 + モジュール単位の薄い
 //! シングルトンストア)で実装する。モザイクは色の概念を持たないため本ストアを参照しない
 //! (ARCH §5.2・§6.3、FR-013受け入れ基準)。メモリ上のみで永続化しない(ARCH §6.2)。
+//!
+//! QE-T12: これから置くスタンプの種類 `stampKind` を加えた(既定は番号、UI_quick-edits §2.1)。
+//! 取り消しの対象外で、アプリを閉じるまで覚える(永続化しない、PRD_quick-edits §5)。
+
+import type { StampGlyph } from "./tools/stampShape";
 
 /** プリセット色見本・カラーピッカー共通の既定色(PRD §5、FR-013)。 */
 export const DEFAULT_COLOR = "#FF5C8A";
 /** テキストツールのフォントサイズ既定値(T21で「中」に確定、PRD §5「既定値は実装時に確定」)。 */
 export const DEFAULT_FONT_SIZE: FontSize = "medium";
+/** スタンプの種類の既定値(番号、UI_quick-edits §2.1)。 */
+export const DEFAULT_STAMP_KIND: StampGlyph = "number";
 
 /** テキストのフォントサイズ段階(PRD §5、FR-012・FR-013)。 */
 export type FontSize = "small" | "medium" | "large";
@@ -17,11 +24,13 @@ export interface ToolSettings {
   /** `#RRGGBB` 形式の色コード(FR-013)。 */
   color: string;
   fontSize: FontSize;
+  /** これから置くスタンプの種類(選択中のスタンプは変えない、QE-T12)。 */
+  stampKind: StampGlyph;
 }
 
-/** 既定色・既定フォントサイズの初期状態を返す純粋関数。 */
+/** 既定色・既定フォントサイズ・既定のスタンプの種類の初期状態を返す純粋関数。 */
 export function createToolSettings(): ToolSettings {
-  return { color: DEFAULT_COLOR, fontSize: DEFAULT_FONT_SIZE };
+  return { color: DEFAULT_COLOR, fontSize: DEFAULT_FONT_SIZE, stampKind: DEFAULT_STAMP_KIND };
 }
 
 /** 色をセットした新しい状態を返す純粋関数(イミュータブル)。 */
@@ -35,6 +44,11 @@ export function withFontSize(
   fontSize: FontSize,
 ): ToolSettings {
   return { ...state, fontSize };
+}
+
+/** スタンプの種類をセットした新しい状態を返す純粋関数(イミュータブル)。 */
+export function withStampKind(state: ToolSettings, stampKind: StampGlyph): ToolSettings {
+  return { ...state, stampKind };
 }
 
 /**
@@ -66,6 +80,12 @@ export function setColor(color: string): void {
 /** フォントサイズをセットし、購読者へ通知する(`ui/fontSizePicker.ts` から呼ぶ想定、T28)。 */
 export function setFontSize(fontSize: FontSize): void {
   state = withFontSize(state, fontSize);
+  notify();
+}
+
+/** スタンプの種類をセットし、購読者へ通知する(種類の切替 UI から呼ぶ想定、QE-T13)。 */
+export function setStampKind(stampKind: StampGlyph): void {
+  state = withStampKind(state, stampKind);
   notify();
 }
 

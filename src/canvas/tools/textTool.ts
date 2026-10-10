@@ -162,6 +162,11 @@ export interface TextToolOptions {
    * IPC層へ直接依存しないよう、呼び出し側から注入する)。
    */
   onEditorFocus?: () => void;
+  /**
+   * 50個の上限でテキストを追加できなかったときに呼ぶ(QE-T12: `main.ts`がトーストを結ぶ。
+   * canvas層からui層へ依存しないよう、呼び出し側から注入する)。
+   */
+  onObjectLimit?: () => void;
 }
 
 /**
@@ -214,8 +219,10 @@ export function bindTextTool(canvas: HTMLCanvasElement, options: TextToolOptions
     const outcome = decideTextEdit(reason, current.input.value, target ? target.original.text : null);
     switch (outcome.type) {
       case "add":
-        // 上限で追加されなければ`null`(ARCH_quick-edits §15 #3)。入力欄は閉じ、何も残さない(通知は QE-T12)。
-        addShapeObject(buildTextShape(canvas, current, outcome.text));
+        // 上限で追加されなければ`null`(ARCH_quick-edits §15 #3)。入力欄は閉じ、何も残さず通知する。
+        if (!addShapeObject(buildTextShape(canvas, current, outcome.text))) {
+          options.onObjectLimit?.();
+        }
         break;
       case "update":
         if (target) {

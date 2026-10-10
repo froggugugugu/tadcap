@@ -81,6 +81,16 @@ import { clearToast, showToast } from "./ui/toast";
 
 let canvasEl: HTMLCanvasElement | null = null;
 let statusEl: HTMLElement | null = null;
+
+/** 50 個の上限で注釈を置けなかったときの通知(QE-T12、UI_quick-edits §6。全種類で同じ文言)。 */
+const OBJECT_LIMIT_MESSAGE = "注釈は 50 個までです。いらない注釈を消してから置いてください。";
+
+/** 上限の通知をトースト(error、5 秒)に出す。続けて繰り返したら出し直す(`showToast()` がタイマーをやり直す)。 */
+function notifyObjectLimit(): void {
+  if (statusEl) {
+    showToast(statusEl, OBJECT_LIMIT_MESSAGE, "error");
+  }
+}
 let permissionBanner: PermissionBannerController | null = null;
 /** キャプチャ直後の自動コピー(`ui/clipboardButton.ts`、v0.2.2後)。初期化前は`null`。 */
 let copyAfterCapture: (() => Promise<void>) | null = null;
@@ -364,11 +374,15 @@ window.addEventListener("DOMContentLoaded", () => {
     // T32: 表示canvas = ベース(オフスクリーン)+ オブジェクトの合成。矢印・矩形・円は
     // オブジェクトとして保持し、クリックで選び直してハンドルでリサイズ・移動できる。
     setDocumentSurface(createDocumentSurface(canvasEl));
-    bindShapeTools(canvasEl);
+    // QE-T12: 50 個の上限で置けなかったときの通知は main.ts から渡す(canvas/ → ui/ を作らない)。
+    bindShapeTools(canvasEl, { onObjectLimit: notifyObjectLimit });
     bindMosaicTool(canvasEl);
     // T27: テキストツール(クリック位置に入力欄を重ね、Enter/blurで確定・Escで取消)。
     // v0.2.2: 入力欄のフォーカスでアプリのアクティブ化を要求する(日本語IMEが効くように)。
-    bindTextTool(canvasEl, { onEditorFocus: () => requestAppActivation() });
+    bindTextTool(canvasEl, {
+      onEditorFocus: () => requestAppActivation(),
+      onObjectLimit: notifyObjectLimit,
+    });
     // AM-T15: 自動マスキング(実行ボタン・⌘⇧M・結果バー・Esc)と候補の印(AM-T12)。Esc を
     // `selectionKeys` より先に受けて`preventDefault()`するため、`bindSelectionKeys()`より前に登録する。
     const toolbarHeaderEl = document.querySelector<HTMLElement>("header.toolbar");

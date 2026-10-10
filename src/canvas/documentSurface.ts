@@ -8,9 +8,12 @@
 //!
 //! ブラウザのCanvas APIに依存するため、Vitest(Node)では自動テストせずE2Eで検証する
 //! (状態遷移は`documentState.test.ts`が偽のサーフェスで検証済み)。
+//!
+//! QE-T12: 合成(`render()`)のたびに`stampNumbers()`を1回求め、番号スタンプへ番号を渡す
+//! (ARCH_quick-edits §5.2)。番号を決める`stampLabel()`は純粋関数としてユニットテストする。
 
 import type { Rect } from "./coords";
-import { drawStamp } from "./tools/stampShape";
+import { drawStamp, isNumberStamp, stampNumbers } from "./tools/stampShape";
 import type { DocumentSurface, ShapeDraft } from "./documentState";
 import type { AnnotationObject } from "./objectModel";
 import type { EditableShape } from "./shapeEdit";
@@ -20,12 +23,33 @@ import { computeEllipseCenterAndRadii, drawEllipseOutline, ellipseLineWidth } fr
 import { drawRectangleOutline, rectangleLineWidth } from "./tools/rectangleTool";
 import { drawTextShape } from "./tools/textLayout";
 
-/** 図形1つをcanvasへ描く(ツール別の既存描画関数へ振り分ける。T31で`shapeTools.ts`に新設、T32で移設)。 */
+/**
+ * 番号スタンプに描く番号(QE-T12、ARCH_quick-edits §5.2)。置いてあるものは`numbers`
+ * (`stampNumbers()`の`id`の順位)、作成中の下書き(`id`が`null`)は「今の番号スタンプの数 + 1」。
+ * 記号スタンプ・ほかの注釈は`null`(番号を持たない)。
+ */
+export function stampLabel(
+  shape: EditableShape,
+  id: number | null,
+  numbers: ReadonlyMap<number, number>,
+): number | null {
+  if (!isNumberStamp(shape)) {
+    return null;
+  }
+  return id === null ? numbers.size + 1 : (numbers.get(id) ?? null);
+}
+
+/**
+ * 図形1つをcanvasへ描く(ツール別の既存描画関数へ振り分ける。T31で`shapeTools.ts`に新設、T32で移設)。
+ * `label`は番号スタンプの番号(`stampLabel()`)。焼き込み(`burn`)は番号スタンプを選ばない
+ * (`pickBurnTarget()`)ため、省略時の`null`で足りる。
+ */
 export function drawEditableShape(
   ctx: CanvasRenderingContext2D,
   shape: EditableShape,
   canvasWidth: number,
   canvasHeight: number,
+  label: number | null = null,
 ): void {
   if (shape.kind === "text") {
     drawTextShape(ctx, shape, canvasWidth, canvasHeight);
@@ -43,9 +67,7 @@ export function drawEditableShape(
     return;
   }
   if (shape.kind === "stamp") {
-    // 番号はここでは描かない(番号の割り当てと表示は QE-T12 で stampNumbers() から渡す)。
-    // 上限で焼き込まれるのは記号スタンプだけなので、焼き込みの経路でも番号は要らない。
-    drawStamp(ctx, shape, null, canvasWidth, canvasHeight);
+    drawStamp(ctx, shape, label, canvasWidth, canvasHeight);
     return;
   }
   drawEllipseOutline(
@@ -168,12 +190,14 @@ export function createDocumentSurface(display: HTMLCanvasElement): DocumentSurfa
       }
       displayCtx.clearRect(0, 0, width, height);
       displayCtx.drawImage(base, 0, 0);
+      // 番号は合成ごとに1回だけ求める(消すと詰まり、取り消しで戻る。QE-T12)。
+      const numbers = stampNumbers(objects);
       for (const object of objects) {
         const shape = draft && draft.id === object.id ? draft.shape : object.shape;
-        drawEditableShape(displayCtx, shape, width, height);
+        drawEditableShape(displayCtx, shape, width, height, stampLabel(shape, object.id, numbers));
       }
       if (draft && draft.id === null) {
-        drawEditableShape(displayCtx, draft.shape, width, height);
+        drawEditableShape(displayCtx, draft.shape, width, height, stampLabel(draft.shape, null, numbers));
       }
     },
   };
