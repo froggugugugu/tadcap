@@ -8,8 +8,8 @@
 //! 本モジュールの `toolLabel()` を読むため、循環を避けて可否の判定は `bindToolKeys()` の引数で
 //! 受け取る(`main.ts` が `toolButtonState()` を渡す)。
 //!
-//! 新しいツール(スタンプ `KeyN`・スポットライト `KeyS`・トリミング `KeyC`)は、ツールを追加する
-//! タスクで `TOOL_KEYS` に 1 行足す(PRD_quick-edits §9 Phase 1)。それまでそのキーは何もしない。
+//! 新しいツール(スポットライト `KeyS`・トリミング `KeyC`)は、ツールを追加するタスクで `TOOL_KEYS` に
+//! 1 行足す(PRD_quick-edits §9 Phase 1)。それまでそのキーは何もしない。スタンプ `KeyN` は QE-T13 で足した。
 
 import { getCanvasState, toggleActiveTool, type ToolId } from "../canvas/canvasState";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
@@ -28,6 +28,7 @@ export const TOOL_KEYS: ReadonlyArray<ToolKeyEntry> = [
   { tool: "rectangle", code: "KeyR", label: "矩形" },
   { tool: "ellipse", code: "KeyO", label: "円" },
   { tool: "text", code: "KeyT", label: "テキスト" },
+  { tool: "stamp", code: "KeyN", label: "スタンプ" },
   { tool: "mosaic", code: "KeyM", label: "モザイク" },
 ];
 

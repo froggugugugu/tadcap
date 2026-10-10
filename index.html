@@ -73,6 +73,18 @@
           </button>
         </div>
 
+        <!-- スタンプの種類(QE-T13、UI_quick-edits §2.1)。スタンプツールの間だけ出す。重ね順の後ろに置き、
+             出し入れしても既存のボタンが動かないようにする -->
+        <div id="stamp-kind-divider" class="toolbar__divider" aria-hidden="true" hidden></div>
+        <div
+          id="stamp-kind-picker"
+          class="tool-toolbar stamp-kind-picker"
+          role="group"
+          aria-label="スタンプの種類"
+          data-preserve-selection
+          hidden
+        ></div>
+
         <!-- 右のまとまり(取り消し・やり直し〜コピー)。窓を狭めて 2 段に折り返しても右端にそろえる(QE-T03) -->
         <div class="toolbar__end">
           <div class="tool-toolbar" role="group" aria-label="取り消し・やり直し">

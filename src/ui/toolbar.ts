@@ -29,6 +29,8 @@
 //! QE-T03: ツールを「描く注釈」(色を使う)と「画像を変える」(色を持たない)の 2 組に分け、
 //! `initToolbar()` が組の間に細い区切り(`.tool-toolbar__divider`)を 1 本入れる(UI_quick-edits §1.1)。
 //! 区切りは見た目だけで、グループの `role="group"` は 1 つのまま。
+//!
+//! QE-T13: スタンプ(N)のボタンを描く注釈の組の最後(テキストの直後)に加えた(UI_quick-edits §1.1・§1.2)。
 
 import {
   getCanvasState,
@@ -87,6 +89,16 @@ const TOOLS: ToolDefinition[] = [
     icon:
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<path d="M4.5 5.5V4.5H15.5V5.5M10 4.5V15.5M7.5 15.5H12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+      "</svg>",
+  },
+  {
+    // QE-T13: スタンプ(N)。丸の輪郭 + 数字の 1(UI_quick-edits §1.2)。描く注釈の組の最後。
+    id: "stamp",
+    group: "annotate",
+    icon:
+      '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
+      '<circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+      '<path d="M8.4 7.6 10.4 6.3V13.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
       "</svg>",
   },
   {

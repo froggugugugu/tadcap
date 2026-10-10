@@ -82,6 +82,7 @@ describe("toolButtonAttributes", () => {
     ["rectangle", "矩形(R)", "R"],
     ["ellipse", "円(O)", "O"],
     ["text", "テキスト(T)", "T"],
+    ["stamp", "スタンプ(N)", "N"],
     ["mosaic", "モザイク(M)", "M"],
   ] as const)("%s は aria-label・title が %s、aria-keyshortcuts が %s", (id, label, key) => {
     expect(toolButtonAttributes(id)).toEqual({ ariaLabel: label, title: label, ariaKeyShortcuts: key });
@@ -99,7 +100,7 @@ describe("toolButtonAttributes", () => {
 // QE-T03: ツールの 2 組(描く注釈 ┆ 画像を変える)と区切り(UI_quick-edits §1.1)。
 describe("toolbarItems(ツールの並びと組の区切り)", () => {
   it("描く注釈の組 → 区切り → 画像を変える組の順に並ぶ", () => {
-    expect(toolbarItems()).toEqual(["arrow", "rectangle", "ellipse", "text", "divider", "mosaic"]);
+    expect(toolbarItems()).toEqual(["arrow", "rectangle", "ellipse", "text", "stamp", "divider", "mosaic"]);
   });
 
   it("区切りは組の間に 1 本だけ(先頭・末尾・連続には入らない)", () => {
@@ -122,8 +123,16 @@ describe("toolbarItems(ツールの並びと組の区切り)", () => {
       ["rectangle", "annotate"],
       ["ellipse", "annotate"],
       ["text", "annotate"],
+      ["stamp", "annotate"],
       ["mosaic", "image"],
     ]);
+  });
+
+  // QE-T13: スタンプは描く注釈の組の最後(テキストの直後、UI_quick-edits §1.1)。
+  it("スタンプはテキストの直後・区切りの手前", () => {
+    const items = toolbarItems();
+    expect(items[items.indexOf("text") + 1]).toBe("stamp");
+    expect(items[items.indexOf("stamp") + 1]).toBe("divider");
   });
 
   it("区切りを除いた並びは TOOL_IDS と同じ", () => {

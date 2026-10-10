@@ -135,7 +135,13 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 | `draft` | `{ id: number \| null, shape } \| null` | ドラッグ中の下書き(`id`がnullなら作成中)。確定までモデルは変えない |
 
 `AnnotationObject = { id: number, shape: EditableShape }`(`EditableShape`は`shapeEdit.ts`: 矢印`{kind:"arrow", start, end, color}`、
-矩形・円`{kind:"rectangle"|"ellipse", rect, color}`、【T33】テキスト`{kind:"text", text, x, top, fontSize, color, metrics}`。
+矩形・円`{kind:"rectangle"|"ellipse", rect, color}`、【T33】テキスト`{kind:"text", text, x, top, fontSize, color, metrics}`、
+【QE-T11】スタンプ`StampShape = {kind:"stamp", center, glyph, color, fontSize, styleBasis?}`(`stampShape.ts`。`glyph`は`StampGlyph = "number"|"check"|"cross"|"exclamation"|"question"`、
+直径は`fontSize`と大きさの基準の対角線から算出、`styleBasis`はトリミングで残ったときだけ付く)。**番号はフィールドに持たない**: 描くたびに`stampNumbers(objects)`が
+番号スタンプ(`glyph:"number"`)を`id`の昇順に並べた順位(1 から)で求める。記号は数えず、重ね順を変えても番号は変わらず、消すと詰まり、取り消しで戻る。
+上限の焼き込みは番号スタンプを選ばない(全部が番号スタンプなら追加しない)。
+これから置くスタンプの種類は`toolSettings.stampKind`(`StampGlyph`、既定`"number"`。取り消し対象外・永続化しない。
+`ui/stampKindPicker.ts`で切り替え、選択中のスタンプの`glyph`は変えない。QE-T12・T13)。
 テキストの`x`/`top`は行ボックスの左端・上端、フォント実寸は`fontSize`と画像サイズから算出、`metrics`は`measureText()`の
 `width`・`actualBoundingBox{Left,Right,Ascent,Descent}`・`fontBoundingBox{Ascent,Descent}`)。
 `hiddenId`(T33): 再編集中で描画から一時的に外しているテキストのid(取り消し対象外)。

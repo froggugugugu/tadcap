@@ -34,6 +34,7 @@ const TOOL_KEYS = [
   { key: "r", name: "矩形(R)", shortcut: "R" },
   { key: "o", name: "円(O)", shortcut: "O" },
   { key: "t", name: "テキスト(T)", shortcut: "T" },
+  { key: "n", name: "スタンプ(N)", shortcut: "N" },
   { key: "m", name: "モザイク(M)", shortcut: "M" },
 ] as const;
 
@@ -91,7 +92,7 @@ test.describe("ツールの 1 キー切替(QE-T02)", () => {
     await page.keyboard.press("m");
     await expect(toolButton(page, "モザイク(M)")).toHaveAttribute("aria-pressed", "false");
     // 割り当てのないキー・まだ無いツールのキーは何もしない。
-    for (const key of ["z", "1", "n", "s", "c"]) {
+    for (const key of ["z", "1", "s", "c"]) {
       await page.keyboard.press(key);
     }
     await expect(page.locator(".tool-toolbar__button[aria-pressed='true']")).toHaveCount(0);

@@ -55,6 +55,7 @@ import { initCaptureButton } from "./ui/captureButton";
 import { initClipboardButton, isClipboardCopyEnabled } from "./ui/clipboardButton";
 import { initColorPicker } from "./ui/colorPicker";
 import { initFontSizePicker } from "./ui/fontSizePicker";
+import { initStampKindPicker } from "./ui/stampKindPicker";
 import {
   initPermissionBanner,
   shouldShowPermissionBanner,
@@ -370,6 +371,11 @@ window.addEventListener("DOMContentLoaded", () => {
   if (fontSizePickerEl) {
     initFontSizePicker(fontSizePickerEl);
   }
+  // QE-T13: スタンプの種類(番号・✓・×・!・?)。スタンプツールの間だけ重ね順の後ろに出す。
+  const stampKindPickerEl = document.querySelector<HTMLElement>("#stamp-kind-picker");
+  if (stampKindPickerEl) {
+    initStampKindPicker(stampKindPickerEl, document.querySelector<HTMLElement>("#stamp-kind-divider"));
+  }
   if (canvasEl) {
     // T32: 表示canvas = ベース(オフスクリーン)+ オブジェクトの合成。矢印・矩形・円は
     // オブジェクトとして保持し、クリックで選び直してハンドルでリサイズ・移動できる。
@@ -392,7 +398,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     initMaskOverlay(canvasEl);
     bindSelectionKeys();
-    // QE-T02: ツールの 1 キー切替(A・R・O・T・M)。`bindSelectionKeys()` の後に登録する(ARCH_quick-edits §11)。
+    // QE-T02: ツールの 1 キー切替(A・R・O・T・N・M。N は QE-T13)。`bindSelectionKeys()` の後に登録する(ARCH_quick-edits §11)。
     // 押せるかどうかはツールボタンと同じ `toolButtonState()` で決める。
     bindToolKeys((id) => toolButtonState(id, currentToolButtonContext()).disabled);
     // T29: 取り消し・やり直し(ボタン + Cmd+Z/Cmd+Shift+Z)。Undo/Redoスタックのクリアは

@@ -52,6 +52,8 @@
 - `ui/permissionBanner.ts`(T08、NFR-002): 画面収録権限未許可時の案内バナー。`shouldShowPermissionBanner(state)`(3状態からの表示要否判定)・`permissionBannerMessage()`(バナー本文、【仮定】アプリ再起動が必要な場合がある旨を含む)は純粋関数としてユニットテスト対象。`initPermissionBanner(mount)`(DOM生成・マウント・「システム設定を開く」ボタンのクリックバインド)はDOM APIに依存するため自動テスト対象外(project-config.md §11参照)
 - `ui/colorPicker.ts`(T28【新設 2026-09-24】、FR-013): プリセット6色(`COLOR_PRESETS`、定義はここ1か所。ピンク`#FF5C8A`・赤`#FF3B30`・橙`#FF9500`・黄`#FFCC00`・緑`#34C759`・青`#007AFF`)の丸いスウォッチ + 透明の`<input type="color">`を重ねたカラーピッカー。クリックで`toolSettings.setColor()`、選択状態は購読で`aria-pressed`(ピッカーは`.color-swatch--selected`)。`colorAtPresetIndex()`・`presetIndexOfColor()`・`toColorInputValue()`は純粋関数。編集中の図形(T31)の色は変えない
 - `ui/fontSizePicker.ts`(T28【新設 2026-09-24】、FR-013): 文字サイズ小・中・大のアイコンボタン(「A」の大きさの比は`textTool.ts::FONT_SIZE_MULTIPLIER`に一致、`fontSizeGlyphHeight()`)。クリックで`toolSettings.setFontSize()`
+- `canvas/tools/stampShape.ts`(QE-T10、PRD_quick-edits FR-001〜FR-004): 番号・記号スタンプの型(`StampShape`・`StampGlyph`)・寸法(`stampDiameter()` = 文字の大きさ × 1.2、下限 20px)・記号の色(`stampGlyphColor()`、白とのコントラスト比 2.5 未満なら `#1a1a1a`)・番号(`stampNumbers()`)・描画(`drawStamp()`)・当たり判定(`hitStamp()`)の純粋関数。`canvas/styleBasis.ts`(QE-T10): 大きさの基準の対角線 `shapeStyleDiagonal()`(`styleBasis` が無ければ今の画像の対角線)
+- `ui/stampKindPicker.ts`(QE-T13、UI_quick-edits §2.1・§2.2): スタンプの種類(番号・チェック・バツ・注意・質問)の 5 ボタン。`fontSizePicker.ts` と同じ作りで、クリックで `toolSettings.setStampKind()`(選択中のスタンプは変えない)、押下状態は購読で `aria-pressed`。`#stamp-kind-picker` と前の区切り `#stamp-kind-divider` はスタンプツールの間だけ出す(`isStampKindPickerVisible()`、`canvasState` を購読)。重ね順の後ろに置くので、出し入れしても既存のボタンは動かない。`STAMP_KIND_OPTIONS`・`stampKindIcon()` は純粋関数
 - `ui/undoButton.ts`(T29【新設 2026-09-24】、FR-014): 取り消し・やり直しボタン + `Cmd+Z`/`Cmd+Shift+Z`。対象矩形をpeek→`getImageData()`→`popUndo/popRedo(current)`→`putImageData()`。編集中の図形があれば取り消し=`discardPendingShape()`・やり直しは無効。テキスト入力欄フォーカス中・ドラッグ中は発火しない。判定`undoShortcutCommand()`・`resolveUndoCommand()`・`undoAvailability()`は純粋関数。ボタンは`data-preserve-pending-shape`属性で`shapeTools.ts`の「Canvas外pointerdownで確定」から除外。T32【改訂 2026-09-24】で実行は`documentState.ts::undoDocument()`/`redoDocument()`に委ね、編集中の図形の特別扱い(破棄・やり直し無効)は廃止。属性は`data-preserve-selection`(Canvas外pointerdownの選択解除から除外)に改名
 - `ui/toolbar.ts`(T09土台、T10でモザイク有効化、FR-006・FR-008共通): 矢印/モザイクのツール切替UI。`TOOLS` 配列(T10で矢印・モザイクの2件)からボタンを生成し、クリックで `canvasState.toggleActiveTool()` を呼ぶ。`canvasState` の変化を購読して `aria-pressed`・活性状態(`isDrawing`中は非アクティブなボタンを無効化)に反映する。DOM生成を伴う `initToolbar()` はVitestの既定環境では自動テスト対象外(project-config.md §11参照)
 - `ui/shortcutGuards.ts`(T22【新設 2026-09-24】): `isEditableTarget(target)`(input/textarea/contentEditableかどうかの判定。テキスト入力中はアプリのショートカットを奪わない)を提供する純粋関数モジュール。T22で`clipboardButton.ts`から抽出し、`Cmd+Z`/`Cmd+Shift+Z`(T29)・テキスト入力欄表示中の判定(T27)からも再利用する(挙動不変)
@@ -83,7 +85,8 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 │   ├── canvasState.ts        # 現在表示中の画像を保持する薄い状態オブジェクト(T07)。T09で選択中ツール・描画中フラグを追加。T14で`CanvasImage.capture`をnullable化(履歴からの再読込対応)
 │   ├── render.ts             # 画像読み込み・Canvas描画(T07)。T12で getCanvasImageData()(RGBA8抽出)を追加。T14で captureHistoryAssets()(履歴保存用image/thumbnailのObjectURL抽出)を追加
 │   ├── coords.ts             # CSS表示座標→Canvasピクセル座標の変換(T09)。T20で`Rect`/`normalizeRect()`/`clipRectToCanvas()`を`tools/mosaicTool.ts`から、T25で`roundRect()`/`cropSnapshotRect()`を`tools/arrowTool.ts`・`tools/mosaicTool.ts`から移設
-│   ├── toolSettings.ts       # 矢印/矩形/円/テキスト共通の現在色・フォントサイズ段階(純粋関数+薄いストア、T21、FR-013)
+│   ├── toolSettings.ts       # 矢印/矩形/円/テキスト共通の現在色・フォントサイズ段階(純粋関数+薄いストア、T21、FR-013)。QE-T12 でスタンプの種類
+│   ├── styleBasis.ts         # 注釈の大きさの基準の対角線 shapeStyleDiagonal()(QE-T10)
 │   ├── undoStack.ts          # Undo/Redoスタック(変更矩形+ピクセルの差分方式、純粋関数+薄いストア、T23、FR-014)
 │   ├── shapeEdit.ts          # 選択中の図形の当たり判定・リサイズ・移動・pointerdown分岐の純粋関数(T31、T32で一般化)
 │   ├── objectModel.ts        # オブジェクト配列の純粋関数・上限50(T32)
@@ -97,6 +100,7 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 │       ├── mosaicTool.ts     # モザイク(矩形選択→ピクセル化焼き込み、T10)。T20で`Rect`/`normalizeRect()`/`clipRectToCanvas()`を`../coords.ts`へ移設
 │       ├── rectangleTool.ts  # 矩形枠(塗りつぶしなしの枠線描画、T25、FR-007)
 │       ├── ellipseTool.ts    # 円(楕円)枠(塗りつぶしなしの枠線描画、T26、FR-011)
+│       ├── stampShape.ts     # 番号・記号スタンプの寸法・記号の色・番号・描画・当たり判定(QE-T10)
 │       └── textTool.ts       # テキスト(クリック位置の入力欄→焼き込み、T27、FR-012)
 ├── ui/                       # DOM構築・イベントバインディング(T07〜)
 │   ├── captureButton.ts      # キャプチャ開始ボタン(T07)。T08で onPermissionDenied コールバックを追加
@@ -105,6 +109,7 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 │   ├── selectionKeys.ts      # 選択中のオブジェクトのEnter/Esc=選択解除(T31のpendingShapeKeys.tsをT32で置き換え)
 │   ├── colorPicker.ts        # 注釈色のプリセット6色+カラーピッカー(T28、FR-013)
 │   ├── fontSizePicker.ts     # 文字サイズ小・中・大(T28、FR-013)
+│   ├── stampKindPicker.ts    # スタンプの種類(番号・✓・×・!・?)、スタンプツールの間だけ表示(QE-T13)
 │   ├── undoButton.ts         # 取り消し・やり直しボタン+Cmd+Z/Cmd+Shift+Z(T29、FR-014)
 │   ├── toast.ts              # 右下トーストの自動消去(`showToast()`/`clearToast()`、成功・情報2.5秒/エラー5秒、reduced-motionはフェードなし。v0.2.0後フィードバック)
 │   ├── shortcutGuards.ts     # `isEditableTarget()`(編集可能要素の判定、T22、`clipboardButton.ts`から抽出)
@@ -194,6 +199,8 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `arrowTool.test.ts` | `src/canvas/tools/` | `arrowLineWidth()`(Canvas対角線からの線幅算出・上下限クランプ、T25追補で20px/6px/48pxへ改訂、T31で1.5倍の30px/9px/72pxへ改訂)、`arrowHeadLength()`、`arrowHeadWidth()`(T25追補で新設)、`arrowShadowParams()`(T25追補で新設)、`computeArrowGeometry()`(斜め/水平ドラッグでの矢じり左右対称配置を幾何関係で検証、ドラッグ距離2px未満は`null`)、`computeTaperArrowBoundingRect()`(シャドウ込み余白の厳密値検証、T25追補で追加)(T09)。DOM/Canvas依存の`bindArrowTool()`は対象外(project-config.md §11参照)。T25で`cropSnapshotRect()`のテストは`coords.test.ts`へ移設 |
 | `shapeEdit.test.ts` | `src/canvas/` | 編集中の図形(T31): `createShapeFromDrag()`・`getShapeHandles()`・`hitTestShape()`(ハンドル優先・矩形/楕円の内側・矢印の胴体)・`resizeShape()`(対角固定・反転時の正規化・Shift正方形・最小サイズ未満は据え置き・Canvasクランプ)・`moveShape()`(はみ出さないよう移動量をクランプ)・`applyEditDrag()`・`decidePointerDown()`(T32で一般化: 選択中のハンドル・内側/未選択は線の付近で選択+移動/最前面優先/空白は作成 or 選択解除/モザイク・テキスト中は掴まない/選択idが無い場合)・`shapeUndoRect()`・`cursorForHit()` |
 | (廃止 T32)`pendingShape.test.ts` | `src/canvas/` | `documentState.test.ts` に置き換え |
+| `stampShape.test.ts` | `src/canvas/tools/` | QE-T10: `stampDiameter()`(UI_quick-edits §2.3 の例・下限 20)・`stampGlyphColor()`(プリセット 6 色と比 2.5 の境目)・`stampNumbers()`(置いた順・消すと詰まる・記号を数えない・重ね順で変わらない)・`hitStamp()`・`drawStamp()`(偽の `ctx` で描く順と 2 桁の文字の大きさ) |
+| `styleBasis.test.ts` | `src/canvas/` | QE-T10: `shapeStyleDiagonal()`(`styleBasis` 無しは今の対角線、有りはその値) |
 | `mosaicTool.test.ts` | `src/canvas/tools/` | `computeMosaicRect()`(`coords.ts`の`normalizeRect()`/`clipRectToCanvas()`を利用、正規化+クリップの合成、ドラッグ距離2px未満は`null`)、`mosaicBlockSize()`(典型サイズ・5K Retina相当・下限12px/上限64pxクランプ)、`pixelateImageData()`(単一ブロックのRGBA平均、ブロックサイズで割り切れない端数ブロックの平均、単色画像は不変、入力配列を変更しない、ブロックサイズが矩形より大きい場合の全体1ブロック化)(T10)。T20で`normalizeRect()`/`clipRectToCanvas()`自体のテストは`coords.test.ts`へ移設。T25で`cropSnapshotRect()`/`roundRect()`のテストも`coords.test.ts`へ移設。DOM/Canvas依存の`bindMosaicTool()`は対象外(project-config.md §11参照)。AM-T07: `pixelateRect()`(既存のモザイクと同じ処理・ブロックサイズ) |
 | `rectangleTool.test.ts` | `src/canvas/tools/` | `rectangleLineWidth()`(Canvas対角線からの枠線幅算出・上下限クランプ、矩形サイズ非依存)、`constrainToSquare()`(Shift押下時の正方形補正、通常/逆方向/既に正方形の各ケース)、`computeRectangleGeometry()`(正規化+クリップ、ドラッグ距離2px未満・Canvasはみ出し・Shift併用)、`computeRectangleBoundingRect()`(線幅分の余白を含む整数外接矩形、Canvas端でのクリップ)(T25)。`rectangleCornerRadius()`(線幅×2.5・短辺×0.25で頭打ち・幅0で0)。DOM/Canvas依存の`bindRectangleTool()`は対象外(project-config.md §11参照) |
 | `ellipseTool.test.ts` | `src/canvas/tools/` | `ellipseLineWidth()`(Canvas対角線からの枠線幅算出・上下限クランプ、外接矩形サイズ非依存)、`constrainToSquare()`(Shift押下時の正方形補正)、`computeEllipseCenterAndRadii()`(外接矩形→中心・X半径・Y半径)、`computeEllipseGeometry()`(正規化+クリップ、ドラッグ距離2px未満・Canvasはみ出し・Shift併用で正円)、`computeEllipseBoundingRect()`(線幅分の余白を含む整数外接矩形、Canvas端でのクリップ)(T26)。DOM/Canvas依存の`bindEllipseTool()`は対象外(project-config.md §11参照) |
@@ -215,6 +222,7 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `shortcutGuards.test.ts` | `src/ui/` | `isEditableTarget()`(null/undefined/INPUT/TEXTAREA/contentEditable/通常要素の分岐)(T22。`clipboardButton.test.ts`から移設、挙動不変)。T28で`type="color"`等の文字入力でないINPUTはfalse |
 | `colorPicker.test.ts` | `src/ui/` | `COLOR_PRESETS`(6色・先頭が既定ピンク・形式・重複なし)、`colorAtPresetIndex()`、`presetIndexOfColor()`(大小文字無視・プリセット外は-1)、`toColorInputValue()`(T28) |
 | `fontSizePicker.test.ts` | `src/ui/` | `FONT_SIZE_OPTIONS`、`fontSizeGlyphHeight()`(大小比が`FONT_SIZE_MULTIPLIER`に一致)(T28) |
+| `stampKindPicker.test.ts` | `src/ui/` | QE-T13: `STAMP_KIND_OPTIONS`(種類 → `スタンプ 番号` などの名前、5 つの順)・`stampKindLabel()`・`isStampKindPickerVisible()`(スタンプツールのときだけ)・`stampKindIcon()`(塗りの丸 + 地の色で抜いた記号、種類ごとに違う形) |
 | `undoButton.test.ts` | `src/ui/` | `undoShortcutCommand()`(Cmd+Z/Cmd+Shift+Z、修飾・入力欄・type=color)、`undoAvailability()`・`resolveUndoCommand()`(編集中図形=破棄・やり直し無効、ドラッグ中は無効)(T29) |
 | `textScan.test.ts` | `src/ipc/` | AM-T08: 生のバイト列での invoke、応答の検証(5 キーちょうど・整数・既知の種類。余分なフィールドや 1 件の不正で全体を `invalid_response`)、`text_scan_busy`/`text_scan_failed` の変換、エラー文言に応答を含めない |
 | `autoMask.test.ts` | `src/ui/` | AM-T15・AM-T25-F1: 開始条件(画像あり・idle・ドラッグ中でない)、⌘⇧M と Esc の判定(入力欄・IME 変換中は奪わない)、結果バーの表示と文言、IPC の応答 → 候補の詰め替え、一括モザイク(実際に加工した件数)、失敗時のトースト、画像の差し替えで候補を破棄 |
@@ -277,6 +285,7 @@ Vite dev server上のページを開き `e2e/fixtures/tauriMock.ts` が `page.ad
 | `e2e/shape-edit.spec.ts` | T31: 編集中の図形はコピー時に確定されて写りハンドル(白)は写らない(コピーRGBA=Canvas、近白画素0)/矩形の右下ハンドルでリサイズ/矢印の胴体ドラッグで移動+Enter確定/Escで破棄/次の図形の描き始めで直前の図形が確定。T32で後ろ2件を「Escは選択解除でCmd+Zで描く前に戻る」「次の図形を描いても前の図形は残り、取り消しは新しい方から」に変更 |
 | `e2e/object-layer.spec.ts` | T32: 確定後の矢印を選び直して移動・リサイズ→Cmd+Z×2で編集前とバイト一致/51個目で最古が焼き込まれ選べなくなり、1回の取り消しで戻る/選択中(ハンドル表示中)のCmd+Cでもコピー結果にハンドルが写らない/モザイクはベースにだけ効き上の矩形は隠れず後から動かせる/テキストはベースへ焼き込まれ矩形より下(T33で「テキストもオブジェクトとして重ね順に入り、後から置けば矩形より上・Cmd+Zで消える」に変更) |
 | `e2e/capture-flow.spec.ts` | v0.2.2後: キャプチャするとボタンを押さずに無編集の画像がクリップボードに入り(Canvasと一致・注釈色なし)、トーストは「キャプチャを…」、後から描いても自動コピーされた画像は変わらない。`e2e/fixtures/captureReady.ts`は自動コピーの1回が済むまで待つ(各specのコピー回数はこの1回を含む)。①「キャプチャ→矢印描画→モザイク適用→クリップボードコピーで履歴に1件表示・選択される」: キャプチャボタン押下 → `capture_screen`モック(`capture://completed`をemit)→ Canvasに画像表示 → 矢印ツールへ切替・ドラッグ(既定色`#FF5C8A`付近の画素を`getImageData()`で検証)→ モザイクツールへ切替(排他確認)・ドラッグ(ブロック平均によるピクセル変化を検証)→「クリップボードにコピー」(`plugin:image|new`→`plugin:clipboard-manager|write_image`呼び出し回数で成功を検証)→ 成功フィードバック表示 → 履歴サイドバー(`#history-sidebar`)に1件・選択状態(`.history-sidebar__item--selected`)。②「画面収録権限が未許可(permission_denied)の場合、キャプチャ実行時に権限バナーが表示される」: `capture_screen`が`"permission_denied"`でrejectする場合に`.permission-banner`が表示されることを検証(T13実装時点で既知の不具合(project-config.md §11参照)により本テストはfailする) |
+| `e2e/stamp.spec.ts` | QE-T13: 種類の切替はスタンプツールの間だけ出て(N キーでも)、出し入れで色・文字サイズ・重ね順のボタンが動かない・選んだ種類を覚える/番号 1・2・3 → 2 番目を消すと 1・2 → ⌘Z で画素まで戻る → 選択中に種類を変えてもスタンプは変わらない → 色・文字サイズの変更でほかの番号は同じ・1 手で戻る → 記号を挟んでも次は 4 → ⌘⇧B・⌘⇧F で番号が変わらない。番号は 1 色の地でスタンプの周りの画素を同じ番号の見た目と比べて読む(状態を読むテスト用の口は作らない) |
 | `e2e/auto-mask.spec.ts` | AM-T17・AM-T25-F1(15 件): 開始条件・処理中・印の外す/戻す・まとめてモザイク(外した領域は不変、取り消し 1 回で復元、やり直し)・二重実行・Esc・⌘C に印が写らない・確認中の操作制限・0 件・失敗 3 通り・画像の切替で候補を破棄・表示倍率の変化で印のずれ 1px 以内。`tauriMock.ts` の `scan_sensitive_text` は矩形と種類だけを返す |
 
 fixture画像は `e2e/fixtures/sampleCapturePng.ts` が `node:zlib` のみでチェッカーボードPNGを

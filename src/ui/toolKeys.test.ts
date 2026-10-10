@@ -39,6 +39,7 @@ describe("toolKeyTarget", () => {
     ["KeyR", "rectangle"],
     ["KeyO", "ellipse"],
     ["KeyT", "text"],
+    ["KeyN", "stamp"],
     ["KeyM", "mosaic"],
   ] as const)("%s は %s を返す", (code, tool) => {
     expect(toolKeyTarget(keyEvent(code), context())).toBe(tool);
@@ -104,8 +105,7 @@ describe("toolKeyTarget", () => {
     expect(toolKeyTarget(keyEvent("Digit1"), context())).toBeNull();
   });
 
-  it("まだ無いツールのキー(KeyN・KeyS・KeyC)は扱わない", () => {
-    expect(toolKeyTarget(keyEvent("KeyN"), context())).toBeNull();
+  it("まだ無いツールのキー(KeyS・KeyC)は扱わない", () => {
     expect(toolKeyTarget(keyEvent("KeyS"), context())).toBeNull();
     expect(toolKeyTarget(keyEvent("KeyC"), context())).toBeNull();
   });
@@ -122,6 +122,7 @@ describe("toolLabel", () => {
     expect(toolLabel("rectangle")).toBe("矩形(R)");
     expect(toolLabel("ellipse")).toBe("円(O)");
     expect(toolLabel("text")).toBe("テキスト(T)");
+    expect(toolLabel("stamp")).toBe("スタンプ(N)");
     expect(toolLabel("mosaic")).toBe("モザイク(M)");
   });
 
