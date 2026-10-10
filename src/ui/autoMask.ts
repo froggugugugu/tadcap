@@ -15,7 +15,7 @@
 
 import { getCanvasState, isSameCanvasImage, subscribeCanvasState, type CanvasImage } from "../canvas/canvasState";
 import { clipRectToCanvas, type Rect } from "../canvas/coords";
-import { applyBaseEdits, exportDocumentBase, selectObject } from "../canvas/documentState";
+import { applyBaseEdits, exportDocumentBase, getCaptureSize, selectObject } from "../canvas/documentState";
 import {
   acceptScanResult,
   activeRects,
@@ -177,6 +177,11 @@ export interface AutoMaskDeps {
   getImage: () => CanvasImage | null;
   /** 表示中のベースの実ピクセルの大きさ。 */
   getImageSize: () => { width: number; height: number };
+  /**
+   * 撮った時点の画像の大きさ(`documentState.getCaptureSize()`)。一括モザイクの粗さはこれで決める
+   * (手で囲むモザイクと同じ基準、QE-T18・ADR-002)。`null`なら今の画像の大きさで決める。
+   */
+  getCaptureSize: () => { width: number; height: number } | null;
   /** ドラッグ中か(`canvasState.isDrawing`)。 */
   isDrawing: () => boolean;
   commitPendingText: () => void;
@@ -273,7 +278,7 @@ export function createAutoMaskController(deps: AutoMaskDeps): AutoMaskController
       return;
     }
     const rects = activeRects();
-    const { width, height } = deps.getImageSize();
+    const { width, height } = deps.getCaptureSize() ?? deps.getImageSize();
     const applied = deps.applyBaseEdits(rects, (ctx, rect) => pixelateRect(ctx, rect, width, height));
     discardMaskSession();
     // 件数は実際に加工した数。1 件も加工できなければ(サーフェスが無い等)画像は変わっていないので
@@ -424,6 +429,7 @@ export function initAutoMask(elements: AutoMaskElements): () => void {
   const controller = createAutoMaskController({
     getImage: () => getCanvasState().image,
     getImageSize: () => ({ width: elements.canvas.width, height: elements.canvas.height }),
+    getCaptureSize,
     isDrawing: () => getCanvasState().isDrawing,
     commitPendingText,
     clearSelection: () => selectObject(null),

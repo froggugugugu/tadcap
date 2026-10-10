@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { computeMosaicRect, mosaicBlockSize, pixelateImageData, pixelateRect } from "./mosaicTool";
+import type { DocumentSurface } from "../documentState";
+import { resetDocument, setDocumentSurface } from "../documentState";
+import { canUndo } from "../undoStack";
+import {
+  applyMosaicToBase,
+  computeMosaicRect,
+  mosaicBlockSize,
+  pixelateImageData,
+  pixelateRect,
+} from "./mosaicTool";
 
 // T20【改訂 2026-09-24】: `normalizeRect`/`clipRectToCanvas` 自体のテストは
 // `../coords.test.ts` へ移設した(定義本体を `coords.ts` へ移設したため)。
@@ -130,47 +139,48 @@ describe("pixelateImageData", () => {
 
 // AM-T07【新設 2026-10-09】: 一括モザイク用に既存の`applyMosaic()`を`pixelateRect()`として公開した
 // (処理・ブロックサイズの式は変えない)。VitestのNode環境には`ImageData`が無いので偽物を置く。
-describe("pixelateRect", () => {
-  class FakeImageData {
-    constructor(
-      public data: Uint8ClampedArray,
-      public width: number,
-      public height: number,
-    ) {}
-  }
+class FakeImageData {
+  constructor(
+    public data: Uint8ClampedArray,
+    public width: number,
+    public height: number,
+  ) {}
+}
 
+/** 1枚のRGBA配列を持つ偽の描画コンテキスト(読み書きした矩形を記録する)。 */
+function createFakeContext(canvasWidth: number, canvasHeight: number) {
+  const pixels = new Uint8ClampedArray(canvasWidth * canvasHeight * 4);
+  for (let i = 0; i < pixels.length; i += 1) {
+    pixels[i] = (i * 37) % 256;
+  }
+  const reads: number[][] = [];
+  const writes: number[][] = [];
+  const ctx = {
+    getImageData: (x: number, y: number, width: number, height: number) => {
+      reads.push([x, y, width, height]);
+      const data = new Uint8ClampedArray(width * height * 4);
+      for (let row = 0; row < height; row += 1) {
+        const from = ((y + row) * canvasWidth + x) * 4;
+        data.set(pixels.subarray(from, from + width * 4), row * width * 4);
+      }
+      return new FakeImageData(data, width, height);
+    },
+    putImageData: (image: FakeImageData, x: number, y: number) => {
+      writes.push([x, y, image.width, image.height]);
+      for (let row = 0; row < image.height; row += 1) {
+        const from = row * image.width * 4;
+        pixels.set(image.data.subarray(from, from + image.width * 4), ((y + row) * canvasWidth + x) * 4);
+      }
+    },
+  };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, pixels, reads, writes };
+}
+
+
+describe("pixelateRect", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
-
-  /** 1枚のRGBA配列を持つ偽の描画コンテキスト(読み書きした矩形を記録する)。 */
-  function createFakeContext(canvasWidth: number, canvasHeight: number) {
-    const pixels = new Uint8ClampedArray(canvasWidth * canvasHeight * 4);
-    for (let i = 0; i < pixels.length; i += 1) {
-      pixels[i] = (i * 37) % 256;
-    }
-    const reads: number[][] = [];
-    const writes: number[][] = [];
-    const ctx = {
-      getImageData: (x: number, y: number, width: number, height: number) => {
-        reads.push([x, y, width, height]);
-        const data = new Uint8ClampedArray(width * height * 4);
-        for (let row = 0; row < height; row += 1) {
-          const from = ((y + row) * canvasWidth + x) * 4;
-          data.set(pixels.subarray(from, from + width * 4), row * width * 4);
-        }
-        return new FakeImageData(data, width, height);
-      },
-      putImageData: (image: FakeImageData, x: number, y: number) => {
-        writes.push([x, y, image.width, image.height]);
-        for (let row = 0; row < image.height; row += 1) {
-          const from = row * image.width * 4;
-          pixels.set(image.data.subarray(from, from + image.width * 4), ((y + row) * canvasWidth + x) * 4);
-        }
-      },
-    };
-    return { ctx: ctx as unknown as CanvasRenderingContext2D, pixels, reads, writes };
-  }
 
   it("矩形を整数化して読み、画像全体の対角線で決まるブロックサイズでピクセル化して書き戻す", () => {
     vi.stubGlobal("ImageData", FakeImageData);
@@ -197,5 +207,73 @@ describe("pixelateRect", () => {
     pixelateRect(ctx, { x: 1, y: 1, width: 0.4, height: 5 }, 16, 16);
     expect(reads).toEqual([]);
     expect(writes).toEqual([]);
+  });
+});
+
+// QE-T18【新設】: モザイクの粗さは撮った時点の大きさ(`captureSize`)で決める(ADR-002)。
+// トリミング等でベースが小さくなっても、ブロックが細かくならない(隠す強さを落とさない)。
+describe("applyMosaicToBase(ベースへのモザイク、粗さは captureSize)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    setDocumentSurface(null);
+  });
+
+  /** 大きさを後から変えられる偽のサーフェス。`editBase` は偽の描画コンテキストへ描く。 */
+  function createResizableSurface(width: number, height: number, ctx: CanvasRenderingContext2D) {
+    const size = { width, height };
+    const surface: DocumentSurface = {
+      size: () => ({ ...size }),
+      reset: () => {},
+      load: () => {},
+      exportBase: () => Promise.resolve(new Blob()),
+      burn: () => {},
+      editBase: (draw) => draw(ctx),
+      render: () => {},
+      read: (r) => ({ data: new Uint8ClampedArray(r.width * r.height * 4), width: r.width, height: r.height }),
+      write: () => {},
+    };
+    return { surface, size };
+  }
+
+  it("ベースの大きさが変わっても、撮った時点の大きさで決まるブロックでピクセル化する", () => {
+    vi.stubGlobal("ImageData", FakeImageData);
+    const fake = createFakeContext(64, 48);
+    const before = createFakeContext(64, 48).ctx.getImageData(0, 0, 40, 40) as unknown as FakeImageData;
+    const { surface, size } = createResizableSurface(2000, 1500, fake.ctx);
+    setDocumentSurface(surface);
+    resetDocument();
+    // 撮った後にベースが小さくなった(トリミング相当)。今の大きさならブロックは下限の 12px。
+    size.width = 400;
+    size.height = 300;
+    expect(mosaicBlockSize(2000, 1500)).toBe(20);
+    expect(mosaicBlockSize(400, 300)).toBe(12);
+
+    applyMosaicToBase({ x: 0, y: 0, width: 40, height: 40 });
+
+    const expected = pixelateImageData(before.data, 40, 40, 20);
+    const after = fake.ctx.getImageData(0, 0, 40, 40) as unknown as FakeImageData;
+    expect(Array.from(after.data)).toEqual(Array.from(expected));
+    expect(canUndo()).toBe(true);
+  });
+
+  it("大きさが変わっていなければ今と同じ(今の画像の大きさで決まる)", () => {
+    vi.stubGlobal("ImageData", FakeImageData);
+    const fake = createFakeContext(64, 48);
+    const reference = createFakeContext(64, 48);
+    const rect = { x: 3.4, y: 5.6, width: 20.4, height: 13.5 };
+    setDocumentSurface(createResizableSurface(64, 48, fake.ctx).surface);
+    resetDocument();
+
+    applyMosaicToBase(rect);
+    pixelateRect(reference.ctx, rect, 64, 48);
+
+    expect(Array.from(fake.pixels)).toEqual(Array.from(reference.pixels));
+  });
+
+  it("サーフェスが無ければ何もしない", () => {
+    setDocumentSurface(null);
+    resetDocument();
+    expect(() => applyMosaicToBase({ x: 0, y: 0, width: 10, height: 10 })).not.toThrow();
+    expect(canUndo()).toBe(false);
   });
 });

@@ -79,9 +79,21 @@ export interface DocumentState {
 
 type Listener = (state: DocumentState) => void;
 
+/** 画像の実ピクセルの大きさ。 */
+export interface ImageSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 let surface: DocumentSurface | null = null;
 let state: DocumentState = { objects: [], selectedId: null, draft: null, hiddenId: null };
 let nextId = 1;
+/**
+ * 撮った時点の画像の大きさ(モザイクの粗さの基準、QE-T18・ADR-002「モザイクの粗さ」)。
+ * 新規の読み込みで画像の大きさ、退避からの復元で退避の値にし、ベースの大きさが変わる操作
+ * (トリミング)では変えない。サーフェスが無ければ`null`。メモリだけに持つ(NFR-002)。
+ */
+let captureSize: ImageSize | null = null;
 const listeners = new Set<Listener>();
 
 export function setDocumentSurface(next: DocumentSurface | null): void {
@@ -93,11 +105,20 @@ export function getDocumentState(): DocumentState {
 }
 
 /**
+ * モザイクの粗さを決める大きさ(撮った時点の画像の大きさ)。今の画像の大きさではなくこれを使う
+ * (切った後にブロックが細かくなり、隠す強さが落ちないように、ADR-002)。
+ */
+export function getCaptureSize(): ImageSize | null {
+  return captureSize;
+}
+
+/**
  * 新しい画像を読み込んだ直後に呼ぶ(新規キャプチャ・履歴再読込)。表示をベースへ取り込み、
  * オブジェクト・選択・下書き・取り消しスタックを空にする。
  */
 export function resetDocument(baseBlob: Blob | null = null): void {
   surface?.reset(baseBlob);
+  captureSize = surface ? surface.size() : null;
   state = { objects: [], selectedId: null, draft: null, hiddenId: null };
   clearUndoStack();
   commit();
@@ -344,11 +365,14 @@ export interface DocumentSnapshot {
   objects: readonly AnnotationObject[];
   nextId: number;
   undo: UndoStackState;
+  /** 撮った時点の画像の大きさ(QE-T18)。これを持たない退避から戻すときは戻した画像の大きさにする。 */
+  captureSize?: ImageSize;
 }
 
 /** 今のドキュメントを退避用に取り出す(配列・スタックはイミュータブルに扱うため共有してよい)。 */
 export function snapshotDocument(): DocumentSnapshot {
-  return { objects: state.objects, nextId, undo: getUndoStackState() };
+  const snapshot: DocumentSnapshot = { objects: state.objects, nextId, undo: getUndoStackState() };
+  return captureSize ? { ...snapshot, captureSize } : snapshot;
 }
 
 /** ベースをPNGで取り出す(呼んだ時点の内容。サーフェス未登録なら空のBlob)。 */
@@ -366,6 +390,7 @@ export function restoreDocument(
   baseBlob: Blob | null,
 ): void {
   surface?.load(base, baseBlob);
+  captureSize = snapshot.captureSize ?? { width: base.width, height: base.height };
   nextId = Math.max(nextId, snapshot.nextId);
   state = { objects: snapshot.objects, selectedId: null, draft: null, hiddenId: null };
   replaceUndoStackState(snapshot.undo);

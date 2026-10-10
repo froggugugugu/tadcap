@@ -41,7 +41,7 @@ import {
   setDrawing,
   type CanvasImage,
 } from "../canvasState";
-import { applyBaseEdit, renderDocument } from "../documentState";
+import { applyBaseEdit, getCaptureSize, renderDocument } from "../documentState";
 
 export type { Point, Rect };
 
@@ -220,6 +220,21 @@ export function pixelateRect(
 }
 
 /**
+ * ベースの`rect`をピクセル化し、`pixels`コマンドとして積む(T32)。変更矩形は従来どおり整数化した
+ * `roundRect(rect)`で、`pixelateRect`(旧`applyMosaic`)には元の`rect`を渡す(内部の丸めも挙動不変)。
+ *
+ * QE-T18: ブロックサイズは今の画像の大きさではなく撮った時点の大きさ(`getCaptureSize()`)で決める
+ * (ADR-002。切った後にブロックが細かくなり読めてしまうのを防ぐ)。サーフェスが無ければ何もしない。
+ */
+export function applyMosaicToBase(rect: Rect): void {
+  const basis = getCaptureSize();
+  if (!basis) {
+    return;
+  }
+  applyBaseEdit(roundRect(rect), (baseCtx) => pixelateRect(baseCtx, rect, basis.width, basis.height));
+}
+
+/**
  * Canvas上のポインタ操作からモザイクツールを結線する(Container相当、DOM依存、自動テスト
  * 対象外)。
  *
@@ -299,11 +314,7 @@ export function bindMosaicTool(canvas: HTMLCanvasElement): () => void {
     if (isSameCanvasImage(getCanvasState().image, imageAtDragStart)) {
       const rect = computeMosaicRect(start, toCanvasPoint(event), canvas.width, canvas.height);
       if (rect) {
-        // T32: ベースだけをピクセル化し、`pixels`コマンドとして積む(変更矩形は従来どおり
-        // 整数化した`roundRect(rect)`。`pixelateRect`(旧`applyMosaic`)は元の`rect`を渡し内部の丸めも挙動不変)。
-        const width = canvas.width;
-        const height = canvas.height;
-        applyBaseEdit(roundRect(rect), (baseCtx) => pixelateRect(baseCtx, rect, width, height));
+        applyMosaicToBase(rect);
       } else {
         renderDocument();
       }

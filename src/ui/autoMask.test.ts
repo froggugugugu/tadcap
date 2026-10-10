@@ -7,6 +7,12 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
+// 一括モザイクに渡す粗さの基準(QE-T18)を確かめるため、`pixelateRect` だけ記録する偽物に差し替える。
+vi.mock("../canvas/tools/mosaicTool", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../canvas/tools/mosaicTool")>()),
+  pixelateRect: vi.fn(),
+}));
+
 import {
   clearCanvasImage,
   getCanvasState,
@@ -24,6 +30,7 @@ import {
   toggleCandidate,
   type MaskSessionState,
 } from "../canvas/maskSession";
+import { pixelateRect } from "../canvas/tools/mosaicTool";
 import { TextScanError, type ScannedCandidate } from "../ipc/textScan";
 import { arrangeShortcutCommand } from "./arrangeButtons";
 import {
@@ -91,6 +98,7 @@ interface Harness {
   deps: AutoMaskDeps;
   image: { current: CanvasImage | null };
   size: { width: number; height: number };
+  captureSize: { current: { width: number; height: number } | null };
   calls: string[];
   scan: ReturnType<typeof vi.fn>;
   applyBaseEdits: ReturnType<typeof vi.fn>;
@@ -101,6 +109,7 @@ interface Harness {
 function makeHarness(scanImpl: (png: Blob) => Promise<ScannedCandidate[]> = async () => SCANNED): Harness {
   const image = { current: makeImage() as CanvasImage | null };
   const size = { width: 200, height: 100 };
+  const captureSize = { current: { width: 200, height: 100 } as { width: number; height: number } | null };
   const calls: string[] = [];
   const scan = vi.fn(async (png: Blob) => {
     calls.push("scan");
@@ -113,6 +122,7 @@ function makeHarness(scanImpl: (png: Blob) => Promise<ScannedCandidate[]> = asyn
   const deps: AutoMaskDeps = {
     getImage: () => image.current,
     getImageSize: () => size,
+    getCaptureSize: () => captureSize.current,
     isDrawing: () => drawing.current,
     commitPendingText: () => {
       calls.push("commit");
@@ -128,7 +138,7 @@ function makeHarness(scanImpl: (png: Blob) => Promise<ScannedCandidate[]> = asyn
     applyBaseEdits,
     notify,
   };
-  return { deps, image, size, calls, scan, applyBaseEdits, notify, drawing };
+  return { deps, image, size, captureSize, calls, scan, applyBaseEdits, notify, drawing };
 }
 
 beforeEach(() => {
@@ -498,6 +508,37 @@ describe("createAutoMaskController(ARCH §7.1 の手順)", () => {
     expect(h.applyBaseEdits.mock.calls[0][0]).toEqual([{ x: 50, y: 60, width: 40, height: 10 }]);
     expect(getMaskSession().status).toBe("idle");
     expect(h.notify).toHaveBeenCalledWith("候補 1 件にモザイクをかけました。⌘Z で戻せます。", "info");
+  });
+
+  it("まとめてモザイクの粗さは撮った時点の大きさ(captureSize)で決める(QE-T18・ADR-002)", async () => {
+    const h = makeHarness();
+    const controller = createAutoMaskController(h.deps);
+    await controller.start();
+    // 撮った後にベースが小さくなった(トリミング相当)。
+    h.captureSize.current = { width: 2000, height: 1500 };
+    h.size.width = 400;
+    h.size.height = 300;
+    controller.applyMosaic();
+    const draw = h.applyBaseEdits.mock.calls[0][1] as (ctx: CanvasRenderingContext2D, rect: Rect) => void;
+    const ctx = {} as CanvasRenderingContext2D;
+    const rect = { x: 10, y: 20, width: 30, height: 12 };
+    vi.mocked(pixelateRect).mockClear();
+    draw(ctx, rect);
+    expect(pixelateRect).toHaveBeenCalledWith(ctx, rect, 2000, 1500);
+  });
+
+  it("captureSize が無ければ今の画像の大きさで決める(今と同じ)", async () => {
+    const h = makeHarness();
+    h.captureSize.current = null;
+    const controller = createAutoMaskController(h.deps);
+    await controller.start();
+    controller.applyMosaic();
+    const draw = h.applyBaseEdits.mock.calls[0][1] as (ctx: CanvasRenderingContext2D, rect: Rect) => void;
+    const ctx = {} as CanvasRenderingContext2D;
+    const rect = { x: 10, y: 20, width: 30, height: 12 };
+    vi.mocked(pixelateRect).mockClear();
+    draw(ctx, rect);
+    expect(pixelateRect).toHaveBeenCalledWith(ctx, rect, 200, 100);
   });
 
   it("残り 0 件ではまとめてモザイクしない", async () => {

@@ -7,6 +7,7 @@ import {
   applyBaseEdits,
   arrangeSelected,
   exportDocumentBase,
+  getCaptureSize,
   previewSelectedColor,
   restoreDocument,
   setSelectedColor,
@@ -876,5 +877,77 @@ describe("composeDocument(合成の段: ベース → 暗さ → 穴以外の注
     composeDocument(ctx, base, W, H, objects(stamp, hole(100), { ...stamp, center: { x: 150, y: 50 } }), null);
     const texts = calls.filter((c) => c.name === "fillText").map((c) => ("args" in c ? c.args[0] : null));
     expect(texts).toEqual(["1", "2"]);
+  });
+});
+
+describe("captureSize(モザイクの粗さの基準、QE-T18・ADR-002)", () => {
+  /** 大きさを後から変えられる偽のサーフェス(トリミング等でベースの大きさが変わった状況を作る)。 */
+  function resizable(width: number, height: number) {
+    const size = { width, height };
+    const fake: FakeSurface = { ...createFakeSurface(), size: () => ({ ...size }) };
+    setDocumentSurface(fake);
+    return size;
+  }
+
+  it("新規(resetDocument)では読み込んだ画像の大きさになる", () => {
+    resizable(2000, 1500);
+    resetDocument();
+    expect(getCaptureSize()).toEqual({ width: 2000, height: 1500 });
+  });
+
+  it("ベースの大きさが後から変わっても変わらない", () => {
+    const size = resizable(2000, 1500);
+    resetDocument();
+    size.width = 400;
+    size.height = 300;
+    expect(getCaptureSize()).toEqual({ width: 2000, height: 1500 });
+  });
+
+  it("次の画像を読み込むと、その画像の大きさに置き換わる", () => {
+    const size = resizable(2000, 1500);
+    resetDocument();
+    size.width = 640;
+    size.height = 480;
+    resetDocument();
+    expect(getCaptureSize()).toEqual({ width: 640, height: 480 });
+  });
+
+  it("退避(snapshotDocument)に入り、退避からの復元で退避の値に戻る(画像の大きさではない)", () => {
+    const size = resizable(2000, 1500);
+    resetDocument();
+    const snapshot = snapshotDocument();
+    expect(snapshot.captureSize).toEqual({ width: 2000, height: 1500 });
+
+    size.width = 640;
+    size.height = 480;
+    resetDocument(); // 別の画像
+    expect(getCaptureSize()).toEqual({ width: 640, height: 480 });
+
+    restoreDocument(snapshot, { width: 400, height: 300 } as unknown as ImageBitmap, null);
+    expect(getCaptureSize()).toEqual({ width: 2000, height: 1500 });
+  });
+
+  it("captureSize の無い古い退避からの復元では、戻した画像の大きさになる", () => {
+    resetDocument();
+    const { captureSize: _omitted, ...legacy } = snapshotDocument();
+    restoreDocument(legacy, { width: 800, height: 600 } as unknown as ImageBitmap, null);
+    expect(getCaptureSize()).toEqual({ width: 800, height: 600 });
+  });
+
+  it("履歴への退避(documentArchive)を通しても保たれる", () => {
+    resizable(2000, 1500);
+    resetDocument();
+    saveArchivedDocument("qe-t18", { base: new Blob(["base"]), snapshot: snapshotDocument() });
+    resetDocument();
+    const archived = getArchivedDocument("qe-t18")!;
+    deleteArchivedDocument("qe-t18");
+    restoreDocument(archived.snapshot, { width: 10, height: 10 } as unknown as ImageBitmap, null);
+    expect(getCaptureSize()).toEqual({ width: 2000, height: 1500 });
+  });
+
+  it("サーフェスが無ければ null", () => {
+    setDocumentSurface(null);
+    resetDocument();
+    expect(getCaptureSize()).toBeNull();
   });
 });
