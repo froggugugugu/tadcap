@@ -103,8 +103,14 @@ export interface TauriMockConfig {
   /**
    * 縮めてコピーの設定の初期値(`get_shrink_copy` の応答、QE-T08)。省略時は `false`(既定のオフ)。
    * `set_shrink_copy` は値を変えて真偽値を返す(Rust と同じ応答の形)。
+   * 保存した値は同じタブの再読み込み(`page.reload()`)の後も保たれる(設定ファイルの代わり、QE-T09)。
    */
   shrinkCopy?: boolean;
+  /**
+   * `true` なら `set_shrink_copy` を Rust の固定文字列 `settings_save_failed` で reject し、値を変えない
+   * (設定ファイルの保存の失敗、QE-T09)。実行中は {@link setShrinkCopySaveFails} で切り替えられる。
+   */
+  shrinkCopySaveFails?: boolean;
 }
 
 /**
@@ -165,6 +171,8 @@ const injectTauriMocks: InjectedMockScript = (config) => {
       shortcutCalls: string[];
       /** 縮めてコピーの設定の現在値(`get_shrink_copy` / `set_shrink_copy`、QE-T08)。 */
       shrinkCopy: boolean;
+      /** `true` の間、`set_shrink_copy` を `settings_save_failed` で reject する(QE-T09)。 */
+      shrinkCopySaveFails: boolean;
       /** テストから Rust 発のイベント(`settings://open` など)を送る。 */
       emit?: (event: string, payload: unknown) => void;
       /** `scan_sensitive_text` の現在の挙動(AM-T17。テストから差し替える)。 */
@@ -189,11 +197,22 @@ const injectTauriMocks: InjectedMockScript = (config) => {
   w.__TAURI_EVENT_PLUGIN_INTERNALS__ = w.__TAURI_EVENT_PLUGIN_INTERNALS__ ?? {};
   const heldTextScans: (() => void)[] = [];
   const heldCaptureImages: (() => void)[] = [];
+  // 縮めてコピーの保存先(設定ファイルの代わり)。再読み込みで初期化スクリプトが走り直しても、
+  // 保存した値を引き継ぐ(QE-T09)。テストごとに別のコンテキストなので他のテストへは漏れない。
+  const SHRINK_COPY_KEY = "__tadcapE2E.shrinkCopy";
+  let savedShrinkCopy: boolean | null = null;
+  try {
+    const saved = window.sessionStorage.getItem(SHRINK_COPY_KEY);
+    savedShrinkCopy = saved === null ? null : saved === "true";
+  } catch {
+    savedShrinkCopy = null;
+  }
   w.__tadcapE2E = {
     clipboardWriteCount: 0,
     activateAppCount: 0,
     shortcutCalls: [],
-    shrinkCopy: config.shrinkCopy ?? false,
+    shrinkCopy: savedShrinkCopy ?? config.shrinkCopy ?? false,
+    shrinkCopySaveFails: config.shrinkCopySaveFails ?? false,
     textScan: config.textScan ?? {},
     textScanCalls: [],
     releaseTextScans: () => {
@@ -402,8 +421,17 @@ const injectTauriMocks: InjectedMockScript = (config) => {
         return w.__tadcapE2E!.shrinkCopy;
 
       case "set_shrink_copy":
-        // Rust の `set_shrink_copy` は保存後の値(真偽値)を返す(QE-T05)。
+        // Rust の `set_shrink_copy` は保存後の値(真偽値)を返す(QE-T05)。保存に失敗したら
+        // 固定文字列で reject し、値は元のまま(QE-T09)。
+        if (w.__tadcapE2E!.shrinkCopySaveFails) {
+          throw "settings_save_failed";
+        }
         w.__tadcapE2E!.shrinkCopy = actualArgs.enabled === true;
+        try {
+          window.sessionStorage.setItem(SHRINK_COPY_KEY, String(w.__tadcapE2E!.shrinkCopy));
+        } catch {
+          // 保存先が使えなくても、このページの中の値は変わっている。
+        }
         return w.__tadcapE2E!.shrinkCopy;
 
       case "set_shortcut_recording":
@@ -611,6 +639,24 @@ export async function setCaptureImageHold(page: Page, hold: boolean): Promise<vo
       w.__tadcapE2E.holdCaptureImage = hold;
     }
   }, hold);
+}
+
+/** `set_shrink_copy` を保存の失敗(`settings_save_failed`)にするかを切り替える(QE-T09)。 */
+export async function setShrinkCopySaveFails(page: Page, fails: boolean): Promise<void> {
+  await page.evaluate((fails) => {
+    const w = window as unknown as { __tadcapE2E?: { shrinkCopySaveFails: boolean } };
+    if (w.__tadcapE2E) {
+      w.__tadcapE2E.shrinkCopySaveFails = fails;
+    }
+  }, fails);
+}
+
+/** 縮めてコピーの設定の現在値(モックの保存先の値、QE-T09)。 */
+export async function getMockShrinkCopy(page: Page): Promise<boolean | undefined> {
+  return page.evaluate(() => {
+    const w = window as unknown as { __tadcapE2E?: { shrinkCopy: boolean } };
+    return w.__tadcapE2E?.shrinkCopy;
+  });
 }
 
 /** 保留中の `read_capture_image` の数(AM-T25-F1)。 */

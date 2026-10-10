@@ -7,19 +7,25 @@
 //!
 //! 他の spec と同じく Tauri ランタイムは起動せず `e2e/fixtures/tauriMock.ts` で IPC をモックする。
 //! 倍率は撮影結果(`capture://completed` の payload)の `pixelRatio` で渡す(PNG の pHYs の読み取りは
-//! Rust 側の責務で、`cargo test` で確かめる)。設定画面の UI は QE-T09 で足すため、ここでは
-//! `get_shrink_copy` の初期値で設定を切り替える。
+//! Rust 側の責務で、`cargo test` で確かめる)。QE-T08 の項目は `get_shrink_copy` の初期値で設定を切り替える。
+//!
+//! QE-T09(UI_quick-edits §5.1): 設定画面の「コピーを等倍に縮める」で切り替えるとすぐ保存され、コピーに
+//! 効くこと、保存の失敗(`settings_save_failed`)でチェックが戻り文言が出ること、再読み込みの後も値が
+//! 保たれること(モックの保存先は同じタブの再読み込みで引き継ぐ)を確かめる。
 
 import { expect, test, type Page } from "@playwright/test";
 
 import { captureAndWaitReady } from "./fixtures/captureReady";
 import { createFixtureCapturePng } from "./fixtures/sampleCapturePng";
 import {
+  emitTauriEvent,
   getClipboardImageStats,
   getClipboardWriteCount,
   getLastClipboardImageSize,
+  getMockShrinkCopy,
   installTauriMocks,
   routeCrossOriginAssets,
+  setShrinkCopySaveFails,
   type MockCaptureResult,
 } from "./fixtures/tauriMock";
 
@@ -49,7 +55,7 @@ const fixturePng = createFixtureCapturePng(WIDTH, HEIGHT);
 
 async function setup(
   page: Page,
-  options: { shrinkCopy: boolean; results: MockCaptureResult[] },
+  options: { shrinkCopy: boolean; results: MockCaptureResult[]; shrinkCopySaveFails?: boolean },
 ): Promise<string[]> {
   const pageErrors: string[] = [];
   page.on("pageerror", (err) => pageErrors.push(err.message));
@@ -65,6 +71,7 @@ async function setup(
     captureResults: options.results,
     captureImageBase64: fixturePng.toString("base64"),
     shrinkCopy: options.shrinkCopy,
+    shrinkCopySaveFails: options.shrinkCopySaveFails,
   });
   await page.goto("/");
   return pageErrors;
@@ -202,6 +209,122 @@ test.describe("縮めてコピー(QE-T08)", () => {
     // もう一度、倍率 2 の項目へ(開き直しを繰り返しても同じ)。
     await openHistoryItem(page, 1);
     await copyWithShortcut(page);
+    expect(await lastCopySize(page)).toEqual(HALF);
+    expect(pageErrors).toEqual([]);
+  });
+});
+
+const SAVE_FAILED_TEXT = "保存できませんでした。元の設定のままです。";
+
+function settingsDialog(page: Page) {
+  return page.getByRole("dialog", { name: "設定" });
+}
+
+function shrinkCheckbox(page: Page) {
+  return settingsDialog(page).getByRole("checkbox", { name: "コピーを等倍に縮める" });
+}
+
+/** 設定画面を開き(Rust の `settings://open` の代わり)、縮めてコピーの読み直しが済むのを待つ。 */
+async function openSettings(page: Page): Promise<void> {
+  await emitTauriEvent(page, "settings://open");
+  await expect(settingsDialog(page)).toBeVisible();
+  await expect(shrinkCheckbox(page)).toBeEnabled();
+}
+
+async function closeSettings(page: Page): Promise<void> {
+  await settingsDialog(page).getByRole("button", { name: "閉じる" }).click();
+  await expect(settingsDialog(page)).toBeHidden();
+}
+
+test.describe("設定画面の「コピーを等倍に縮める」(QE-T09)", () => {
+  test("既定はオフ。オンにするとすぐ保存されコピーが半分になり、オフに戻すと元の大きさに戻る", async ({ page }) => {
+    const pageErrors = await setup(page, { shrinkCopy: false, results: [captureResult(1, 2)] });
+
+    await captureAndWaitReady(page, 1);
+    expect(await lastCopySize(page)).toEqual(FULL);
+
+    await openSettings(page);
+    // 項目の構成(UI_quick-edits §5.1): 説明は aria-describedby、ボタンは「キーを既定に戻す」。
+    await expect(shrinkCheckbox(page)).not.toBeChecked();
+    await expect(shrinkCheckbox(page)).toHaveAccessibleDescription(
+      "高精細な画面で撮った画像を、画面で見えていた大きさに縮めてコピーします(倍率 2 倍の画面なら縦横 1/2)。編集中の画像は縮めません。",
+    );
+    await expect(settingsDialog(page).getByRole("button", { name: "キーを既定に戻す", exact: true })).toBeVisible();
+    await expect(settingsDialog(page).locator("hr.settings-dialog__divider")).toHaveCount(1);
+
+    await shrinkCheckbox(page).check();
+    await expect(shrinkCheckbox(page)).toBeChecked();
+    await expect.poll(() => getMockShrinkCopy(page)).toBe(true);
+    await expect(settingsDialog(page).getByText(SAVE_FAILED_TEXT)).toHaveCount(0);
+    await closeSettings(page);
+
+    await copyWithButton(page);
+    expect(await lastCopySize(page)).toEqual(HALF);
+    await copyWithShortcut(page);
+    expect(await lastCopySize(page)).toEqual(HALF);
+
+    await openSettings(page);
+    await expect(shrinkCheckbox(page)).toBeChecked();
+    await shrinkCheckbox(page).uncheck();
+    await expect.poll(() => getMockShrinkCopy(page)).toBe(false);
+    await closeSettings(page);
+
+    await copyWithButton(page);
+    expect(await lastCopySize(page)).toEqual(FULL);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("保存に失敗するとチェックが元に戻り、文言が出て、コピーは元の設定のまま。直れば保存でき文言が消える", async ({
+    page,
+  }) => {
+    const pageErrors = await setup(page, {
+      shrinkCopy: false,
+      results: [captureResult(1, 2)],
+      shrinkCopySaveFails: true,
+    });
+
+    await captureAndWaitReady(page, 1);
+    await openSettings(page);
+    await shrinkCheckbox(page).click();
+    await expect(settingsDialog(page).getByRole("status").filter({ hasText: SAVE_FAILED_TEXT })).toBeVisible();
+    await expect(shrinkCheckbox(page)).not.toBeChecked();
+    await expect(shrinkCheckbox(page)).toBeEnabled();
+    expect(await getMockShrinkCopy(page)).toBe(false);
+    await closeSettings(page);
+
+    await copyWithButton(page);
+    expect(await lastCopySize(page)).toEqual(FULL);
+
+    // 閉じて開き直すと文言は消え、保存できるようになれば切り替えられる。
+    await setShrinkCopySaveFails(page, false);
+    await openSettings(page);
+    await expect(settingsDialog(page).getByText(SAVE_FAILED_TEXT)).toHaveCount(0);
+    await shrinkCheckbox(page).check();
+    await expect.poll(() => getMockShrinkCopy(page)).toBe(true);
+    await expect(settingsDialog(page).getByText(SAVE_FAILED_TEXT)).toHaveCount(0);
+    await closeSettings(page);
+    await copyWithButton(page);
+    expect(await lastCopySize(page)).toEqual(HALF);
+
+    // 保存の失敗はアプリの例外ではない(console.warn だけ)。
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("オンにした設定は再読み込みの後も保たれ、設定画面とコピーの両方に効く", async ({ page }) => {
+    const pageErrors = await setup(page, { shrinkCopy: false, results: [captureResult(1, 2)] });
+
+    await openSettings(page);
+    await shrinkCheckbox(page).check();
+    await expect.poll(() => getMockShrinkCopy(page)).toBe(true);
+    await closeSettings(page);
+
+    await page.reload();
+    await openSettings(page);
+    await expect(shrinkCheckbox(page)).toBeChecked();
+    await closeSettings(page);
+
+    // 起動時の読み込みでオンになっている(撮った直後の自動コピーが半分)。
+    await captureAndWaitReady(page, 1);
     expect(await lastCopySize(page)).toEqual(HALF);
     expect(pageErrors).toEqual([]);
   });

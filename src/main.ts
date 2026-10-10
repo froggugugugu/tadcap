@@ -74,6 +74,7 @@ import {
   resetCaptureShortcut,
   setCaptureShortcut,
   setShortcutRecording,
+  setShrinkCopy,
 } from "./ipc/settings";
 import { applyCaptureShortcutLabel } from "./ui/captureShortcutLabel";
 import { initSettingsDialog } from "./ui/settingsDialog";
@@ -102,7 +103,7 @@ let permissionBanner: PermissionBannerController | null = null;
 let copyAfterCapture: (() => Promise<void>) | null = null;
 /**
  * 縮めてコピーの設定(QE-T08、PRD_quick-edits FR-011)。起動時に`getShrinkCopy()`で読み、読み終わるまでは
- * オフ(縮めない)。設定画面での変更は QE-T09 で結ぶ。
+ * オフ(縮めない)。設定画面で保存に成功したら更新する(QE-T09)。
  */
 let shrinkCopy = false;
 
@@ -485,8 +486,12 @@ window.addEventListener("DOMContentLoaded", () => {
     console.warn("記録中の状態を解除できませんでした", error);
   });
   // QE-T08: 縮めてコピーの設定を読む(読めなければオフのまま。`getShrinkCopy()`は失敗をオフとして返す)。
+  // 設定画面で先に保存が済んでいれば、後から届いた起動時の値で上書きしない(QE-T09)。
+  let shrinkCopyChangedInSettings = false;
   void getShrinkCopy().then((enabled) => {
-    shrinkCopy = enabled;
+    if (!shrinkCopyChangedInSettings) {
+      shrinkCopy = enabled;
+    }
   });
   void getCaptureShortcut()
     .then((info) => applyCaptureShortcutLabel(info.accelerator))
@@ -500,6 +505,12 @@ window.addEventListener("DOMContentLoaded", () => {
     resetShortcut: resetCaptureShortcut,
     setRecording: setShortcutRecording,
     onChanged: (info) => applyCaptureShortcutLabel(info.accelerator),
+    getShrinkCopy,
+    setShrinkCopy,
+    onShrinkCopyChanged: (enabled) => {
+      shrinkCopyChangedInSettings = true;
+      shrinkCopy = enabled;
+    },
   });
   void onSettingsOpen(() => {
     void settingsDialog.open();

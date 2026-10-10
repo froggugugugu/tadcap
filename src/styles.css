@@ -902,3 +902,39 @@ button {
 .settings-dialog__status--error {
   color: #b23b2d;
 }
+
+/* 縮めてコピー(QE-T09、UI_quick-edits §5.1)。ショートカットの項目と区切り線で分ける */
+
+.settings-dialog__divider {
+  margin: 4px 0 12px;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}
+
+.settings-dialog__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95em;
+  cursor: pointer;
+}
+
+.settings-dialog__check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+.settings-dialog__check input:disabled {
+  cursor: default;
+}
+
+/* チェックの文字(16px + 間 8px)にそろえる */
+.settings-dialog__check-hint {
+  margin: 4px 0 0 24px;
+  color: var(--text-muted);
+  font-size: 0.85em;
+  line-height: 1.5;
+}
