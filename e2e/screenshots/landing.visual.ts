@@ -4,13 +4,17 @@
 //! 実行: `npx playwright test --config=e2e/screenshots/playwright.config.ts landing`
 //!
 //! 一部の画像だけを撮り直すときは `LANDING_MEDIA` に書き出すファイル名をカンマ区切りで渡す
-//! (指定の無いファイルは書き換えない)。例: エディタとツールバーだけ
-//! `LANDING_MEDIA=editor.png,toolbar.png npx playwright test --config=e2e/screenshots/playwright.config.ts landing -g 使用例`
+//! (指定の無いファイルは書き換えない)。例: ツールバーと注釈入りの画像だけ
+//! `LANDING_MEDIA=toolbar.png,annotated.png npx playwright test --config=e2e/screenshots/playwright.config.ts landing -g 使用例`
 //!
 //! キャプチャ画像はチェッカーボードではなく、架空のアプリの「設定画面」を HTML で描いて
 //! PNG にしたものを使う(実在の製品名・ロゴ・個人情報は含めない)。その画像を
 //! `capture-flow.spec.ts` と同じ IPC モックで読み込ませ、実際のツールで矢印・矩形・円・
 //! テキスト・モザイクを描いて撮る。出力先は `docs/media/`。
+//!
+//! 「手順を 1 枚で伝える」例(`editor.png`・`crop.png`・`steps.png`・`shrink-copy.png`)は、同じ架空の
+//! 設定画面を架空のデスクトップ(メニューバーと、となりの架空のメモの窓)に置いた画像を撮り、
+//! 番号スタンプ 3 つ・矢印・スポットライトを置いて、トリミングで設定の窓だけを残す。
 //!
 //! Vite dev server の監視対象に書き込むと画面が再読み込みされうるため、ファイルの書き出しは
 //! 各テストの最後(ページ操作がすべて終わった後)にまとめて行う。
@@ -22,6 +26,7 @@ import { expect, test, type Browser, type Locator, type Page } from "@playwright
 
 import { captureAndWaitReady } from "../fixtures/captureReady";
 import {
+  emitTauriEvent,
   installTauriMocks,
   routeCrossOriginAssets,
   type MockCaptureResult,
@@ -85,7 +90,7 @@ const FAKE_SCREEN_HTML = `<!doctype html>
   <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
     <span class="title">サンプルアプリ — 設定</span></div>
   <div class="body">
-    <div class="side"><div>一般</div><div>通知</div><div class="on">アカウント</div><div>同期</div><div>詳細</div></div>
+    <div class="side"><div>一般</div><div>通知</div><div class="on" id="side-account">アカウント</div><div>同期</div><div>詳細</div></div>
     <div class="main">
       <h1>アカウント</h1>
       <div class="warn">⚠ 二段階認証が無効になっています</div>
@@ -174,10 +179,10 @@ test.beforeAll(() => {
   mkdirSync(MEDIA_DIR, { recursive: true });
 });
 
-test("紹介ページ用: 使用例(注釈入りのエディタ)とツールバー", async ({ browser }) => {
+test("紹介ページ用: 使用例(注釈入りの画像)とツールバー", async ({ browser }) => {
   const screen = await renderFakeScreen(browser);
   const context = await browser.newContext({
-    viewport: { width: 1040, height: 700 },
+    viewport: { width: 1080, height: 700 },
     deviceScaleFactor: 2,
   });
   const page = await context.newPage();
@@ -236,12 +241,10 @@ test("紹介ページ用: 使用例(注釈入りのエディタ)とツールバ�
   // キャプチャ直後の自動コピーのトーストが消えてから撮る(`autoMask.visual.ts` と同じ)。
   await expect(page.locator("#clipboard-status")).toBeHidden({ timeout: 10_000 });
 
-  const editor = await page.screenshot();
   const toolbar = await page.locator(".toolbar").screenshot();
   const annotated = await canvas.evaluate((el: HTMLCanvasElement) => el.toDataURL("image/png"));
   await context.close();
 
-  writeMedia("editor.png", editor);
   writeMedia("toolbar.png", toolbar);
   writeMedia(
     "annotated.png",
@@ -283,4 +286,170 @@ test("紹介ページ用: ロゴ(icon.svg → icon.png)", async ({ browser }) =>
   const png = await page.screenshot({ omitBackground: true });
   await page.close();
   writeMedia("icon.png", png);
+});
+
+/**
+ * 架空のデスクトップ(CSS 800×480、2倍で 1600×960 の PNG): 上に架空のメニューバー、左に
+ * `FAKE_SCREEN_HTML` の設定の窓(640×400)、右端にとなりの架空のメモの窓が少しだけ写り込む。
+ * トリミングで設定の窓だけを残す例に使う(写っている文字はすべて架空)。
+ */
+const DESKTOP = { width: 800, height: 480, win: { x: 24, y: 48, width: 640, height: 400 } };
+
+const DESKTOP_HTML = `<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: ${DESKTOP.width}px; height: ${DESKTOP.height}px; overflow: hidden; position: relative;
+         font-family: -apple-system, "Hiragino Sans", sans-serif; font-size: 12px; color: #1f2937;
+         background: linear-gradient(135deg, #c7d2fe 0%, #e0e7ff 45%, #fbcfe8 100%); }
+  .menubar { position: absolute; inset: 0 0 auto 0; height: 24px; display: flex; align-items: center; gap: 16px;
+             padding: 0 14px; background: rgb(255 255 255 / 70%); font-size: 12px; color: #374151; }
+  .menubar b { font-weight: 700; }
+  .menubar .clock { margin-left: auto; }
+  iframe { position: absolute; left: ${DESKTOP.win.x}px; top: ${DESKTOP.win.y}px; width: ${DESKTOP.win.width}px;
+           height: ${DESKTOP.win.height}px; border: 0; border-radius: 10px; background: #fff;
+           box-shadow: 0 12px 32px rgb(15 23 42 / 25%), 0 0 0 1px rgb(15 23 42 / 8%); }
+  .memo { position: absolute; left: 688px; top: 72px; width: 220px; height: 300px; border-radius: 10px; background: #fffbea;
+          box-shadow: 0 12px 32px rgb(15 23 42 / 20%), 0 0 0 1px rgb(15 23 42 / 8%); padding: 34px 14px 0; color: #78350f; }
+  .memo p { margin: 0 0 10px; white-space: nowrap; }
+</style></head><body>
+  <div class="menubar"><b>サンプルアプリ</b><span>ファイル</span><span>編集</span><span>表示</span><span>ウインドウ</span>
+    <span class="clock">10:00</span></div>
+  <iframe title="設定" srcdoc="${FAKE_SCREEN_HTML.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"></iframe>
+  <div class="memo"><p>個人メモ</p><p>来週の予定を確認</p><p>サンプル案件の資料</p><p>買い物リスト</p></div>
+</body></html>`;
+
+interface DesktopScreen {
+  png: Buffer;
+  win: Rect;
+  account: Rect;
+  mfaRow: Rect;
+  toggle: Rect;
+  save: Rect;
+}
+
+async function renderDesktop(browser: Browser): Promise<DesktopScreen> {
+  const page = await browser.newPage({
+    viewport: { width: DESKTOP.width, height: DESKTOP.height },
+    deviceScaleFactor: 2,
+  });
+  await page.setContent(DESKTOP_HTML);
+  const frame = page.frameLocator("iframe");
+  await frame.locator("#save").waitFor();
+  const rectOf = async (locator: Locator): Promise<Rect> => {
+    const r = await locator.boundingBox();
+    if (!r) {
+      throw new Error("element is not visible");
+    }
+    return { x: r.x / DESKTOP.width, y: r.y / DESKTOP.height, w: r.width / DESKTOP.width, h: r.height / DESKTOP.height };
+  };
+  const [win, account, mfaRow, toggle, save] = await Promise.all([
+    rectOf(page.locator("iframe")),
+    rectOf(frame.locator("#side-account")),
+    rectOf(frame.locator("#mfa-row")),
+    rectOf(frame.locator("#mfa")),
+    rectOf(frame.locator("#save")),
+  ]);
+  const png = await page.screenshot();
+  await page.close();
+  return { png, win, account, mfaRow, toggle, save };
+}
+
+/** 画像の比率座標で 1 回クリックする。 */
+async function clickRatio(page: Page, canvas: Locator, at: [number, number]): Promise<void> {
+  const [x, y] = await toViewport(canvas, at[0], at[1]);
+  await page.mouse.click(x, y);
+}
+
+test("紹介ページ用: 手順を 1 枚で伝える(番号スタンプ・矢印・スポットライト → トリミング → コピー)と縮めてコピーの設定", async ({
+  browser,
+}) => {
+  const desk = await renderDesktop(browser);
+  const context = await browser.newContext({
+    viewport: { width: 1080, height: 720 },
+    deviceScaleFactor: 2,
+  });
+  const page = await context.newPage();
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await routeCrossOriginAssets(page, desk.png);
+  await installTauriMocks(page, {
+    initialPermissionState: "granted",
+    capture: { kind: "success", result: { ...sampleCaptureResult, id: "landing-steps-1" } },
+    captureImageBase64: desk.png.toString("base64"),
+  });
+  await page.goto("/");
+  const canvas = await captureAndWaitReady(page);
+  await expect(page.locator("#clipboard-status")).toBeHidden({ timeout: 10_000 });
+
+  const { account: a, mfaRow: r, toggle: t, save: s } = desk;
+  // 1 px(CSS)を画像の比率にしたもの。
+  const px = 1 / DESKTOP.width;
+  const py = 1 / DESKTOP.height;
+
+  // 矢印: ② の番号(行のまん中の空き)からトグルへ。
+  const stamp2: [number, number] = [t.x - 92 * px, t.y + t.h / 2];
+  await tool(page, "矢印");
+  await drag(page, canvas, [stamp2[0] + 18 * px, stamp2[1]], [t.x - 6 * px, t.y + t.h / 2]);
+  await page.keyboard.press("Escape");
+
+  // 番号スタンプ ①②③(クリックごとに連番)。
+  await page.getByRole("button", { name: "スタンプ(N)", exact: true }).click();
+  await page.getByRole("button", { name: "スタンプ 番号", exact: true }).click();
+  await clickRatio(page, canvas, [a.x + a.w - 16 * px, a.y + a.h / 2]);
+  await page.keyboard.press("Escape");
+  await clickRatio(page, canvas, stamp2);
+  await page.keyboard.press("Escape");
+  await clickRatio(page, canvas, [s.x + s.w + 12 * px, s.y + s.h / 2]);
+  await page.keyboard.press("Escape");
+
+  // スポットライト: 手順の 3 か所だけを明るく残す(穴の外は暗くなる)。
+  await page.getByRole("button", { name: "スポットライト(S)", exact: true }).click();
+  const holes: Array<[[number, number], [number, number]]> = [
+    [[a.x - 4 * px, a.y - 4 * py], [a.x + a.w + 4 * px, a.y + a.h + 4 * py]],
+    [[r.x - 6 * px, r.y - 2 * py], [r.x + r.w + 6 * px, r.y + r.h + 2 * py]],
+    [[s.x - 6 * px, s.y - 6 * py], [s.x + s.w + 24 * px, s.y + s.h + 6 * py]],
+  ];
+  for (const [from, to] of holes) {
+    await drag(page, canvas, from, to);
+    await page.keyboard.press("Escape");
+  }
+
+  // トリミング: 設定の窓だけを残す(メニューバーやとなりのメモの窓を写さない)。
+  await page.getByRole("button", { name: "トリミング(C)", exact: true }).click();
+  await expect(page.locator("#crop-bar")).toBeVisible();
+  const w = desk.win;
+  await drag(page, canvas, [w.x, w.y], [w.x + w.w, w.y + w.h]);
+  await expect(page.locator("#crop-bar").getByRole("button", { name: "確定" })).toBeEnabled();
+  await page.mouse.move(1070, 710);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))));
+  const cropShot = await page.screenshot({ animations: "disabled" });
+
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#crop-bar").getByRole("button", { name: "確定" })).toHaveCount(0);
+  // 撮影時はスタンプツールを選び、種類(番号・✓・×・!・?)が出た状態にする。
+  await page.getByRole("button", { name: "スタンプ(N)", exact: true }).click();
+  await expect(page.getByRole("group", { name: "スタンプの種類" })).toBeVisible();
+  // 確定のトースト(`切り抜きました。⌘Z で戻せます。`)が消えてから撮る。
+  await expect(page.locator(".toast-region .toast:visible")).toHaveCount(0, { timeout: 10_000 });
+  await page.mouse.move(1070, 710);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))));
+  const editorShot = await page.screenshot({ animations: "disabled" });
+  const steps = await canvas.evaluate((el: HTMLCanvasElement) => el.toDataURL("image/png"));
+
+  // 縮めてコピー: 設定画面の項目(オンにした状態)。
+  await emitTauriEvent(page, "settings://open");
+  const dialog = page.getByRole("dialog", { name: "設定" });
+  const shrink = dialog.getByRole("checkbox", { name: "コピーを等倍に縮める" });
+  await expect(shrink).toBeEnabled();
+  await shrink.check();
+  await expect(shrink).toBeChecked();
+  await page.mouse.move(1070, 710);
+  const shrinkShot = await dialog.screenshot({ animations: "disabled" });
+  await context.close();
+  expect(pageErrors).toEqual([]);
+
+  writeMedia("crop.png", cropShot);
+  writeMedia("editor.png", editorShot);
+  writeMedia("steps.png", Buffer.from(steps.replace(/^data:image\/png;base64,/, ""), "base64"));
+  writeMedia("shrink-copy.png", shrinkShot);
 });
