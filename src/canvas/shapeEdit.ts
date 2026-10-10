@@ -19,8 +19,9 @@
 import type { ToolId } from "./canvasState";
 import type { Point, Rect } from "./coords";
 import { findObject, pickObjectAt, type AnnotationObject } from "./objectModel";
+import { shapeStyleDiagonal } from "./styleBasis";
 import {
-  arrowLineWidth,
+  arrowLineWidthForDiagonal,
   computeArrowGeometry,
   computeTaperArrowBoundingRect,
   computeTaperArrowPolygon,
@@ -29,12 +30,12 @@ import {
   computeEllipseBoundingRect,
   computeEllipseGeometry,
   computeEllipseCenterAndRadii,
-  ellipseLineWidth,
+  ellipseLineWidthForDiagonal,
 } from "./tools/ellipseTool";
 import {
   computeRectangleBoundingRect,
   computeRectangleGeometry,
-  rectangleLineWidth,
+  rectangleLineWidthForDiagonal,
 } from "./tools/rectangleTool";
 import { stampShapeDiameter, type StampShape } from "./tools/stampShape";
 import { textShapeBoundingRect, textShapeBox } from "./tools/textLayout";
@@ -53,6 +54,8 @@ export interface ArrowShape {
   start: Point;
   end: Point;
   color: string;
+  /** 大きさの基準の対角線(px)。トリミングの確定で残ったときだけ付く(`styleBasis.ts`、QE-T17)。 */
+  styleBasis?: number;
 }
 
 /** 矩形・円(外接矩形で表す)。`rect`は正規化・Canvas範囲内クリップ済み。 */
@@ -60,6 +63,8 @@ export interface BoxShape {
   kind: "rectangle" | "ellipse";
   rect: Rect;
   color: string;
+  /** 大きさの基準の対角線(px)。トリミングの確定で残ったときだけ付く(`styleBasis.ts`、QE-T17)。 */
+  styleBasis?: number;
 }
 
 /**
@@ -76,6 +81,8 @@ export interface TextShape {
   fontSize: FontSize;
   color: string;
   metrics: TextMetricsSnapshot;
+  /** 大きさの基準の対角線(px)。トリミングの確定で残ったときだけ付く(`styleBasis.ts`、QE-T17)。 */
+  styleBasis?: number;
 }
 
 /** `ctx.measureText()`の必要な値(Canvasピクセル)。 */
@@ -100,6 +107,8 @@ export interface TextMetricsSnapshot {
 export interface SpotlightShape {
   kind: "spotlight";
   rect: Rect;
+  /** 大きさの基準の対角線(px)。トリミングの確定で残ったときだけ付く(`styleBasis.ts`、QE-T17)。 */
+  styleBasis?: number;
 }
 
 /** 注釈オブジェクトの形。QE-T11でスタンプ(`tools/stampShape.ts`)、QE-T15で穴を加えた。 */
@@ -211,7 +220,7 @@ export function hitTestShape(
       : null;
   }
   if (shape.kind === "arrow") {
-    const halfWidth = arrowLineWidth(canvasWidth, canvasHeight) / 2;
+    const halfWidth = arrowLineWidthForDiagonal(shapeStyleDiagonal(shape, canvasWidth, canvasHeight)) / 2;
     return distanceToSegment(point, shape.start, shape.end) <= halfWidth + tolerance
       ? { type: "body" }
       : null;
@@ -260,7 +269,11 @@ export function resizeShape(
   }
   const color = shape.kind === "spotlight" ? "" : shape.color;
   const next = createShapeFromDrag(shape.kind, anchor, p, color, canvasWidth, canvasHeight, shiftKey);
-  return next ?? shape;
+  if (!next) {
+    return shape;
+  }
+  // 大きさの基準はリサイズでも保つ(作り直した形には付かないため引き継ぐ、QE-T17)。
+  return shape.styleBasis === undefined ? next : { ...next, styleBasis: shape.styleBasis };
 }
 
 /**
@@ -433,7 +446,8 @@ function grabbableObjects(
 
 /**
  * 確定時にUndoステップへ積む外接矩形(線の太さ・影の余白込み、整数、Canvas内クリップ済み)。
- * 各ツールの既存`compute*BoundingRect()`をそのまま使う(確定前の旧実装と同じ範囲)。
+ * 各ツールの既存`compute*BoundingRect()`をそのまま使う(確定前の旧実装と同じ範囲)。線の太さ・影は
+ * 描画と同じく`shapeStyleDiagonal()`の対角線で見積もる(QE-T17、ADR-002)。
  */
 export function shapeUndoRect(shape: EditableShape, canvasWidth: number, canvasHeight: number): Rect {
   if (shape.kind === "text") {
@@ -447,7 +461,13 @@ export function shapeUndoRect(shape: EditableShape, canvasWidth: number, canvasH
     return outwardIntegerRect(shape.rect, canvasWidth, canvasHeight);
   }
   if (shape.kind === "arrow") {
-    const polygon = computeTaperArrowPolygon(shape.start, shape.end, canvasWidth, canvasHeight);
+    const polygon = computeTaperArrowPolygon(
+      shape.start,
+      shape.end,
+      canvasWidth,
+      canvasHeight,
+      shapeStyleDiagonal(shape, canvasWidth, canvasHeight),
+    );
     if (!polygon) {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
@@ -455,7 +475,10 @@ export function shapeUndoRect(shape: EditableShape, canvasWidth: number, canvasH
   }
   if (shape.kind === "rectangle") {
     return computeRectangleBoundingRect(
-      { rect: shape.rect, lineWidth: rectangleLineWidth(canvasWidth, canvasHeight) },
+      {
+        rect: shape.rect,
+        lineWidth: rectangleLineWidthForDiagonal(shapeStyleDiagonal(shape, canvasWidth, canvasHeight)),
+      },
       canvasWidth,
       canvasHeight,
     );
@@ -464,7 +487,7 @@ export function shapeUndoRect(shape: EditableShape, canvasWidth: number, canvasH
     {
       rect: shape.rect,
       ...computeEllipseCenterAndRadii(shape.rect),
-      lineWidth: ellipseLineWidth(canvasWidth, canvasHeight),
+      lineWidth: ellipseLineWidthForDiagonal(shapeStyleDiagonal(shape, canvasWidth, canvasHeight)),
     },
     canvasWidth,
     canvasHeight,

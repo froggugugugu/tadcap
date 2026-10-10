@@ -27,7 +27,8 @@ import {
   type AnnotationObject,
 } from "./objectModel";
 import { shapeUndoRect, type EditableShape, type TextMetricsSnapshot } from "./shapeEdit";
-import { computeFontSizePx } from "./tools/textLayout";
+import { shapeStyleDiagonal } from "./styleBasis";
+import { fontSizePxForDiagonal } from "./tools/textLayout";
 import type { FontSize } from "./toolSettings";
 import {
   clearUndoStack,
@@ -315,7 +316,9 @@ export function setSelectedFontSize(fontSize: FontSize): boolean {
     return false;
   }
   const { width, height } = surface.size();
-  const metrics = measureText(selected.shape.text, computeFontSizePx(fontSize, width, height));
+  // 測り直しも描画と同じ大きさの基準(`styleBasis`があればその対角線)で測る(QE-T17)。
+  const diagonal = shapeStyleDiagonal(selected.shape, width, height);
+  const metrics = measureText(selected.shape.text, fontSizePxForDiagonal(fontSize, diagonal));
   return commitShapeEdit(selected.id, { ...selected.shape, fontSize, metrics });
 }
 

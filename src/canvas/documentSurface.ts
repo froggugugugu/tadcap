@@ -25,9 +25,14 @@ import type { DocumentSurface, ShapeDraft } from "./documentState";
 import type { AnnotationObject } from "./objectModel";
 import type { EditableShape } from "./shapeEdit";
 import type { ImageDataLike } from "./commands";
+import { shapeStyleDiagonal } from "./styleBasis";
 import { computeTaperArrowPolygon, drawTaperArrowPolygon } from "./tools/arrowTool";
-import { computeEllipseCenterAndRadii, drawEllipseOutline, ellipseLineWidth } from "./tools/ellipseTool";
-import { drawRectangleOutline, rectangleLineWidth } from "./tools/rectangleTool";
+import {
+  computeEllipseCenterAndRadii,
+  drawEllipseOutline,
+  ellipseLineWidthForDiagonal,
+} from "./tools/ellipseTool";
+import { drawRectangleOutline, rectangleLineWidthForDiagonal } from "./tools/rectangleTool";
 import { drawTextShape } from "./tools/textLayout";
 
 /**
@@ -62,15 +67,17 @@ export function drawEditableShape(
     drawTextShape(ctx, shape, canvasWidth, canvasHeight);
     return;
   }
+  // 太さは大きさの基準の対角線から決める(トリミングの確定で残った注釈は`styleBasis`、QE-T17)。
+  const styleDiagonal = shapeStyleDiagonal(shape, canvasWidth, canvasHeight);
   if (shape.kind === "arrow") {
-    const polygon = computeTaperArrowPolygon(shape.start, shape.end, canvasWidth, canvasHeight);
+    const polygon = computeTaperArrowPolygon(shape.start, shape.end, canvasWidth, canvasHeight, styleDiagonal);
     if (polygon) {
       drawTaperArrowPolygon(ctx, polygon, shape.color);
     }
     return;
   }
   if (shape.kind === "rectangle") {
-    drawRectangleOutline(ctx, shape.rect, rectangleLineWidth(canvasWidth, canvasHeight), shape.color);
+    drawRectangleOutline(ctx, shape.rect, rectangleLineWidthForDiagonal(styleDiagonal), shape.color);
     return;
   }
   if (shape.kind === "stamp") {
@@ -86,7 +93,7 @@ export function drawEditableShape(
     {
       rect: shape.rect,
       ...computeEllipseCenterAndRadii(shape.rect),
-      lineWidth: ellipseLineWidth(canvasWidth, canvasHeight),
+      lineWidth: ellipseLineWidthForDiagonal(styleDiagonal),
     },
     shape.color,
   );

@@ -6,11 +6,13 @@ import {
   computeFontSizePx,
   computeTextBoundingRect,
   decideTextEdit,
+  fontSizePxForDiagonal,
   textLineHeight,
   textShadowParams,
   textShapeBaselineY,
   textShapeBoundingRect,
   textShapeBox,
+  textShapeFontPx,
 } from "./textLayout";
 
 const W = 400;
@@ -80,5 +82,49 @@ describe("decideTextEdit(入力の終わり方 → 追加・変更・削除)", (
   it("再編集: Esc・画像差し替えは編集前のまま(何もしない)", () => {
     expect(decideTextEdit("escape", "", "Hi")).toEqual({ type: "none" });
     expect(decideTextEdit("imageChanged", "Hello", "Hi")).toEqual({ type: "none" });
+  });
+});
+
+// QE-T17(ADR-002「注釈の大きさの基準」): 文字の大きさは対角線から決め、テキストは`shapeStyleDiagonal()`を通す。
+describe("注釈の大きさの基準(styleBasis、QE-T17)", () => {
+  const sizes: [number, number][] = [
+    [10, 10],
+    [400, 300],
+    [1234, 567],
+    [2000, 1000],
+    [5120, 2880],
+    [8000, 6000],
+  ];
+  const basis = Math.hypot(2000, 1000);
+
+  it("fontSizePxForDiagonal(段階, hypot(幅, 高さ))は今のcomputeFontSizePx(段階, 幅, 高さ)と同じ値", () => {
+    for (const [w, h] of sizes) {
+      for (const size of ["small", "medium", "large"] as const) {
+        expect(fontSizePxForDiagonal(size, Math.hypot(w, h))).toBe(computeFontSizePx(size, w, h));
+      }
+    }
+  });
+
+  it("textShapeFontPx: styleBasis無しは今の画像、有りは画像の大きさによらず基準で決まる", () => {
+    expect(textShapeFontPx(text, W, H)).toBe(18);
+    const kept = { ...text, styleBasis: basis };
+    expect(textShapeFontPx(kept, W, H)).toBe(computeFontSizePx("medium", 2000, 1000));
+    expect(textShapeFontPx(kept, 8000, 6000)).toBe(computeFontSizePx("medium", 2000, 1000));
+  });
+
+  it("行ボックス・外接矩形もstyleBasisの文字の大きさで決まる", () => {
+    const kept = { ...text, styleBasis: basis };
+    const fontPx = computeFontSizePx("medium", 2000, 1000);
+    expect(textShapeBox(kept, W, H).height).toBe(textLineHeight(fontPx));
+    expect(textShapeBoundingRect(kept, W, H)).toEqual(
+      computeTextBoundingRect({
+        x: 100,
+        baselineY: textShapeBaselineY(kept, W, H),
+        metrics: { left: 0, right: 38, ascent: 13, descent: 1 },
+        shadow: textShadowParams(fontPx),
+        canvasWidth: W,
+        canvasHeight: H,
+      }),
+    );
   });
 });

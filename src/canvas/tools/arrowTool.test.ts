@@ -4,11 +4,13 @@ import {
   arrowHeadLength,
   arrowHeadWidth,
   arrowLineWidth,
+  arrowLineWidthForDiagonal,
   arrowShadowParams,
   computeArrowGeometry,
   computeTaperArrowBoundingRect,
   computeTaperArrowPolygon,
 } from "./arrowTool";
+import { hitTestShape, shapeUndoRect, type ArrowShape } from "../shapeEdit";
 
 // T25追補【改訂 2026-09-24】: 人間からのフィードバック(project-config.md §11参照。
 // 「テーパー矢印の終点側の太さが細すぎる、もっとインパクトのある太さにしたい」)を受け、
@@ -311,3 +313,59 @@ describe("computeTaperArrowBoundingRect", () => {
 
 // T25【改訂 2026-09-24】: `cropSnapshotRect()`のテストは`../coords.test.ts`へ移設した
 // (定義本体を`coords.ts`へ移設したため、Rule of Three)。
+
+// QE-T17(ADR-002「注釈の大きさの基準」): 太さは対角線から決め、呼び出し元は`shapeStyleDiagonal()`を渡す。
+describe("注釈の大きさの基準(styleBasis、QE-T17)", () => {
+  const sizes: [number, number][] = [
+    [10, 10],
+    [300, 200],
+    [400, 300],
+    [1234, 567],
+    [2000, 1000],
+    [5120, 2880],
+    [8000, 6000],
+  ];
+  const start = { x: 50, y: 150 };
+  const end = { x: 350, y: 150 };
+  const basis = Math.hypot(2000, 1000);
+
+  it("arrowLineWidthForDiagonal(hypot(幅, 高さ))は今のarrowLineWidth(幅, 高さ)と同じ値(styleBasis無しは回帰しない)", () => {
+    for (const [w, h] of sizes) {
+      expect(arrowLineWidthForDiagonal(Math.hypot(w, h))).toBe(arrowLineWidth(w, h));
+    }
+  });
+
+  it("対角線を渡さなければ今の画像の対角線で決まる(今と同じ多角形)", () => {
+    for (const [w, h] of sizes) {
+      expect(computeTaperArrowPolygon(start, end, w, h)).toEqual(
+        computeTaperArrowPolygon(start, end, w, h, Math.hypot(w, h)),
+      );
+    }
+  });
+
+  it("対角線を渡すと画像の大きさが変わっても太さ・矢じりが変わらない", () => {
+    const before = computeTaperArrowPolygon(start, end, 2000, 1000)!;
+    const after = computeTaperArrowPolygon(start, end, 400, 300, basis)!;
+    expect(after.endWidth).toBe(30);
+    expect(after).toEqual(before);
+    expect(computeArrowGeometry(start, end, 400, 300, basis)?.lineWidth).toBe(30);
+  });
+
+  it("shapeUndoRect: styleBasis無しは今の範囲、有りは基準の太さで見積もる", () => {
+    const arrow: ArrowShape = { kind: "arrow", start, end, color: "#FF5C8A" };
+    expect(shapeUndoRect(arrow, 400, 300)).toEqual(
+      computeTaperArrowBoundingRect(computeTaperArrowPolygon(start, end, 400, 300)!, 400, 300),
+    );
+    expect(shapeUndoRect({ ...arrow, styleBasis: basis }, 400, 300)).toEqual(
+      computeTaperArrowBoundingRect(computeTaperArrowPolygon(start, end, 400, 300, basis)!, 400, 300),
+    );
+  });
+
+  it("hitTestShape: 胴の半幅はstyleBasisの太さで決まる", () => {
+    const arrow: ArrowShape = { kind: "arrow", start, end, color: "#FF5C8A" };
+    // 400x300の太さは9px(半幅4.5)、基準(2000x1000)の太さは30px(半幅15)。
+    const point = { x: 200, y: 162 };
+    expect(hitTestShape(arrow, point, 0, 400, 300)).toBeNull();
+    expect(hitTestShape({ ...arrow, styleBasis: basis }, point, 0, 400, 300)).toEqual({ type: "body" });
+  });
+});

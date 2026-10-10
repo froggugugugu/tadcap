@@ -53,6 +53,7 @@ import {
   textKeyAction,
   textLineHeight,
   textShadowParams,
+  textShapeFontPx,
   type TextFinishReason,
   type TextSession,
 } from "./textLayout";
@@ -310,7 +311,8 @@ export function bindTextTool(canvas: HTMLCanvasElement, options: TextToolOptions
   /** テキストオブジェクトを元の位置・文字サイズ・色で再編集する(T33)。 */
   const openExisting = (object: AnnotationObject & { shape: TextShape }): void => {
     const { shape } = object;
-    const fontPx = computeFontSizePx(shape.fontSize, canvas.width, canvas.height);
+    // 入力欄の文字の大きさは描画と同じ(`styleBasis`があればその基準、QE-T17)。
+    const fontPx = textShapeFontPx(shape, canvas.width, canvas.height);
     selectObject(null);
     setHiddenObject(object.id);
     openEditor(

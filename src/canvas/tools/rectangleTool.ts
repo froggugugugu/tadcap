@@ -27,6 +27,7 @@ import {
   type Point,
   type Rect,
 } from "../coords";
+import { shapeStyleDiagonal } from "../styleBasis";
 
 export type { Point, Rect };
 
@@ -65,14 +66,21 @@ export interface RectangleGeometry {
 }
 
 /**
- * Canvasの対角線(ピクセルバッファサイズ、画像の実ピクセル)から枠線の太さを決定論的に
- * 算出する純粋関数(`arrowTool.ts::arrowLineWidth()`と同じ考え方)。選択矩形のサイズには
- * 依存しない([MIN_LINE_WIDTH, MAX_LINE_WIDTH]にクランプ)。
+ * 大きさの基準の対角線(px)から枠線の太さを決定論的に算出する純粋関数(QE-T17、`arrowTool.ts::arrowLineWidthForDiagonal()`と同じ考え方)。
+ * 外接矩形のサイズには依存しない([MIN_LINE_WIDTH, MAX_LINE_WIDTH]にクランプ)。描いた注釈の太さは
+ * 呼び出し元が `shapeStyleDiagonal(shape, 幅, 高さ)` を渡す(ADR-002)。
  */
-export function rectangleLineWidth(canvasWidth: number, canvasHeight: number): number {
-  const diagonal = Math.hypot(canvasWidth, canvasHeight);
+export function rectangleLineWidthForDiagonal(diagonal: number): number {
   const raw = Math.round(diagonal * LINE_WIDTH_RATIO);
   return clamp(raw, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
+}
+
+/**
+ * 今の画像の大きさ(ピクセルバッファサイズ、画像の実ピクセル)での枠線の太さ。`styleBasis` を持たない
+ * 注釈(これから描く矩形)用で、`rectangleLineWidthForDiagonal(hypot(幅, 高さ))` と同じ値。
+ */
+export function rectangleLineWidth(canvasWidth: number, canvasHeight: number): number {
+  return rectangleLineWidthForDiagonal(shapeStyleDiagonal({}, canvasWidth, canvasHeight));
 }
 
 /**

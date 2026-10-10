@@ -7,6 +7,7 @@
 
 import { clipRectToCanvas, type Rect } from "../coords";
 import type { TextShape } from "../shapeEdit";
+import { shapeStyleDiagonal } from "../styleBasis";
 import type { FontSize } from "../toolSettings";
 
 // --- 定数(テキストの寸法・見た目はすべてここに集約) ---
@@ -57,15 +58,25 @@ const IME_PROCESS_KEY_CODE = 229;
 
 // --- 純粋関数 ---
 
-/** フォントサイズ段階と画像サイズからフォント実寸(px、Canvasピクセル)を決定論的に算出する。 */
+/**
+ * フォントサイズ段階と大きさの基準の対角線(px)からフォント実寸(px、Canvasピクセル)を決定論的に
+ * 算出する(QE-T17)。描いたテキストは `textShapeFontPx()`(`shapeStyleDiagonal()` を通す)を使う(ADR-002)。
+ */
+export function fontSizePxForDiagonal(fontSize: FontSize, diagonal: number): number {
+  const base = clamp(Math.round(diagonal * FONT_SIZE_RATIO), MIN_BASE_FONT_SIZE, MAX_BASE_FONT_SIZE);
+  return Math.round(base * FONT_SIZE_MULTIPLIER[fontSize]);
+}
+
+/**
+ * フォントサイズ段階と今の画像の大きさからフォント実寸(px)を算出する。`styleBasis` を持たない
+ * テキスト(これから入力するテキスト)用で、`fontSizePxForDiagonal(段階, hypot(幅, 高さ))` と同じ値。
+ */
 export function computeFontSizePx(
   fontSize: FontSize,
   canvasWidth: number,
   canvasHeight: number,
 ): number {
-  const diagonal = Math.hypot(canvasWidth, canvasHeight);
-  const base = clamp(Math.round(diagonal * FONT_SIZE_RATIO), MIN_BASE_FONT_SIZE, MAX_BASE_FONT_SIZE);
-  return Math.round(base * FONT_SIZE_MULTIPLIER[fontSize]);
+  return fontSizePxForDiagonal(fontSize, shapeStyleDiagonal({}, canvasWidth, canvasHeight));
 }
 
 /** 行の高さ(px、Canvasピクセル)。 */
@@ -236,9 +247,12 @@ export function fontString(px: number): string {
 
 // --- テキストオブジェクト(T33) ---
 
-/** テキストオブジェクトのフォント実寸(文字サイズ段階と画像サイズから決まる)。 */
+/**
+ * テキストオブジェクトのフォント実寸(文字サイズ段階と大きさの基準の対角線から決まる)。基準は
+ * `shapeStyleDiagonal()`(トリミングの確定で残ったテキストは `styleBasis`、それ以外は今の画像、QE-T17)。
+ */
 export function textShapeFontPx(shape: TextShape, canvasWidth: number, canvasHeight: number): number {
-  return computeFontSizePx(shape.fontSize, canvasWidth, canvasHeight);
+  return fontSizePxForDiagonal(shape.fontSize, shapeStyleDiagonal(shape, canvasWidth, canvasHeight));
 }
 
 /**

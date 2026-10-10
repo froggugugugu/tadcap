@@ -7,7 +7,7 @@
 import type { Point } from "../coords";
 import { shapeStyleDiagonal } from "../styleBasis";
 import type { FontSize } from "../toolSettings";
-import { computeFontSizePx } from "./textLayout";
+import { fontSizePxForDiagonal } from "./textLayout";
 
 // --- 型 ---
 
@@ -72,11 +72,10 @@ const CROSS_HALF_RATIO = 0.165;
 
 /**
  * 文字サイズの段階と大きさの基準の対角線(px)から直径(px)を決定論的に求める。
- * 文字の大きさはテキストと同じ `computeFontSizePx()`(対角線を幅、高さ 0 として渡すと
- * `hypot(d, 0) = d` で同じ計算になる)。
+ * 文字の大きさはテキストと同じ `fontSizePxForDiagonal()`(QE-T17)。
  */
 export function stampDiameter(fontSize: FontSize, diagonal: number): number {
-  const fontPx = computeFontSizePx(fontSize, diagonal, 0);
+  const fontPx = fontSizePxForDiagonal(fontSize, diagonal);
   return Math.max(STAMP_MIN_DIAMETER, Math.round(fontPx * STAMP_DIAMETER_RATIO));
 }
 

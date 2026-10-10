@@ -6,7 +6,9 @@ import {
   constrainToSquare,
   rectangleCornerRadius,
   rectangleLineWidth,
+  rectangleLineWidthForDiagonal,
 } from "./rectangleTool";
+import { resizeShape, shapeUndoRect, type BoxShape } from "../shapeEdit";
 
 describe("rectangleCornerRadius(角丸の半径、決定論的)", () => {
   it("十分大きい矩形では線幅×係数(2.5)になる", () => {
@@ -221,5 +223,52 @@ describe("computeRectangleBoundingRect", () => {
     expect(bounding.y).toBeGreaterThanOrEqual(0);
     expect(bounding.x + bounding.width).toBeLessThanOrEqual(canvasWidth);
     expect(bounding.y + bounding.height).toBeLessThanOrEqual(canvasHeight);
+  });
+});
+
+// QE-T17(ADR-002「注釈の大きさの基準」): 太さは対角線から決め、呼び出し元は`shapeStyleDiagonal()`を渡す。
+describe("注釈の大きさの基準(styleBasis、QE-T17)", () => {
+  const sizes: [number, number][] = [
+    [10, 10],
+    [300, 200],
+    [400, 300],
+    [1234, 567],
+    [2000, 1000],
+    [5120, 2880],
+    [8000, 6000],
+  ];
+  const rect = { x: 100, y: 100, width: 100, height: 80 };
+  const basis = Math.hypot(8000, 6000);
+
+  it("rectangleLineWidthForDiagonal(hypot(幅, 高さ))は今のrectangleLineWidth(幅, 高さ)と同じ値(styleBasis無しは回帰しない)", () => {
+    for (const [w, h] of sizes) {
+      expect(rectangleLineWidthForDiagonal(Math.hypot(w, h))).toBe(rectangleLineWidth(w, h));
+    }
+  });
+
+  it("対角線から決めるので、同じ基準なら画像の大きさによらず同じ太さ", () => {
+    expect(rectangleLineWidthForDiagonal(basis)).toBe(rectangleLineWidth(8000, 6000));
+    expect(rectangleLineWidthForDiagonal(basis)).not.toBe(rectangleLineWidth(400, 300));
+  });
+
+  it("shapeUndoRect: styleBasis無しは今の範囲、有りは基準の太さで見積もる", () => {
+    const shape: BoxShape = { kind: "rectangle", rect, color: "#FF5C8A" };
+    const expected = (lineWidth: number) =>
+      computeRectangleBoundingRect(
+        { ...computeRectangleGeometry({ x: 100, y: 100 }, { x: 200, y: 180 }, 400, 300)!, lineWidth },
+        400,
+        300,
+      );
+    expect(shapeUndoRect(shape, 400, 300)).toEqual(expected(rectangleLineWidth(400, 300)));
+    expect(shapeUndoRect({ ...shape, styleBasis: basis }, 400, 300)).toEqual(
+      expected(rectangleLineWidthForDiagonal(basis)),
+    );
+  });
+
+  it("resizeShape: 大きさを変えてもstyleBasisを保つ", () => {
+    const shape: BoxShape = { kind: "rectangle", rect, color: "#FF5C8A", styleBasis: basis };
+    const resized = resizeShape(shape, "se", { x: 250, y: 220 }, 400, 300, false);
+    expect(resized).toMatchObject({ kind: "rectangle", styleBasis: basis });
+    expect(resized).not.toEqual(shape);
   });
 });

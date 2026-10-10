@@ -35,6 +35,7 @@ import {
   type Point,
   type Rect,
 } from "../coords";
+import { shapeStyleDiagonal } from "../styleBasis";
 
 export type { Point, Rect };
 
@@ -115,14 +116,21 @@ export interface ArrowGeometry {
 }
 
 /**
- * Canvasの対角線(ピクセルバッファサイズ、画像の実ピクセル)から線幅を決定論的に算出する
- * 純粋関数。小さい画像で細すぎず、大きい画像で太すぎないよう
- * [MIN_LINE_WIDTH, MAX_LINE_WIDTH] にクランプする。
+ * 大きさの基準の対角線(px)から線幅を決定論的に算出する純粋関数(QE-T17)。小さい画像で
+ * 細すぎず、大きい画像で太すぎないよう [MIN_LINE_WIDTH, MAX_LINE_WIDTH] にクランプする。
+ * 描いた注釈の太さは呼び出し元が `shapeStyleDiagonal(shape, 幅, 高さ)` を渡す(ADR-002)。
  */
-export function arrowLineWidth(canvasWidth: number, canvasHeight: number): number {
-  const diagonal = Math.hypot(canvasWidth, canvasHeight);
+export function arrowLineWidthForDiagonal(diagonal: number): number {
   const raw = Math.round(diagonal * LINE_WIDTH_RATIO);
   return clamp(raw, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
+}
+
+/**
+ * 今の画像の大きさ(ピクセルバッファサイズ、画像の実ピクセル)での線幅。`styleBasis` を持たない
+ * 注釈(これから描く矢印)用で、`arrowLineWidthForDiagonal(hypot(幅, 高さ))` と同じ値。
+ */
+export function arrowLineWidth(canvasWidth: number, canvasHeight: number): number {
+  return arrowLineWidthForDiagonal(shapeStyleDiagonal({}, canvasWidth, canvasHeight));
 }
 
 /** 矢じりの長さを線幅(胴の太さ)から算出する純粋関数。 */
@@ -156,6 +164,8 @@ export function arrowShadowParams(endWidth: number): ArrowShadowParams {
 /**
  * 始点・終点(いずれもCanvasピクセル座標)から矢印の描画パラメータを算出する純粋関数。
  * ドラッグ距離が `MIN_DRAG_DISTANCE` 未満(誤クリック等)の場合は `null` を返す。
+ * 線幅は `styleDiagonal`(大きさの基準の対角線、省略時は今の画像の対角線)から決める。描いた矢印は
+ * 呼び出し元が `shapeStyleDiagonal(shape, 幅, 高さ)` を渡す(QE-T17、ADR-002)。
  *
  * 【T25追補 改訂 2026-09-24】矢じり左右2点(`head.left`/`head.right`)の算出方法を、旧・
  * 開き角(30°)からの三角関数による間接的な算出から、「終点からheadLength手前(進行方向の
@@ -168,15 +178,17 @@ export function computeArrowGeometry(
   end: Point,
   canvasWidth: number,
   canvasHeight: number,
+  styleDiagonal: number = shapeStyleDiagonal({}, canvasWidth, canvasHeight),
 ): ArrowGeometry | null {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
+  // 始点→終点の距離(画像の対角線ではないため`shapeStyleDiagonal()`を通さない、QE-T17)。
   const distance = Math.hypot(dx, dy);
   if (distance < MIN_DRAG_DISTANCE) {
     return null;
   }
 
-  const lineWidth = arrowLineWidth(canvasWidth, canvasHeight);
+  const lineWidth = arrowLineWidthForDiagonal(styleDiagonal);
   const headLength = arrowHeadLength(lineWidth);
   const headWidth = arrowHeadWidth(lineWidth);
 
@@ -237,20 +249,23 @@ export interface TaperArrowPolygon {
  * 内部で呼び出しそのまま流用する(同一の算出結果になることを保証し、トリゴノメトリの
  * 重複も避ける)。ドラッグ距離が`MIN_DRAG_DISTANCE`未満の場合は`null`を返す(既存と同じ
  * ガード条件、`computeArrowGeometry()`が`null`を返す場合にそのまま連動する)。
+ * `styleDiagonal` は `computeArrowGeometry()` と同じ(QE-T17)。
  */
 export function computeTaperArrowPolygon(
   start: Point,
   end: Point,
   canvasWidth: number,
   canvasHeight: number,
+  styleDiagonal: number = shapeStyleDiagonal({}, canvasWidth, canvasHeight),
 ): TaperArrowPolygon | null {
-  const geometry = computeArrowGeometry(start, end, canvasWidth, canvasHeight);
+  const geometry = computeArrowGeometry(start, end, canvasWidth, canvasHeight, styleDiagonal);
   if (!geometry) {
     return null;
   }
 
   const dx = end.x - start.x;
   const dy = end.y - start.y;
+  // 始点→終点の距離(画像の対角線ではないため`shapeStyleDiagonal()`を通さない、QE-T17)。
   const distance = Math.hypot(dx, dy);
   const ux = dx / distance;
   const uy = dy / distance;
