@@ -21,7 +21,9 @@ import {
   snapshotDocument,
 } from "./canvas/documentState";
 import { createDocumentSurface } from "./canvas/documentSurface";
+import { cancelCrop } from "./canvas/cropSession";
 import { discardMaskSession } from "./canvas/maskSession";
+import { bindCropTool } from "./canvas/tools/cropTool";
 import { bindMosaicTool } from "./canvas/tools/mosaicTool";
 import { bindShapeTools } from "./canvas/tools/shapeTools";
 import { bindTextTool, commitPendingText } from "./canvas/tools/textTool";
@@ -83,11 +85,19 @@ import { currentToolButtonContext, initToolbar, toolButtonState } from "./ui/too
 import { initUndoButtons } from "./ui/undoButton";
 import { initArrangeButtons } from "./ui/arrangeButtons";
 import { initAutoMask } from "./ui/autoMask";
+import { CROP_BAR_MESSAGES, initCropBar } from "./ui/cropBar";
 import { initMaskOverlay } from "./ui/maskOverlay";
 import { clearToast, showToast } from "./ui/toast";
 
 let canvasEl: HTMLCanvasElement | null = null;
 let statusEl: HTMLElement | null = null;
+
+/** トリミングの確定の通知をトースト(info)に出す(QE-T22、UI_quick-edits §4.2。Enter・確定ボタン共通)。 */
+function notifyCropped(): void {
+  if (statusEl) {
+    showToast(statusEl, CROP_BAR_MESSAGES.cropped, "info");
+  }
+}
 
 /** 50 個の上限で注釈を置けなかったときの通知(QE-T12、UI_quick-edits §6。全種類で同じ文言)。 */
 const OBJECT_LIMIT_MESSAGE = "注釈は 50 個までです。いらない注釈を消してから置いてください。";
@@ -173,8 +183,9 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
   let objectUrl: string | null = null;
   try {
     // AM-T15: 画像を差し替える前に自動マスキングの候補を捨てる(処理中の結果も、token の照合で
-    // 捨てられる。ARCH_auto-masking §7.1 手順11)。
+    // 捨てられる。ARCH_auto-masking §7.1 手順11)。QE-T22: 確定前のトリミング範囲も捨てる。
     discardMaskSession();
+    cancelCrop();
     // T27: 差し替え前に入力中のテキストを確定し、下の履歴保存に含める(T32: 図形は
     // オブジェクトとして常に表示canvasへ合成済みのため確定は不要)。
     commitPendingText();
@@ -201,7 +212,9 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
     setCanvasImage({ assetUrl: objectUrl, capture: result, pixelRatio });
     // AM-T25-F1: 上の await の間(画像が変わる前)に始めた自動マスキングの処理・結果を捨てる
     // (`ui/autoMask.ts::bindMaskSessionToCanvasImage` も画像の変化で捨てる。念のため差し替え直後にも)。
+    // QE-T22: 同じ隙間に囲んだトリミング範囲も捨てる(同じ大きさの画像では大きさの変化で捨てられない)。
     discardMaskSession();
+    cancelCrop();
     const assets = await captureHistoryAssets(canvasEl);
     const evicted = addHistoryItem({
       id: result.id,
@@ -306,7 +319,9 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
   // (項目クリックの経路では`captureCurrentHistoryAssets`で確定済みなので何もしない)。
   commitPendingText();
   // AM-T15: 画像を差し替える前に自動マスキングの候補を捨てる(ARCH_auto-masking §7.1 手順11)。
+  // QE-T22: 確定前のトリミング範囲も捨てる。
   discardMaskSession();
+  cancelCrop();
   try {
     // T34: 退避したドキュメントがあれば、ベース・オブジェクト・取り消しスタックごと戻す
     // (戻った後もオブジェクトを再調整・取り消しできる)。
@@ -319,6 +334,7 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
       setCanvasImage({ assetUrl: item.image, capture: null, pixelRatio: historyItemPixelRatio(item) });
       // AM-T25-F1: 上の await の間に始めた自動マスキングの処理・結果を捨てる(新規キャプチャと同じ)。
       discardMaskSession();
+      cancelCrop();
       return;
     }
     const image = await loadImage(item.image);
@@ -328,6 +344,7 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
     resetDocument();
     setCanvasImage({ assetUrl: item.image, capture: null, pixelRatio: historyItemPixelRatio(item) });
     discardMaskSession();
+    cancelCrop();
   } catch (error) {
     // 読めなかった項目の選択とCanvasの中身(前の画像)がずれたまま次の保存点を迎えると、別の項目の
     // 内容で上書きしてしまう。エディタを空にして未選択にし、履歴から選び直してもらう(人間の決定)。
@@ -354,7 +371,9 @@ function clearEditor(): void {
   }
   commitPendingText();
   // AM-T15: 画像を消す前に自動マスキングの候補を捨てる(ARCH_auto-masking §7.1 手順11)。
+  // QE-T22: 確定前のトリミング範囲も捨てる。
   discardMaskSession();
+  cancelCrop();
   canvasEl.width = 0;
   canvasEl.height = 0;
   resetDocument();
@@ -398,6 +417,15 @@ window.addEventListener("DOMContentLoaded", () => {
     // T32: 表示canvas = ベース(オフスクリーン)+ オブジェクトの合成。矢印・矩形・円は
     // オブジェクトとして保持し、クリックで選び直してハンドルでリサイズ・移動できる。
     setDocumentSurface(createDocumentSurface(canvasEl));
+    // QE-T22: トリミング(範囲・Enter で確定・Esc でやめる)と帯。範囲がある間の Enter / Esc を
+    // `selectionKeys` より先に受けるため、`bindSelectionKeys()`より前に登録する(ARCH_quick-edits §11)。
+    // 図形のオーバーレイより先に結線し、DOM で図形のオーバーレイ(`.shape-overlay` の最初の 1 つ)の後ろ
+    // (= 上)にトリミングのオーバーレイが来るようにする(各ツールはオーバーレイを Canvas の直後に差し込む)。
+    bindCropTool(canvasEl, { onCropped: notifyCropped });
+    const cropBarEl = document.querySelector<HTMLElement>("#crop-bar");
+    if (cropBarEl) {
+      initCropBar(cropBarEl, { canvas: canvasEl, onCropped: notifyCropped });
+    }
     // QE-T12: 50 個の上限で置けなかったときの通知は main.ts から渡す(canvas/ → ui/ を作らない)。
     bindShapeTools(canvasEl, { onObjectLimit: notifyObjectLimit });
     bindMosaicTool(canvasEl);

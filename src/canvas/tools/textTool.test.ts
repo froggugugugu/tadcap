@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canReeditTextOnDoubleClick,
   canvasToCssScale,
   computeBaselineY,
   computeFontSizePx,
@@ -164,5 +165,27 @@ describe("createTextSession / finishTextSession", () => {
     expect(finishTextSession(createTextSession(), "imageChanged", "abc").action).toEqual({
       type: "cancel",
     });
+  });
+});
+
+// T33 のダブルクリックでの編集し直し。モザイク・トリミングの間は開かない(QE-T22: トリミング中に
+// 開くと、範囲の指定と入力欄が重なり、Enter が確定と取り合いになる)。
+describe("canReeditTextOnDoubleClick", () => {
+  const base = { hasImage: true, editorOpen: false };
+
+  it("ツールなし・テキスト・図形のツールでは開く", () => {
+    for (const activeTool of [null, "text", "arrow", "rectangle", "ellipse", "stamp", "spotlight"] as const) {
+      expect(canReeditTextOnDoubleClick({ ...base, activeTool })).toBe(true);
+    }
+  });
+
+  it("モザイク・トリミングでは開かない", () => {
+    expect(canReeditTextOnDoubleClick({ ...base, activeTool: "mosaic" })).toBe(false);
+    expect(canReeditTextOnDoubleClick({ ...base, activeTool: "crop" })).toBe(false);
+  });
+
+  it("画像なし・入力中は開かない", () => {
+    expect(canReeditTextOnDoubleClick({ ...base, hasImage: false, activeTool: null })).toBe(false);
+    expect(canReeditTextOnDoubleClick({ ...base, editorOpen: true, activeTool: null })).toBe(false);
   });
 });

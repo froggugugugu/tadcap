@@ -17,15 +17,22 @@
 //! 何もしない(ARCH_auto-masking §15 #4 A 案、FR-012)。キーの判定(`undoShortcutCommand`)は
 //! 変えないため、確認中の ⌘Z も WebView 既定の取り消しへは流さない。
 //!
+//! QE-T22: トリミングの範囲の指定中(`cropSession` に範囲がある間)は、⌘Z・⇧⌘Z とボタンのどちらも
+//! 範囲の指定をやめるだけ(`cancelCrop()`。画像・取り消しスタックは変えない。ARCH_quick-edits §15 #4 A 案)。
+//!
 //! 判定は純粋関数としてユニットテストし、DOM/Canvas結線(`initUndoButtons`)はE2Eで検証する。
 
 import { getCanvasState, subscribeCanvasState } from "../canvas/canvasState";
+import { cancelCrop, getCropSession, subscribeCropSession } from "../canvas/cropSession";
 import { redoDocument, undoDocument } from "../canvas/documentState";
 import { isMaskSessionActive, subscribeMaskSession } from "../canvas/maskSession";
 import { canRedo, canUndo, subscribeUndoStack } from "../canvas/undoStack";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
 
 export type UndoShortcutCommand = "undo" | "redo";
+
+/** 実際に行う操作。範囲の指定中は ⌘Z・⇧⌘Z とも`cancelCrop`(QE-T22)。 */
+export type UndoAction = UndoShortcutCommand | "cancelCrop";
 
 export interface UndoShortcutEvent {
   key: string;
@@ -58,18 +65,23 @@ export interface UndoContext {
   isDrawing: boolean;
   /** 自動マスキングの処理中・確認中(`maskSession` が `idle` 以外、AM-T13・AM-T25-F1)。省略時は `false`。 */
   isMasking?: boolean;
+  /** トリミングの範囲の指定中(`getCropSession() !== null`、QE-T22)。省略時は `false`。 */
+  isCropping?: boolean;
 }
 
 /**
  * 取り消し・やり直しで実際に行う操作。できなければ `null`
- * (ドラッグ中・自動マスキングの処理中・確認中は両方できない)。
+ * (ドラッグ中・自動マスキングの処理中・確認中は両方できない)。範囲の指定中は両方とも`cancelCrop`。
  */
 export function resolveUndoCommand(
   command: UndoShortcutCommand,
   context: UndoContext,
-): UndoShortcutCommand | null {
+): UndoAction | null {
   if (context.isDrawing || context.isMasking === true) {
     return null;
+  }
+  if (context.isCropping === true) {
+    return "cancelCrop";
   }
   const available = command === "undo" ? context.canUndo : context.canRedo;
   return available ? command : null;
@@ -83,13 +95,14 @@ export function undoAvailability(context: UndoContext): { undo: boolean; redo: b
   };
 }
 
-/** 今のストア(取り消しスタック・`canvasState`・`maskSession`)から文脈を組み立てる。 */
+/** 今のストア(取り消しスタック・`canvasState`・`maskSession`・`cropSession`)から文脈を組み立てる。 */
 export function currentUndoContext(): UndoContext {
   return {
     canUndo: canUndo(),
     canRedo: canRedo(),
     isDrawing: getCanvasState().isDrawing,
     isMasking: isMaskSessionActive(),
+    isCropping: getCropSession() !== null,
   };
 }
 
@@ -99,6 +112,8 @@ function runCommand(command: UndoShortcutCommand): void {
     undoDocument();
   } else if (action === "redo") {
     redoDocument();
+  } else if (action === "cancelCrop") {
+    cancelCrop();
   }
 }
 
@@ -133,6 +148,7 @@ export function initUndoButtons(elements: UndoButtonElements): () => void {
     subscribeUndoStack(render),
     subscribeCanvasState(render),
     subscribeMaskSession(render),
+    subscribeCropSession(render),
   ];
   render();
 

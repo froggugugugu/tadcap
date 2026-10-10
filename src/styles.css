@@ -590,8 +590,10 @@ body {
 
 /* 自動マスキングの結果バー(AM-T15、UI_auto-masking §2・§3)。ツールバーの直後に流し込みで置き、
    Canvasに重ねない。処理中は回転するリングと文言、確認中は件数・やめる・まとめてモザイク。
-   1行に収め、長い補足文は省略記号で切る。出入りのアニメーションはしない。 */
-.mask-bar {
+   1行に収め、長い補足文は省略記号で切る。出入りのアニメーションはしない。
+   QE-T22: トリミングの帯(`#crop-bar`、UI_quick-edits §4.3)も同じ作り・同じ値(ボタン・キーの表示も共用)。 */
+.mask-bar,
+.crop-bar {
   display: flex;
   align-items: center;
   gap: 0.75em;
@@ -621,7 +623,8 @@ body {
   }
 }
 
-.mask-bar__status {
+.mask-bar__status,
+.crop-bar__status {
   flex: 1;
   min-width: 0;
   margin: 0;
@@ -629,7 +632,8 @@ body {
   text-overflow: ellipsis;
 }
 
-.mask-bar__hint {
+.mask-bar__hint,
+.crop-bar__hint {
   margin-left: 0.75em;
   color: var(--text-muted);
 }
@@ -690,6 +694,17 @@ body {
   font-family: inherit;
   font-size: 0.85em;
   line-height: 1.4;
+}
+
+/* トリミングの帯の寸法は桁がそろうように(UI_quick-edits §4.3)。 */
+.crop-bar__size {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 確定(primary)の中のキー表示は、背景の色の上で読めるよう白に寄せる。 */
+.mask-bar__button--primary .mask-bar__key {
+  border-color: rgb(255 255 255 / 55%);
+  color: inherit;
 }
 
 @media (prefers-reduced-motion: reduce) {

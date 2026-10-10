@@ -28,6 +28,7 @@ import {
   isSameCanvasImage,
   subscribeCanvasState,
   type CanvasImage,
+  type ToolId,
 } from "../canvasState";
 import { clientToCanvasPoint, type Point } from "../coords";
 import {
@@ -154,6 +155,18 @@ function layoutInput(canvas: HTMLCanvasElement, editor: TextEditor): void {
   const textWidth = measureText(canvas, input.value, editor.fontPx).width;
   const width = Math.max(editor.fontPx * MIN_INPUT_WIDTH_RATIO, textWidth + editor.fontPx * INPUT_TRAILING_RATIO);
   input.style.width = `${width * scale}px`;
+}
+
+/**
+ * ダブルクリックでテキストを編集し直せるか(T33)。画像なし・入力中・モザイクとトリミングの間は開かない
+ * (QE-T22: トリミング中は範囲の指定と入力欄が重なり、Enter が確定と取り合いになる)。
+ */
+export function canReeditTextOnDoubleClick(context: {
+  hasImage: boolean;
+  editorOpen: boolean;
+  activeTool: ToolId | null;
+}): boolean {
+  return context.hasImage && !context.editorOpen && context.activeTool !== "mosaic" && context.activeTool !== "crop";
 }
 
 export interface TextToolOptions {
@@ -355,7 +368,8 @@ export function bindTextTool(canvas: HTMLCanvasElement, options: TextToolOptions
 
   const handleDoubleClick = (event: MouseEvent): void => {
     const state = getCanvasState();
-    if (!state.image || editor || state.activeTool === "mosaic") {
+    const context = { hasImage: state.image !== null, editorOpen: editor !== null, activeTool: state.activeTool };
+    if (!canReeditTextOnDoubleClick(context)) {
       return;
     }
     const cssWidth = canvas.getBoundingClientRect().width;

@@ -7,7 +7,8 @@
 //!   `scanSensitiveText()` → 受け取った矩形を `clipRectToCanvas()` で収め直す → `acceptScanResult()`
 //! - 実行中の invoke を 1 つだけ保持し、終わるまで次を送らない(Rust の `text_scan_busy` を通常は起こさない)
 //! - まとめてモザイクは `applyBaseEdits(activeRects(), pixelateRect)` で 1 手として積み、`discardMaskSession()`
-//! - 開始時に選択を外す。表示中の画像が開始時と違ってきたら候補を捨てる(AM-T25-F1)
+//! - 開始時に選択を外す。表示中の画像が開始時と違ってきたら候補を捨てる(AM-T25-F1)。ドキュメントの大きさが
+//!   変わったとき(トリミングとその取り消し・やり直し)も捨てる(QE-T22)
 //! - 候補・読み取り結果を `console`・ストレージ・履歴に残さない(NFR-002)。失敗の詳細も画面に出さない
 //!
 //! 判定と文言は DOM なしで試せる純粋関数、実行の流れは入出力を差し込む `createAutoMaskController()`、
@@ -15,7 +16,13 @@
 
 import { getCanvasState, isSameCanvasImage, subscribeCanvasState, type CanvasImage } from "../canvas/canvasState";
 import { clipRectToCanvas, type Rect } from "../canvas/coords";
-import { applyBaseEdits, exportDocumentBase, getCaptureSize, selectObject } from "../canvas/documentState";
+import {
+  applyBaseEdits,
+  exportDocumentBase,
+  getCaptureSize,
+  selectObject,
+  subscribeDocument,
+} from "../canvas/documentState";
 import {
   acceptScanResult,
   activeRects,
@@ -312,6 +319,41 @@ export function bindMaskSessionToCanvasImage(): () => void {
   });
 }
 
+/**
+ * ドキュメント(表示 canvas)の大きさが処理中・確認中に変わったら候補を捨てる(QE-T22、防御)。
+ * トリミングとその取り消し・やり直しは`canvasState.image`を変えずに大きさだけを変えるため、
+ * `bindMaskSessionToCanvasImage()`では捨てられない。基準は処理・確認が始まった時点の大きさ
+ * で、`documentState`・`maskSession`の通知のたびに`size()`と比べる。
+ * 戻り値は購読の解除関数。
+ */
+export function bindMaskSessionToDocumentSize(size: () => { width: number; height: number }): () => void {
+  let last = size();
+  let active = getMaskSession().status !== "idle";
+  const check = (): void => {
+    const next = size();
+    const changed = next.width !== last.width || next.height !== last.height;
+    last = next;
+    if (getMaskSession().status === "idle") {
+      active = false;
+      return;
+    }
+    if (!active) {
+      // 始まった時点の大きさを基準にする(始まる前の変化では捨てない)。
+      active = true;
+      return;
+    }
+    if (changed) {
+      discardMaskSession();
+    }
+  };
+  const unsubscribers = [subscribeMaskSession(check), subscribeDocument(check)];
+  return () => {
+    for (const unsubscribe of unsubscribers) {
+      unsubscribe();
+    }
+  };
+}
+
 // ---- DOM ----
 
 /** 実行ボタンのアイコン(UI 仕様 §1.2: 走査の四隅の枠 + 2 本の文字の行)。 */
@@ -469,12 +511,17 @@ export function initAutoMask(elements: AutoMaskElements): () => void {
   window.addEventListener("keydown", handleKeydown);
   // 画像の変化で候補を捨てる購読を、表示の購読より先に登録する(捨てた後の状態で描く)
   const unbindImage = bindMaskSessionToCanvasImage();
+  const unbindSize = bindMaskSessionToDocumentSize(() => ({
+    width: elements.canvas.width,
+    height: elements.canvas.height,
+  }));
   const unsubscribeSession = subscribeMaskSession(render);
   const unsubscribeCanvas = subscribeCanvasState(render);
   render();
 
   return () => {
     unbindImage();
+    unbindSize();
     unsubscribeSession();
     unsubscribeCanvas();
     window.removeEventListener("keydown", handleKeydown);

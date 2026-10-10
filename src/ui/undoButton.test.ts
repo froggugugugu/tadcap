@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { beginCrop, cancelCrop } from "../canvas/cropSession";
 import { beginScan, discardMaskSession } from "../canvas/maskSession";
 import {
   currentUndoContext,
@@ -119,5 +120,43 @@ describe("currentUndoContext(ストアから組み立てる文脈)", () => {
     expect(resolveUndoCommand("undo", context)).toBeNull();
     expect(resolveUndoCommand("redo", context)).toBeNull();
     expect(undoAvailability(context)).toEqual({ undo: false, redo: false });
+  });
+});
+
+// QE-T22: トリミングの範囲の指定中の ⌘Z / ⇧⌘Z とボタンは、指定をやめるだけ(ARCH_quick-edits §15 #4 A 案、
+// UI_quick-edits §4.2・§7)。範囲が無ければ今どおり取り消し・やり直し。
+describe("範囲の指定中(isCropping)の取り消し・やり直し", () => {
+  const ready: UndoContext = { canUndo: true, canRedo: true, isDrawing: false };
+
+  afterEach(() => {
+    cancelCrop();
+  });
+
+  it("指定中は ⌘Z・⇧⌘Z とも cancelCrop(取り消しスタックは使わない)", () => {
+    expect(resolveUndoCommand("undo", { ...ready, isCropping: true })).toBe("cancelCrop");
+    expect(resolveUndoCommand("redo", { ...ready, isCropping: true })).toBe("cancelCrop");
+  });
+
+  it("取り消す手が無くても、指定中なら cancelCrop でボタンは両方有効", () => {
+    expect(resolveUndoCommand("undo", { ...idle, isCropping: true })).toBe("cancelCrop");
+    expect(undoAvailability({ ...idle, isCropping: true })).toEqual({ undo: true, redo: true });
+  });
+
+  it("ドラッグ中は何もしない(指定中でも)", () => {
+    expect(resolveUndoCommand("undo", { ...ready, isCropping: true, isDrawing: true })).toBeNull();
+  });
+
+  it("指定なし(isCropping: false)は今どおり", () => {
+    expect(resolveUndoCommand("undo", { ...ready, isCropping: false })).toBe("undo");
+    expect(resolveUndoCommand("redo", { ...ready, isCropping: false })).toBe("redo");
+    expect(undoAvailability({ ...idle, isCropping: false })).toEqual({ undo: false, redo: false });
+  });
+
+  it("currentUndoContext は範囲の有無を isCropping に入れる", () => {
+    expect(currentUndoContext().isCropping).toBe(false);
+    beginCrop({ x: 0, y: 0, width: 10, height: 10 }, 100, 100);
+    expect(currentUndoContext().isCropping).toBe(true);
+    cancelCrop();
+    expect(currentUndoContext().isCropping).toBe(false);
   });
 });

@@ -22,6 +22,7 @@ import {
   type CanvasImage,
 } from "../canvas/canvasState";
 import type { Rect } from "../canvas/coords";
+import { resetDocument } from "../canvas/documentState";
 import {
   acceptScanResult,
   beginScan,
@@ -36,6 +37,7 @@ import { arrangeShortcutCommand } from "./arrangeButtons";
 import {
   AUTO_MASK_MESSAGES,
   bindMaskSessionToCanvasImage,
+  bindMaskSessionToDocumentSize,
   canApplyMosaic,
   canStartScan,
   createAutoMaskController,
@@ -662,6 +664,69 @@ describe("bindMaskSessionToCanvasImage(表示中の画像が変わったら候�
     setCanvasImage(makeImage());
     expect(getMaskSession().status).toBe("review");
     discardMaskSession();
+  });
+});
+
+// QE-T22: トリミング(とその取り消し・やり直し)は画像(`canvasState.image`)を変えずに大きさだけを変える。
+// 候補の矩形が別の大きさの画像に残らないよう、ドキュメントの大きさが変わったら捨てる(防御)。
+describe("bindMaskSessionToDocumentSize(ドキュメントの大きさが変わったら候補を捨てる、QE-T22)", () => {
+  let size = { width: 800, height: 600 };
+  let unbind: () => void = () => {};
+
+  beforeEach(() => {
+    size = { width: 800, height: 600 };
+    clearCanvasImage();
+    setCanvasImage(makeImage());
+    unbind = bindMaskSessionToDocumentSize(() => size);
+  });
+
+  afterEach(() => {
+    unbind();
+    discardMaskSession();
+    clearCanvasImage();
+  });
+
+  function reviewOnCurrentImage(): void {
+    const image = getCanvasState().image!;
+    const token = beginScan(image);
+    expect(acceptScanResult(token!, image, [{ rect: { x: 0, y: 0, width: 5, height: 5 }, kind: "contact" }])).toBe(
+      true,
+    );
+  }
+
+  it("確認中に大きさが変わる(同じ画像のまま)と破棄する", () => {
+    reviewOnCurrentImage();
+    size = { width: 400, height: 300 };
+    resetDocument(); // ドキュメントの変化の通知(トリミング・取り消しと同じ購読口)
+    expect(getMaskSession().status).toBe("idle");
+  });
+
+  it("処理中に大きさが変わっても破棄する", () => {
+    beginScan(getCanvasState().image!);
+    size = { width: 800, height: 599 };
+    resetDocument();
+    expect(getMaskSession().status).toBe("idle");
+  });
+
+  it("大きさが同じままの変化では破棄しない", () => {
+    reviewOnCurrentImage();
+    resetDocument();
+    expect(getMaskSession().status).toBe("review");
+  });
+
+  it("開始前に変わった大きさは、開始後の基準になる(開始した時点の大きさと比べる)", () => {
+    size = { width: 400, height: 300 };
+    reviewOnCurrentImage();
+    resetDocument();
+    expect(getMaskSession().status).toBe("review");
+  });
+
+  it("解除後は購読しない", () => {
+    reviewOnCurrentImage();
+    unbind();
+    size = { width: 10, height: 10 };
+    resetDocument();
+    expect(getMaskSession().status).toBe("review");
   });
 });
 
