@@ -11,8 +11,14 @@
 //! nullable化した(履歴項目の`image`はCanvas上で編集済みのObjectURLであり、
 //! 元になった単一の`CaptureResult`と一対一に対応しないため。`src/main.ts`が
 //! 履歴再読込時に`capture: null`を渡す)。
+//!
+//! QE-T08で`CanvasImage.pixelRatio`(撮った画面の倍率。縮めてコピーに使う)を追加した。履歴から
+//! 開き直すと`capture`は`null`なので、倍率は`capture`とは別に持つ(ARCH_quick-edits §1.3 #11)。
 
 import type { CaptureResult } from "../ipc/capture";
+
+/** 表示中の画像の撮った画面の倍率(QE-T08)。不明は 1(縮めない)として持つ。 */
+export type CanvasPixelRatio = 1 | 2;
 
 /** Canvasに表示中の画像(描画元URL + 元になったキャプチャ結果)。 */
 export interface CanvasImage {
@@ -27,6 +33,22 @@ export interface CanvasImage {
    * `null`(T14。再読込対象は編集後画像であり、単一の`CaptureResult`と対応しないため)。
    */
   capture: CaptureResult | null;
+  /**
+   * 撮った画面の倍率(QE-T08、ARCH_quick-edits §1.3 #11)。新規キャプチャは撮影結果から、履歴の
+   * 再読込は履歴の項目から入れる。トリミングでは変わらない。省略は 1(倍率を持たない既存の値・
+   * テストの固定値との後方互換。読むときは {@link canvasImagePixelRatio} を使う)。
+   */
+  pixelRatio?: CanvasPixelRatio;
+}
+
+/** 撮影結果の倍率(`1 | 2 | null`、欠落あり)を画像の倍率にする。2 以外(1・不明)は 1(QE-T08)。 */
+export function toCanvasPixelRatio(value: number | null | undefined): CanvasPixelRatio {
+  return value === 2 ? 2 : 1;
+}
+
+/** 画像の倍率を返す。画像なし・倍率を持たない画像は 1(縮めない、QE-T08)。 */
+export function canvasImagePixelRatio(image: CanvasImage | null): CanvasPixelRatio {
+  return image?.pixelRatio ?? 1;
 }
 
 /** 編集ツールの識別子(T09で型定義、T10で `ui/toolbar.ts` に `"mosaic"` の選択肢を追加、

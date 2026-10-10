@@ -31,6 +31,7 @@ Rust `capture::CaptureResult`(`camelCase` でシリアライズ)に対応する�
 | `sourcePath` | `string` | 一時ファイルの絶対パス。`read_capture_image` コマンドに渡してバイト列を受け取り、ObjectURL にしてCanvas表示に使う(asset URLは使わない、実機不具合②〜⑤) |
 | `kind` | `"range"` | MVPでは常に`"range"`(ARCH §15 要確認#2 決定A案) |
 | `createdAt` | `string` | ISO8601(UTC)。例: `2024-01-01T00:00:00.000Z` |
+| `pixelRatio` | `1 \| 2 \| null` | 撮った画面の倍率(QE-T04・T07。Rust が PNG の pHYs から決める)。`null` は不明。`1 \| 2 \| null` 以外・欠落は `null` に正規化する |
 
 派生型: なし
 
@@ -43,6 +44,8 @@ Rust `capture::CaptureResult`(`camelCase` でシリアライズ)に対応する�
 `CanvasImage = { assetUrl: string, capture: CaptureResult | null }`。選択中ツール・描画中フラグはT09で追加。
 `capture`はT14で`null`許容に変更した(セッション内履歴からの再読込時は、再読込対象が編集後画像であり単一の
 `CaptureResult`と対応しないため`null`を渡す。`src/main.ts::reloadHistoryItemIntoCanvas()`参照)。
+QE-T08で `pixelRatio?: 1 | 2`(撮った画面の倍率。縮めてコピーに使う。省略・不明は 1)を追加した。新規キャプチャは
+`CaptureResult.pixelRatio`(`null` は 1)、履歴の再読込は `HistoryItem.pixelRatio` から入れる。
 
 派生型: なし
 
@@ -56,6 +59,7 @@ Rust `capture::CaptureResult`(`camelCase` でシリアライズ)に対応する�
 | `thumbnail` | `string` | サイドバー表示用の縮小画像。ObjectURL(`URL.createObjectURL()`が生成する`blob:`URL) |
 | `image` | `string` | Canvas再読込用の画像データ。編集後(マークアップ済み)画像。ObjectURL |
 | `createdAt` | `string` | ISO8601(UTC)。一覧の並び順(新しいものが上)に使う |
+| `pixelRatio` | `1 \| 2`(省略可) | 撮った画面の倍率(QE-T08)。開き直すと `CanvasImage.pixelRatio` へ戻す。画像の上書きでは変わらない。省略は 1 |
 
 PRD §5は`thumbnail`を「binary / dataURL」、`image`を「binary (PNG)」としているが、実装時にいずれも
 `Blob` + `URL.createObjectURL()`のObjectURL文字列に統一した(【仮定】。dataURL(Base64)は元データの

@@ -1,9 +1,12 @@
 import {
+  canvasImagePixelRatio,
   clearCanvasImage,
   getCanvasState,
   setCanvasImage,
   subscribeCanvasState,
+  toCanvasPixelRatio,
 } from "./canvas/canvasState";
+import { copyRatio } from "./canvas/copyScale";
 import {
   captureHistoryAssets,
   getCanvasImageData,
@@ -35,6 +38,7 @@ import {
   enforceHistoryBudget,
   getHistoryState,
   getSelectedHistoryItem,
+  historyItemPixelRatio,
   updateSelectedItemImage,
   type HistoryItem,
   type HistoryItemImagePatch,
@@ -65,6 +69,7 @@ import { bindSelectionKeys } from "./ui/selectionKeys";
 import { initSidebar } from "./ui/sidebar";
 import {
   getCaptureShortcut,
+  getShrinkCopy,
   onSettingsOpen,
   resetCaptureShortcut,
   setCaptureShortcut,
@@ -95,6 +100,11 @@ function notifyObjectLimit(): void {
 let permissionBanner: PermissionBannerController | null = null;
 /** キャプチャ直後の自動コピー(`ui/clipboardButton.ts`、v0.2.2後)。初期化前は`null`。 */
 let copyAfterCapture: (() => Promise<void>) | null = null;
+/**
+ * 縮めてコピーの設定(QE-T08、PRD_quick-edits FR-011)。起動時に`getShrinkCopy()`で読み、読み終わるまでは
+ * オフ(縮めない)。設定画面での変更は QE-T09 で結ぶ。
+ */
+let shrinkCopy = false;
 
 /**
  * 表示中の履歴項目のドキュメント(ベースPNG・オブジェクト・取り消しスタック)を退避する
@@ -185,7 +195,9 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
     // クリア(T24、取り消し対象を「現在表示中の画像」に限定)も含む。T34: 読み込んだPNGをベースの
     // 退避にそのまま使えるよう渡す(ベースを変えるまで再エンコードしない)。
     resetDocument(blob);
-    setCanvasImage({ assetUrl: objectUrl, capture: result });
+    // QE-T08: 撮った画面の倍率(不明は 1)を画像と履歴の項目の両方に持たせる(縮めてコピーに使う)。
+    const pixelRatio = toCanvasPixelRatio(result.pixelRatio);
+    setCanvasImage({ assetUrl: objectUrl, capture: result, pixelRatio });
     // AM-T25-F1: 上の await の間(画像が変わる前)に始めた自動マスキングの処理・結果を捨てる
     // (`ui/autoMask.ts::bindMaskSessionToCanvasImage` も画像の変化で捨てる。念のため差し替え直後にも)。
     discardMaskSession();
@@ -196,6 +208,7 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
       thumbnail: assets.thumbnail,
       bytes: assets.bytes,
       createdAt: result.createdAt,
+      pixelRatio,
     });
     // T34: 履歴の上限で消えた項目の退避も消す(件数上限)。続けて合計バイト数の上限を確かめる。
     deleteArchivesOf(evicted);
@@ -244,7 +257,10 @@ function getClipboardPayload(): ClipboardImagePayload | null {
   // T27: コピー前に入力中のテキストを確定する(ハンドル・入力欄はCanvasに重ねたDOMのため
   // 元々写らない。T32: 図形は表示canvasへ合成済み)。
   commitPendingText();
-  return getCanvasImageData(canvasEl);
+  // QE-T08: 設定がオンなら表示中の画像の倍率で縮める(オフ・倍率 1・不明は縮めない)。⌘C・ボタン・
+  // 撮った直後の自動コピーはどれもこの関数を通るので、経路ごとの差は出ない(FR-012)。
+  const ratio = copyRatio(shrinkCopy, canvasImagePixelRatio(getCanvasState().image));
+  return getCanvasImageData(canvasEl, ratio);
 }
 
 /**
@@ -298,7 +314,8 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
       const bitmap = await createImageBitmap(archived.base);
       restoreDocument(archived.snapshot, bitmap, archived.base);
       bitmap.close();
-      setCanvasImage({ assetUrl: item.image, capture: null });
+      // QE-T08: 履歴の項目の倍率を画像へ戻す(開き直しても同じ大きさで縮む)。
+      setCanvasImage({ assetUrl: item.image, capture: null, pixelRatio: historyItemPixelRatio(item) });
       // AM-T25-F1: 上の await の間に始めた自動マスキングの処理・結果を捨てる(新規キャプチャと同じ)。
       discardMaskSession();
       return;
@@ -308,7 +325,7 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
     // T32: 合成結果(編集後画像)をベースとする新しいドキュメントにする(Undo/Redoもクリア、
     // T24と同じ理由)。退避が無い場合(T34以前の経路・失敗時)のフォールバック。
     resetDocument();
-    setCanvasImage({ assetUrl: item.image, capture: null });
+    setCanvasImage({ assetUrl: item.image, capture: null, pixelRatio: historyItemPixelRatio(item) });
     discardMaskSession();
   } catch (error) {
     // 読めなかった項目の選択とCanvasの中身(前の画像)がずれたまま次の保存点を迎えると、別の項目の
@@ -466,6 +483,10 @@ window.addEventListener("DOMContentLoaded", () => {
   // 前回の画面が記録中のまま再読込・終了した場合に備え、起動時に記録中を必ず解除する。
   void setShortcutRecording(false).catch((error: unknown) => {
     console.warn("記録中の状態を解除できませんでした", error);
+  });
+  // QE-T08: 縮めてコピーの設定を読む(読めなければオフのまま。`getShrinkCopy()`は失敗をオフとして返す)。
+  void getShrinkCopy().then((enabled) => {
+    shrinkCopy = enabled;
   });
   void getCaptureShortcut()
     .then((info) => applyCaptureShortcutLabel(info.accelerator))

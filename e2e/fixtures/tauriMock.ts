@@ -56,6 +56,11 @@ export interface MockCaptureResult {
   sourcePath: string;
   kind: "range";
   createdAt: string;
+  /**
+   * 撮った画面の倍率(QE-T08。Rust は PNG の pHYs から 1 / 2 / `null` を返す)。省略時は送らない
+   * (倍率を持たない古い形の応答。フロントは不明 = `null` として扱う)。
+   */
+  pixelRatio?: 1 | 2 | null;
 }
 
 /** `capture_screen` 呼び出し時のモック挙動。 */
@@ -95,6 +100,11 @@ export interface TauriMockConfig {
    * 実行中に {@link setTextScanBehavior} で差し替えられる。
    */
   textScan?: TextScanMockBehavior;
+  /**
+   * 縮めてコピーの設定の初期値(`get_shrink_copy` の応答、QE-T08)。省略時は `false`(既定のオフ)。
+   * `set_shrink_copy` は値を変えて真偽値を返す(Rust と同じ応答の形)。
+   */
+  shrinkCopy?: boolean;
 }
 
 /**
@@ -153,6 +163,8 @@ const injectTauriMocks: InjectedMockScript = (config) => {
       lastImage?: { rgba: Uint8Array; width: number; height: number };
       /** 設定のコマンド呼び出しの記録(`set:<accelerator>` / `reset` / `recording:<bool>`、KS-T8)。 */
       shortcutCalls: string[];
+      /** 縮めてコピーの設定の現在値(`get_shrink_copy` / `set_shrink_copy`、QE-T08)。 */
+      shrinkCopy: boolean;
       /** テストから Rust 発のイベント(`settings://open` など)を送る。 */
       emit?: (event: string, payload: unknown) => void;
       /** `scan_sensitive_text` の現在の挙動(AM-T17。テストから差し替える)。 */
@@ -181,6 +193,7 @@ const injectTauriMocks: InjectedMockScript = (config) => {
     clipboardWriteCount: 0,
     activateAppCount: 0,
     shortcutCalls: [],
+    shrinkCopy: config.shrinkCopy ?? false,
     textScan: config.textScan ?? {},
     textScanCalls: [],
     releaseTextScans: () => {
@@ -384,6 +397,14 @@ const injectTauriMocks: InjectedMockScript = (config) => {
         shortcutState.accelerator = DEFAULT_ACCELERATOR;
         shortcutState.registered = true;
         return shortcutInfo();
+
+      case "get_shrink_copy":
+        return w.__tadcapE2E!.shrinkCopy;
+
+      case "set_shrink_copy":
+        // Rust の `set_shrink_copy` は保存後の値(真偽値)を返す(QE-T05)。
+        w.__tadcapE2E!.shrinkCopy = actualArgs.enabled === true;
+        return w.__tadcapE2E!.shrinkCopy;
 
       case "set_shortcut_recording":
         w.__tadcapE2E!.shortcutCalls.push(`recording:${String(actualArgs.recording)}`);
@@ -615,6 +636,17 @@ export async function getTextScanCalls(page: Page): Promise<{ byteLength: number
       __tadcapE2E?: { textScanCalls: { byteLength: number; isPng: boolean }[] };
     };
     return w.__tadcapE2E?.textScanCalls ?? [];
+  });
+}
+
+/** 直近にクリップボードへ渡された画像の幅・高さ(QE-T08)。コピーがまだ無い場合は `null`。 */
+export async function getLastClipboardImageSize(page: Page): Promise<{ width: number; height: number } | null> {
+  return page.evaluate(() => {
+    const w = window as unknown as {
+      __tadcapE2E?: { lastImage?: { rgba: Uint8Array; width: number; height: number } };
+    };
+    const image = w.__tadcapE2E?.lastImage;
+    return image ? { width: image.width, height: image.height } : null;
   });
 }
 

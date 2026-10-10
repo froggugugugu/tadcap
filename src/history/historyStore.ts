@@ -62,6 +62,17 @@ export interface HistoryItem {
   bytes: number;
   /** ISO8601(UTC)文字列。一覧の並び順に使う(新しいものが上)。 */
   createdAt: string;
+  /**
+   * 撮った画面の倍率(QE-T08、ARCH_quick-edits §1.3 #11)。開き直したときに `CanvasImage.pixelRatio`
+   * へ戻し、縮めてコピーに使う。画像の上書きでは変わらない。省略は 1(読むときは
+   * {@link historyItemPixelRatio} を使う)。
+   */
+  pixelRatio?: 1 | 2;
+}
+
+/** 項目の倍率を返す。倍率を持たない項目は 1(縮めない、QE-T08)。 */
+export function historyItemPixelRatio(item: HistoryItem): 1 | 2 {
+  return item.pixelRatio ?? 1;
 }
 
 /** 履歴ストアの状態。`items`は新しいものが先頭(index 0)。 */

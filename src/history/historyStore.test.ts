@@ -11,6 +11,7 @@ import {
   selectHistoryEvictions,
   getHistoryState,
   getSelectedItem,
+  historyItemPixelRatio,
   removeHistoryItem,
   selectHistoryItem,
   subscribeHistoryState,
@@ -411,5 +412,31 @@ describe("historyStoreストア(モジュール単位の薄い状態オブジェ
     addHistoryItem(makeItem({ id: `store-unsub-${Date.now()}` }));
 
     expect(received).toHaveLength(0);
+  });
+});
+
+describe("履歴の項目の倍率(QE-T08、ARCH_quick-edits §1.3 #11)", () => {
+  beforeEach(() => {
+    clearHistory();
+  });
+
+  it("historyItemPixelRatio: 項目の倍率を返し、倍率を持たない項目は 1", () => {
+    expect(historyItemPixelRatio(makeItem({ pixelRatio: 2 }))).toBe(2);
+    expect(historyItemPixelRatio(makeItem({ pixelRatio: 1 }))).toBe(1);
+    expect(historyItemPixelRatio(makeItem())).toBe(1);
+  });
+
+  it("画像の上書き(保存点)でも倍率は変わらず、選択し直しても同じ値を返す", () => {
+    addHistoryItem(makeItem({ id: "a", pixelRatio: 2 }));
+    addHistoryItem(makeItem({ id: "b", pixelRatio: 1 }));
+    selectHistoryItem("a");
+    updateSelectedItemImage({ image: "blob:a2", thumbnail: "blob:a2-thumb", bytes: 50 });
+
+    const selected = getSelectedItem(getHistoryState());
+    expect(selected?.image).toBe("blob:a2");
+    expect(historyItemPixelRatio(selected!)).toBe(2);
+
+    selectHistoryItem("b");
+    expect(historyItemPixelRatio(getSelectedItem(getHistoryState())!)).toBe(1);
   });
 });

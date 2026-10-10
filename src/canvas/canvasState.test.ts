@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { CaptureResult } from "../ipc/capture";
 import {
+  canvasImagePixelRatio,
   clearCanvasImage,
   createCanvasState,
   getCanvasState,
@@ -10,6 +11,7 @@ import {
   setCanvasImage,
   setDrawing,
   subscribeCanvasState,
+  toCanvasPixelRatio,
   toggleActiveTool,
   toggleTool,
   withActiveTool,
@@ -23,6 +25,7 @@ const capture: CaptureResult = {
   sourcePath: "/tmp/tadcap-captures/capture-1.png",
   kind: "range",
   createdAt: "2024-01-01T00:00:00.000Z",
+  pixelRatio: 2,
 };
 
 describe("createCanvasState", () => {
@@ -237,5 +240,29 @@ describe("canvasState ストア(モジュール単位の薄い状態オブジェ
     expect(getCanvasState().isDrawing).toBe(true);
     expect(received).toHaveLength(1);
     unsubscribe();
+  });
+});
+
+describe("画像の倍率(QE-T08、ARCH_quick-edits §1.3 #11)", () => {
+  it("toCanvasPixelRatio: 撮影結果の倍率 2 は 2、1・不明(null/欠落)は 1", () => {
+    expect(toCanvasPixelRatio(2)).toBe(2);
+    expect(toCanvasPixelRatio(1)).toBe(1);
+    expect(toCanvasPixelRatio(null)).toBe(1);
+    expect(toCanvasPixelRatio(undefined)).toBe(1);
+  });
+
+  it("canvasImagePixelRatio: 画像の倍率を返し、倍率を持たない画像・画像なしは 1", () => {
+    expect(canvasImagePixelRatio({ assetUrl: "blob:x", capture, pixelRatio: 2 })).toBe(2);
+    expect(canvasImagePixelRatio({ assetUrl: "blob:x", capture: null, pixelRatio: 1 })).toBe(1);
+    expect(canvasImagePixelRatio({ assetUrl: "blob:x", capture: null })).toBe(1);
+    expect(canvasImagePixelRatio(null)).toBe(1);
+  });
+
+  it("履歴から開き直した画像(capture: null)も倍率を保持する", () => {
+    clearCanvasImage();
+    setCanvasImage({ assetUrl: "blob:history", capture: null, pixelRatio: 2 });
+
+    expect(canvasImagePixelRatio(getCanvasState().image)).toBe(2);
+    clearCanvasImage();
   });
 });
