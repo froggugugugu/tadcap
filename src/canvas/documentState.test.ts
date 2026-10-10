@@ -27,14 +27,17 @@ import {
   type DocumentSurface,
   type ShapeDraft,
 } from "./documentState";
+import { composeDocument } from "./documentSurface";
 import { OBJECT_LIMIT, type AnnotationObject } from "./objectModel";
 import {
   shapeUndoRect,
   type BoxShape,
   type EditableShape,
+  type SpotlightShape,
   type StampShape,
   type TextShape,
 } from "./shapeEdit";
+import { SPOTLIGHT_SHADE, spotlightShadeRects } from "./spotlight";
 import { canRedo, canUndo, getUndoStackState } from "./undoStack";
 import {
   commandPixelBytes,
@@ -120,6 +123,11 @@ function add(shape: EditableShape): AnnotationObject {
     throw new Error("addShapeObject が null を返した");
   }
   return object;
+}
+
+/** 色(穴は色を持たないので `undefined`、QE-T15)。 */
+function shapeColor(shape: EditableShape | undefined): string | undefined {
+  return shape && "color" in shape ? shape.color : undefined;
 }
 
 function sumRegion(surface: FakeSurface, r: Rect): number {
@@ -326,9 +334,9 @@ describe("選択中のオブジェクトの操作(T34)", () => {
     const o = add(box(10));
     expect(setSelectedColor(COLOR)).toBe(false);
     expect(setSelectedColor("#007AFF")).toBe(true);
-    expect(getDocumentState().objects[0]?.shape.color).toBe("#007AFF");
+    expect(shapeColor(getDocumentState().objects[0]?.shape)).toBe("#007AFF");
     undoDocument();
-    expect(getDocumentState().objects[0]?.shape.color).toBe(COLOR);
+    expect(shapeColor(getDocumentState().objects[0]?.shape)).toBe(COLOR);
     expect(getDocumentState().selectedId).toBe(o.id);
   });
 
@@ -337,7 +345,7 @@ describe("選択中のオブジェクトの操作(T34)", () => {
     const depth = getUndoStackState().undo.length;
     previewSelectedColor("#34C759");
     expect(getDocumentState().draft).toEqual({ id: o.id, shape: { ...box(10), color: "#34C759" } });
-    expect(getDocumentState().objects[0]?.shape.color).toBe(COLOR);
+    expect(shapeColor(getDocumentState().objects[0]?.shape)).toBe(COLOR);
     expect(getUndoStackState().undo.length).toBe(depth);
   });
 
@@ -676,7 +684,7 @@ describe("スタンプと上限の焼き込みの選び方(QE-T11、ARCH_quick-e
     const s = add(stamp(100, "exclamation"));
     const depth = getUndoStackState().undo.length;
     expect(setSelectedColor("#007AFF")).toBe(true);
-    expect(getDocumentState().objects[0]?.shape.color).toBe("#007AFF");
+    expect(shapeColor(getDocumentState().objects[0]?.shape)).toBe("#007AFF");
     expect(getUndoStackState().undo.length).toBe(depth + 1);
     undoDocument();
     expect(getDocumentState().objects[0]?.shape).toEqual(stamp(100, "exclamation"));
@@ -694,5 +702,179 @@ describe("スタンプと上限の焼き込みの選び方(QE-T11、ARCH_quick-e
     expect(getDocumentState().objects).toEqual([{ id: s.id, shape: { ...stamp(100), fontSize: "small" } }]);
     undoDocument();
     expect(getDocumentState().objects).toEqual([s]);
+  });
+});
+
+describe("穴(スポットライト)と上限・色・文字サイズ(QE-T15、ARCH_quick-edits §5.3・§15 #3)", () => {
+  const hole = (x: number, y = 100): SpotlightShape => ({
+    kind: "spotlight",
+    rect: { x, y, width: 30, height: 30 },
+  });
+  const numberStamp = (x: number): StampShape => ({
+    kind: "stamp",
+    center: { x, y: 250 },
+    glyph: "number",
+    color: COLOR,
+    fontSize: "medium",
+  });
+
+  it("50 個 + 1 で穴と番号スタンプを飛ばし、最初の焼き込める注釈を焼き込む", () => {
+    const added: AnnotationObject[] = [add(hole(0)), add(numberStamp(20))];
+    for (let i = 2; i < OBJECT_LIMIT; i += 1) {
+      added.push(add(box(i * 5)));
+    }
+    add(box(300, 200));
+    expect(surface.burned).toEqual([added[2]!.shape]);
+    expect(getDocumentState().objects.slice(0, 2)).toEqual(added.slice(0, 2));
+  });
+
+  it("全部が穴なら 51 個目は追加せず null を返し、状態・取り消し・描画を変えない", () => {
+    for (let i = 0; i < OBJECT_LIMIT; i += 1) {
+      add(hole(i * 7));
+    }
+    const before = getDocumentState();
+    const undoBefore = getUndoStackState();
+    const rendersBefore = surface.renders.length;
+
+    expect(addShapeObject(hole(300))).toBeNull();
+    expect(addShapeObject(box(300, 200))).toBeNull();
+
+    expect(getDocumentState()).toBe(before);
+    expect(getUndoStackState()).toEqual(undoBefore);
+    expect(surface.burned).toEqual([]);
+    expect(surface.renders.length).toBe(rendersBefore);
+  });
+
+  it("穴を選んでいるとき setSelectedColor・previewSelectedColor・setSelectedFontSize は何もしない", () => {
+    setTextMeasurer(null);
+    add(hole(50));
+    const depth = getUndoStackState().undo.length;
+    const rendersBefore = surface.renders.length;
+    expect(setSelectedColor("#007AFF")).toBe(false);
+    previewSelectedColor("#007AFF");
+    expect(getDocumentState().draft).toBeNull();
+    expect(setSelectedFontSize("large")).toBe(false);
+    expect(getDocumentState().objects[0]?.shape).toEqual(hole(50));
+    expect(getUndoStackState().undo.length).toBe(depth);
+    expect(surface.renders.length).toBe(rendersBefore);
+  });
+
+  it("穴の移動・リサイズ・削除はそれぞれ 1 手で取り消せる", () => {
+    const h = add(hole(50));
+    expect(commitShapeEdit(h.id, hole(80))).toBe(true);
+    expect(removeShapeObject(h.id)).toBe(true);
+    undoDocument();
+    expect(getDocumentState().objects).toEqual([{ id: h.id, shape: hole(80) }]);
+    undoDocument();
+    expect(getDocumentState().objects).toEqual([h]);
+  });
+});
+
+describe("composeDocument(合成の段: ベース → 暗さ → 穴以外の注釈 → 穴以外の下書き、QE-T15)", () => {
+  type Call = { name: string; args: unknown[] } | { name: "set"; prop: string; value: unknown };
+
+  /** 呼び出しとプロパティの代入を順に記録する偽の 2D コンテキスト。 */
+  function fakeContext(): { ctx: CanvasRenderingContext2D; calls: Call[] } {
+    const calls: Call[] = [];
+    const ctx = new Proxy({} as Record<string, unknown>, {
+      get: (_target, prop) => (...args: unknown[]) => {
+        calls.push({ name: String(prop), args });
+        // スタンプの文字の縦位置に使う寸法(値は描く順の検証に関係しない)
+        return prop === "measureText" ? { actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 } : undefined;
+      },
+      set: (_target, prop, value) => {
+        calls.push({ name: "set", prop: String(prop), value });
+        return true;
+      },
+    }) as unknown as CanvasRenderingContext2D;
+    return { ctx, calls };
+  }
+
+  const base = { kind: "base" } as unknown as CanvasImageSource;
+  const hole = (x: number, y = 100, size = 40): AnnotationObject["shape"] => ({
+    kind: "spotlight",
+    rect: { x, y, width: size, height: size },
+  });
+  const objects = (...shapes: EditableShape[]): AnnotationObject[] =>
+    shapes.map((shape, index) => ({ id: index + 1, shape }));
+
+  /** 暗さの塗り(`fillStyle = SPOTLIGHT_SHADE` の後の `fill`)の位置。 */
+  function shadeFills(calls: Call[]): number[] {
+    const result: number[] = [];
+    let style: unknown = null;
+    calls.forEach((call, index) => {
+      if (call.name === "set" && "prop" in call && call.prop === "fillStyle") {
+        style = call.value;
+      }
+      if (call.name === "fill" && style === SPOTLIGHT_SHADE) {
+        result.push(index);
+      }
+    });
+    return result;
+  }
+
+  const indexOf = (calls: Call[], name: string): number => calls.findIndex((c) => c.name === name);
+
+  it("穴があれば、ベースの転写の後・注釈より前に、暗さを 1 回だけ塗る(1 本のパス)", () => {
+    const { ctx, calls } = fakeContext();
+    composeDocument(ctx, base, W, H, objects(box(10), hole(100), hole(120, 110), box(200)), null);
+
+    const fills = shadeFills(calls);
+    expect(fills).toHaveLength(1);
+    expect(indexOf(calls, "drawImage")).toBeLessThan(fills[0]!);
+    expect(indexOf(calls, "stroke")).toBeGreaterThan(fills[0]!);
+    // 1 本のパス: beginPath は塗りの前に 1 回で、塗る矩形をすべて rect で足す
+    const shadeStart = calls.slice(0, fills[0]).map((c) => c.name).lastIndexOf("beginPath");
+    const rects = calls.slice(shadeStart, fills[0]).filter((c) => c.name === "rect");
+    const expected = spotlightShadeRects(
+      [
+        { x: 100, y: 100, width: 40, height: 40 },
+        { x: 120, y: 110, width: 40, height: 40 },
+      ],
+      W,
+      H,
+    );
+    expect(rects.map((c) => ("args" in c ? c.args : null))).toEqual(
+      expected.map((r) => [r.x, r.y, r.width, r.height]),
+    );
+    // 穴以外の注釈(矩形 2 つ)は重ね順に描き、穴そのものは何も描かない
+    expect(calls.filter((c) => c.name === "stroke")).toHaveLength(2);
+  });
+
+  it("穴が 0 個なら暗さを塗らない", () => {
+    const { ctx, calls } = fakeContext();
+    composeDocument(ctx, base, W, H, objects(box(10)), null);
+    expect(shadeFills(calls)).toEqual([]);
+    expect(calls.some((c) => c.name === "rect")).toBe(false);
+  });
+
+  it("作成中の穴の下書きも暗さに含め、下書きの穴そのものは描かない", () => {
+    const { ctx, calls } = fakeContext();
+    composeDocument(ctx, base, W, H, objects(box(10)), { id: null, shape: hole(150) });
+    expect(shadeFills(calls)).toHaveLength(1);
+    expect(calls.filter((c) => c.name === "stroke")).toHaveLength(1);
+  });
+
+  it("移動中の穴は下書きの位置で暗さを求める", () => {
+    const { ctx, calls } = fakeContext();
+    composeDocument(ctx, base, W, H, objects(hole(0, 0)), { id: 1, shape: hole(200, 150) });
+    const rects = calls.filter((c) => c.name === "rect").map((c) => ("args" in c ? c.args : null));
+    expect(rects).toEqual(
+      spotlightShadeRects([{ x: 200, y: 150, width: 40, height: 40 }], W, H).map((r) => [r.x, r.y, r.width, r.height]),
+    );
+  });
+
+  it("穴が画像全体を覆えば塗らない", () => {
+    const { ctx, calls } = fakeContext();
+    composeDocument(ctx, base, W, H, [{ id: 1, shape: { kind: "spotlight", rect: { x: 0, y: 0, width: W, height: H } } }], null);
+    expect(shadeFills(calls)).toEqual([]);
+  });
+
+  it("番号スタンプには合成ごとの番号を渡す(穴を挟んでも番号は変わらない)", () => {
+    const { ctx, calls } = fakeContext();
+    const stamp: StampShape = { kind: "stamp", center: { x: 50, y: 50 }, glyph: "number", color: COLOR, fontSize: "medium" };
+    composeDocument(ctx, base, W, H, objects(stamp, hole(100), { ...stamp, center: { x: 150, y: 50 } }), null);
+    const texts = calls.filter((c) => c.name === "fillText").map((c) => ("args" in c ? c.args[0] : null));
+    expect(texts).toEqual(["1", "2"]);
   });
 });

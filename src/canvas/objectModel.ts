@@ -13,7 +13,7 @@ import { rectangleCornerRadius, rectangleLineWidth } from "./tools/rectangleTool
 /**
  * 1画像あたりのオブジェクト上限(人間決定 2026-09-24)。超えた分は重ね順の奥から
  * ベース(元画像)へ焼き込み、編集不可にする(`documentState.ts::addShapeObject()`)。
- * 焼き込む先の選び方は`pickBurnTarget()`(番号スタンプは焼き込まない、QE-T11)。
+ * 焼き込む先の選び方は`pickBurnTarget()`(番号スタンプ(QE-T11)と穴(QE-T15)は焼き込まない)。
  */
 export const OBJECT_LIMIT = 50;
 
@@ -64,15 +64,20 @@ export function findObject(
 
 /**
  * 上限を超えたときに焼き込むオブジェクトの位置(ARCH_quick-edits §15 #2・#3)。重ね順の奥
- * (配列の先頭)から、番号スタンプを飛ばして最初の注釈。焼き込めるものが無ければ`null`
+ * (配列の先頭)から、番号スタンプと穴を飛ばして最初の注釈。焼き込めるものが無ければ`null`
  * (呼び出し側は新しい注釈を追加しない)。
  *
  * 【設計判断】番号スタンプを焼き込むと番号(`stampNumbers()`の`id`の順位)が飛び・重複しうるため
- * 対象から外す。記号スタンプは番号を持たないので焼き込む。
+ * 対象から外す。記号スタンプは番号を持たないので焼き込む。穴は焼き込むと暗さが二重になる
+ * (PRD §10 #8 A)ため対象から外す(QE-T15)。
  */
 export function pickBurnTarget(objects: readonly AnnotationObject[]): number | null {
-  const index = objects.findIndex((object) => !isNumberStamp(object.shape));
+  const index = objects.findIndex((object) => canBurn(object.shape));
   return index < 0 ? null : index;
+}
+
+function canBurn(shape: EditableShape): boolean {
+  return shape.kind !== "spotlight" && !isNumberStamp(shape);
 }
 
 /**
@@ -98,6 +103,12 @@ export function hitTestObjectOutline(
     return hitTestShape(shape, point, tolerance, canvasWidth, canvasHeight)?.type === "body";
   }
   const { rect } = shape;
+  if (shape.kind === "spotlight") {
+    // 穴は枠の付近だけ(内側では掴まない、ARCH_quick-edits §5.3)。線は描かないが、掴める幅は矩形と
+    // 同じ「線の太さ+`tolerance`」にそろえる。角は丸めない(QE-T15)。
+    const reach = rectangleLineWidth(canvasWidth, canvasHeight) + tolerance;
+    return Math.abs(roundedRectSignedDistance(point, rect, 0)) <= reach;
+  }
   if (shape.kind === "rectangle") {
     const lineWidth = rectangleLineWidth(canvasWidth, canvasHeight);
     const reach = lineWidth + tolerance;

@@ -13,6 +13,7 @@ import {
   shapeUndoRect,
   type ArrowShape,
   type BoxShape,
+  type SpotlightShape,
   type StampShape,
   type TextShape,
 } from "./shapeEdit";
@@ -470,5 +471,95 @@ describe("スタンプ(QE-T11、ARCH_quick-edits §5.3)", () => {
         decidePointerDown({ ...decideBase, point: stamp.center, objects: [stampObj], activeTool }),
       ).toEqual({ type: "ignore" });
     }
+  });
+});
+
+describe("穴(スポットライト、QE-T15、ARCH_quick-edits §5.3)", () => {
+  const hole: SpotlightShape = { kind: "spotlight", rect: { x: 100, y: 100, width: 100, height: 50 } };
+  const holeObj = { id: 7, shape: hole };
+  const boxObj = { id: 8, shape: { ...rectShape, rect: { x: 20, y: 20, width: 40, height: 40 } } };
+  const decideBase = { tolerance: 8, canvasWidth: W, canvasHeight: H, color: COLOR, selectedId: null };
+  const center = { x: 150, y: 125 };
+  const onFrame = { x: 100, y: 125 };
+
+  it("ハンドルは既存の矩形と同じ四隅の 4 つ", () => {
+    expect(getShapeHandles(hole)).toEqual(getShapeHandles({ ...rectShape, rect: hole.rect }));
+    expect(getShapeHandles(hole).map((h) => h.id)).toEqual(["nw", "ne", "sw", "se"]);
+  });
+
+  it("ドラッグで作る: 矩形と同じ作り方(画像に切り詰め・Shift で正方形・誤クリックは null)。色を持たない", () => {
+    const made = createShapeFromDrag("spotlight", { x: 10, y: 20 }, { x: 110, y: 70 }, COLOR, W, H, false);
+    expect(made).toEqual({ kind: "spotlight", rect: { x: 10, y: 20, width: 100, height: 50 } });
+    expect(made).not.toHaveProperty("color");
+    const square = createShapeFromDrag("spotlight", { x: 10, y: 20 }, { x: 110, y: 70 }, COLOR, W, H, true);
+    const squareBox = createShapeFromDrag("rectangle", { x: 10, y: 20 }, { x: 110, y: 70 }, COLOR, W, H, true) as BoxShape;
+    expect(square).toEqual({ kind: "spotlight", rect: squareBox.rect });
+    expect(createShapeFromDrag("spotlight", { x: 10, y: 20 }, { x: 11, y: 21 }, COLOR, W, H, false)).toBeNull();
+  });
+
+  it("四隅のハンドルでリサイズ(対角を固定)・移動は画像の内側に収める", () => {
+    expect(resizeShape(hole, "se", { x: 300, y: 250 }, W, H, false)).toEqual({
+      kind: "spotlight",
+      rect: { x: 100, y: 100, width: 200, height: 150 },
+    });
+    expect(moveShape(hole, { x: -1000, y: 1000 }, W, H)).toEqual({
+      kind: "spotlight",
+      rect: { x: 0, y: H - 50, width: 100, height: 50 },
+    });
+  });
+
+  it("選択中の穴は矩形と同じく、ハンドルでリサイズ・枠の内側で移動", () => {
+    expect(hitTestShape(hole, { x: 200, y: 150 }, 8, W, H)).toEqual({ type: "handle", handle: "se" });
+    expect(hitTestShape(hole, center, 8, W, H)).toEqual({ type: "body" });
+  });
+
+  it("未選択の穴は内側のクリックで掴まず、枠の付近で掴む(ツール無し)", () => {
+    expect(decidePointerDown({ ...decideBase, point: center, objects: [holeObj], activeTool: null })).toEqual({
+      type: "ignore",
+    });
+    expect(decidePointerDown({ ...decideBase, point: onFrame, objects: [holeObj], activeTool: null })).toEqual({
+      type: "edit",
+      id: 7,
+      session: { mode: "move", origin: onFrame, initial: hole },
+    });
+  });
+
+  it("スポットライトツールでは穴だけを掴み、ほかの注釈は掴まない。空白・穴の内側は新しい穴を描く", () => {
+    expect(
+      decidePointerDown({ ...decideBase, point: onFrame, objects: [holeObj], activeTool: "spotlight" }),
+    ).toMatchObject({ type: "edit", id: 7 });
+    expect(
+      decidePointerDown({ ...decideBase, point: { x: 20, y: 40 }, objects: [boxObj], activeTool: "spotlight" }),
+    ).toEqual({
+      type: "create",
+      session: { mode: "create", kind: "spotlight", origin: { x: 20, y: 40 }, color: COLOR },
+    });
+    expect(
+      decidePointerDown({ ...decideBase, point: center, objects: [holeObj], activeTool: "spotlight" }),
+    ).toMatchObject({ type: "create" });
+  });
+
+  it("矢印・矩形・円ツールでは穴を掴まない(穴の枠の上でも新しい図形を描く)", () => {
+    for (const activeTool of ["arrow", "rectangle", "ellipse"] as const) {
+      expect(
+        decidePointerDown({ ...decideBase, point: onFrame, objects: [holeObj], activeTool }),
+      ).toMatchObject({ type: "create", session: { kind: activeTool } });
+      expect(
+        decidePointerDown({ ...decideBase, point: center, objects: [holeObj], selectedId: 7, activeTool }),
+      ).toMatchObject({ type: "create", session: { kind: activeTool } });
+    }
+  });
+
+  it("isShapeTool: スポットライトはドラッグで作るツール", () => {
+    expect(isShapeTool("spotlight")).toBe(true);
+  });
+
+  it("shapeUndoRect は穴の矩形(整数・画像内)", () => {
+    expect(shapeUndoRect({ kind: "spotlight", rect: { x: 10.4, y: 20.6, width: 30.2, height: 40 } }, W, H)).toEqual({
+      x: 10,
+      y: 20,
+      width: 31,
+      height: 41,
+    });
   });
 });

@@ -11,8 +11,15 @@
 //!
 //! QE-T12: 合成(`render()`)のたびに`stampNumbers()`を1回求め、番号スタンプへ番号を渡す
 //! (ARCH_quick-edits §5.2)。番号を決める`stampLabel()`は純粋関数としてユニットテストする。
+//!
+//! QE-T15: 合成に暗さの段を足した(ARCH_quick-edits §1.3 #9・§7.1 P)。順は「ベース → 穴(下書きを含む)の
+//! 和の外側を`SPOTLIGHT_SHADE`で1回だけ塗る → 穴以外の注釈(重ね順)→ 穴以外の下書き」。穴そのものは
+//! 何も描かない(選択の枠・ハンドルはオーバーレイ)。暗さは表示canvasにだけ入り、ベースには入らないため、
+//! コピー・履歴(表示canvasを読む)には写り、自動マスキング・モザイク(ベースを読む、`exportBase()`・
+//! `read()`)は暗さの影響を受けない。合成は`composeDocument()`(偽の`ctx`でユニットテストする)。
 
 import type { Rect } from "./coords";
+import { SPOTLIGHT_SHADE, spotlightShadeRects } from "./spotlight";
 import { drawStamp, isNumberStamp, stampNumbers } from "./tools/stampShape";
 import type { DocumentSurface, ShapeDraft } from "./documentState";
 import type { AnnotationObject } from "./objectModel";
@@ -70,6 +77,10 @@ export function drawEditableShape(
     drawStamp(ctx, shape, label, canvasWidth, canvasHeight);
     return;
   }
+  if (shape.kind === "spotlight") {
+    // 穴そのものは描かない(暗さは`composeDocument()`の段で塗る。焼き込みの対象にもならない)。
+    return;
+  }
   drawEllipseOutline(
     ctx,
     {
@@ -79,6 +90,67 @@ export function drawEditableShape(
     },
     shape.color,
   );
+}
+
+/**
+ * 表示の合成(QE-T15、ARCH_quick-edits §7.1 P)。`clearRect` → `drawImage(base)` → 穴の和の外側を1本の
+ * パスで1回だけ塗る(穴が無い・穴が画像全体を覆うなら塗らない)→ 穴以外の注釈を重ね順に描く →
+ * 作成中の下書き(`id`が`null`)が穴以外なら最前面に描く。移動・リサイズ中の下書き(`id`あり)は
+ * 該当オブジェクトの形を置き換える(暗さもその位置で求める)。
+ */
+export function composeDocument(
+  ctx: CanvasRenderingContext2D,
+  base: CanvasImageSource,
+  width: number,
+  height: number,
+  objects: readonly AnnotationObject[],
+  draft: ShapeDraft | null,
+): void {
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(base, 0, 0);
+  const shapes: { id: number | null; shape: EditableShape }[] = objects.map((object) => ({
+    id: object.id,
+    shape: draft && draft.id === object.id ? draft.shape : object.shape,
+  }));
+  if (draft && draft.id === null) {
+    shapes.push({ id: null, shape: draft.shape });
+  }
+  const holes = shapes.flatMap(({ shape }) => (shape.kind === "spotlight" ? [shape.rect] : []));
+  fillSpotlightShade(ctx, holes, width, height);
+  // 番号は合成ごとに1回だけ求める(消すと詰まり、取り消しで戻る。QE-T12)。
+  const numbers = stampNumbers(objects);
+  for (const { id, shape } of shapes) {
+    if (shape.kind !== "spotlight") {
+      drawEditableShape(ctx, shape, width, height, stampLabel(shape, id, numbers));
+    }
+  }
+}
+
+/**
+ * 穴の和の外側を、互いに重ならない矩形(`spotlightShadeRects()`)の1本のパスにして1回だけ塗る。
+ * 重なった穴の内側が二重に塗られず、端数の座標の境目に半透明の線も出ない(ARCH_quick-edits §1.3 #8)。
+ */
+function fillSpotlightShade(
+  ctx: CanvasRenderingContext2D,
+  holes: readonly Rect[],
+  width: number,
+  height: number,
+): void {
+  if (holes.length === 0) {
+    return;
+  }
+  const rects = spotlightShadeRects(holes, width, height);
+  if (rects.length === 0) {
+    return;
+  }
+  ctx.save();
+  ctx.beginPath();
+  for (const r of rects) {
+    ctx.rect(r.x, r.y, r.width, r.height);
+  }
+  ctx.fillStyle = SPOTLIGHT_SHADE;
+  ctx.fill();
+  ctx.restore();
 }
 
 function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
@@ -188,17 +260,7 @@ export function createDocumentSurface(display: HTMLCanvasElement): DocumentSurfa
       if (width === 0 || height === 0 || base.width !== width || base.height !== height) {
         return;
       }
-      displayCtx.clearRect(0, 0, width, height);
-      displayCtx.drawImage(base, 0, 0);
-      // 番号は合成ごとに1回だけ求める(消すと詰まり、取り消しで戻る。QE-T12)。
-      const numbers = stampNumbers(objects);
-      for (const object of objects) {
-        const shape = draft && draft.id === object.id ? draft.shape : object.shape;
-        drawEditableShape(displayCtx, shape, width, height, stampLabel(shape, object.id, numbers));
-      }
-      if (draft && draft.id === null) {
-        drawEditableShape(displayCtx, draft.shape, width, height, stampLabel(draft.shape, null, numbers));
-      }
+      composeDocument(displayCtx, base, width, height, objects, draft);
     },
   };
 }

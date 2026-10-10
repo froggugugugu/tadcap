@@ -42,8 +42,11 @@ import type { FontSize } from "./toolSettings";
 
 export type { StampShape } from "./tools/stampShape";
 
-/** 編集中にできる図形の種類(モザイクは即焼き込みのため対象外)。 */
-export type ShapeKind = "arrow" | "rectangle" | "ellipse";
+/**
+ * ドラッグで作る図形の種類(モザイクは即焼き込みのため対象外)。QE-T15でスポットライトの穴を加えた
+ * (矩形と同じ作り方)。
+ */
+export type ShapeKind = "arrow" | "rectangle" | "ellipse" | "spotlight";
 
 export interface ArrowShape {
   kind: "arrow";
@@ -89,8 +92,18 @@ export interface TextMetricsSnapshot {
   fontDescent: number;
 }
 
-/** 注釈オブジェクトの形。QE-T11でスタンプ(`tools/stampShape.ts`)を加えた。 */
-export type EditableShape = ArrowShape | BoxShape | TextShape | StampShape;
+/**
+ * スポットライトの穴(QE-T15、ARCH_quick-edits §5.3)。矩形だけで、色・文字サイズを持たない。
+ * 合成では何も描かず、穴の和の外側を暗くする(`documentSurface.ts::composeDocument()`)。
+ * 50個の上限で焼き込まない(`objectModel.ts::pickBurnTarget()`)。`rect`は正規化・Canvas範囲内クリップ済み。
+ */
+export interface SpotlightShape {
+  kind: "spotlight";
+  rect: Rect;
+}
+
+/** 注釈オブジェクトの形。QE-T11でスタンプ(`tools/stampShape.ts`)、QE-T15で穴を加えた。 */
+export type EditableShape = ArrowShape | BoxShape | TextShape | StampShape | SpotlightShape;
 
 /** 矢印は始点・終点、矩形・円は四隅(北西・北東・南西・南東)。 */
 export type HandleId = "start" | "end" | "nw" | "ne" | "sw" | "se";
@@ -109,7 +122,7 @@ export type EditSession =
   | { mode: "move"; origin: Point; initial: EditableShape };
 
 export function isShapeTool(tool: ToolId | null): tool is ShapeKind {
-  return tool === "arrow" || tool === "rectangle" || tool === "ellipse";
+  return tool === "arrow" || tool === "rectangle" || tool === "ellipse" || tool === "spotlight";
 }
 
 /**
@@ -130,6 +143,11 @@ export function createShapeFromDrag(
       return null;
     }
     return { kind, start, end, color };
+  }
+  if (kind === "spotlight") {
+    // 穴は矩形と同じ作り方(最小ドラッグ・Shiftで正方形・Canvas内クリップ)。色は持たない(QE-T15)。
+    const geometry = computeRectangleGeometry(start, end, canvasWidth, canvasHeight, shiftKey);
+    return geometry ? { kind, rect: geometry.rect } : null;
   }
   const geometry =
     kind === "rectangle"
@@ -199,7 +217,8 @@ export function hitTestShape(
       : null;
   }
   const { rect } = shape;
-  if (shape.kind === "rectangle") {
+  // 選択中の穴は矩形と同じく、枠の内側で移動できる(未選択時の掴める所は`objectModel.ts`)。
+  if (shape.kind === "rectangle" || shape.kind === "spotlight") {
     const inside =
       point.x >= rect.x - tolerance &&
       point.x <= rect.x + rect.width + tolerance &&
@@ -239,7 +258,8 @@ export function resizeShape(
   if (!anchor) {
     return shape;
   }
-  const next = createShapeFromDrag(shape.kind, anchor, p, shape.color, canvasWidth, canvasHeight, shiftKey);
+  const color = shape.kind === "spotlight" ? "" : shape.color;
+  const next = createShapeFromDrag(shape.kind, anchor, p, color, canvasWidth, canvasHeight, shiftKey);
   return next ?? shape;
 }
 
@@ -395,14 +415,18 @@ export function decidePointerDown(input: PointerDownInput): PointerDownDecision 
 /**
  * 選択中のツールで掴める注釈(ARCH_quick-edits §5.3)。テキストツールはテキストだけ(T33: 図形の上にも
  * 文字を置けるように)、スタンプツールはスタンプだけ(QE-T11: テキストの上にも置けるように)、
- * 矢印・矩形・円・ツール無しはすべて。
+ * スポットライトツールは穴だけ(QE-T15)。矢印・矩形・円は穴以外のすべて(穴の枠の上にも図形を
+ * 描けるように)、ツール無しはすべて(穴は未選択なら枠の付近だけ、`objectModel.ts`)。
  */
 function grabbableObjects(
   objects: readonly AnnotationObject[],
   activeTool: ToolId | null,
 ): readonly AnnotationObject[] {
-  if (activeTool === "text" || activeTool === "stamp") {
+  if (activeTool === "text" || activeTool === "stamp" || activeTool === "spotlight") {
     return objects.filter((o) => o.shape.kind === activeTool);
+  }
+  if (activeTool === "arrow" || activeTool === "rectangle" || activeTool === "ellipse") {
+    return objects.filter((o) => o.shape.kind !== "spotlight");
   }
   return objects;
 }
@@ -417,6 +441,10 @@ export function shapeUndoRect(shape: EditableShape, canvasWidth: number, canvasH
   }
   if (shape.kind === "stamp") {
     return stampBoundingRect(shape, canvasWidth, canvasHeight);
+  }
+  if (shape.kind === "spotlight") {
+    // 穴は何も描かない(焼き込みもしない)。範囲は穴の矩形を外側へ整数化したもの。
+    return outwardIntegerRect(shape.rect, canvasWidth, canvasHeight);
   }
   if (shape.kind === "arrow") {
     const polygon = computeTaperArrowPolygon(shape.start, shape.end, canvasWidth, canvasHeight);
@@ -464,6 +492,15 @@ function stampBoundingRect(shape: StampShape, canvasWidth: number, canvasHeight:
   const top = Math.max(0, Math.floor(shape.center.y - reach));
   const right = Math.min(canvasWidth, Math.ceil(shape.center.x + reach));
   const bottom = Math.min(canvasHeight, Math.ceil(shape.center.y + reach));
+  return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
+}
+
+/** 矩形を外側へ整数化し、Canvas内に切り詰める。 */
+function outwardIntegerRect(rect: Rect, canvasWidth: number, canvasHeight: number): Rect {
+  const left = Math.max(0, Math.floor(rect.x));
+  const top = Math.max(0, Math.floor(rect.y));
+  const right = Math.min(canvasWidth, Math.ceil(rect.x + rect.width));
+  const bottom = Math.min(canvasHeight, Math.ceil(rect.y + rect.height));
   return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
 }
 

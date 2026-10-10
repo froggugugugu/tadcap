@@ -270,10 +270,13 @@ export function setTextMeasurer(measurer: TextMeasurer | null): void {
   measureText = measurer;
 }
 
-/** 選択中のオブジェクトの色を変える(取り消せる`update`、T34)。選択が無い・同じ色なら`false`。 */
+/**
+ * 選択中のオブジェクトの色を変える(取り消せる`update`、T34)。選択が無い・同じ色・色を持たない穴
+ * (QE-T15、ARCH_quick-edits §5.3)なら`false`。
+ */
 export function setSelectedColor(color: string): boolean {
   const selected = findObject(state.objects, state.selectedId);
-  if (!selected || selected.shape.color === color) {
+  if (!selected || selected.shape.kind === "spotlight" || selected.shape.color === color) {
     // ピッカーの下書き(`previewSelectedColor`)が残っていれば消す。
     if (state.draft) {
       setDraft(null);
@@ -286,7 +289,8 @@ export function setSelectedColor(color: string): boolean {
 /** 選択中のオブジェクトを指定色で下書き表示する(カラーピッカー操作中、確定は`setSelectedColor`)。 */
 export function previewSelectedColor(color: string): void {
   const selected = findObject(state.objects, state.selectedId);
-  if (selected) {
+  // 穴は色を持たない(QE-T15)。
+  if (selected && selected.shape.kind !== "spotlight") {
     setDraft({ id: selected.id, shape: { ...selected.shape, color } });
   }
 }

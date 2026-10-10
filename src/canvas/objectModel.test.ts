@@ -12,7 +12,7 @@ import {
   replaceObjectShape,
   type AnnotationObject,
 } from "./objectModel";
-import type { ArrowShape, BoxShape, StampShape } from "./shapeEdit";
+import type { ArrowShape, BoxShape, SpotlightShape, StampShape } from "./shapeEdit";
 import { stampShapeDiameter } from "./tools/stampShape";
 
 const W = 400;
@@ -176,5 +176,35 @@ describe("pickBurnTarget(上限の焼き込み先、ARCH_quick-edits §15 #2)", 
   it("焼き込めるものが無ければ null(空・番号スタンプだけ)", () => {
     expect(pickBurnTarget([])).toBeNull();
     expect(pickBurnTarget([obj(1, numberStamp), obj(2, numberStamp)])).toBeNull();
+  });
+});
+
+describe("穴(スポットライト、QE-T15)", () => {
+  const hole: SpotlightShape = { kind: "spotlight", rect: { x: 100, y: 100, width: 100, height: 60 } };
+  const numberStamp: StampShape = {
+    kind: "stamp",
+    center: { x: 50, y: 50 },
+    glyph: "number",
+    color: COLOR,
+    fontSize: "medium",
+  };
+
+  it("未選択の穴は枠の付近だけで掴める(内側・離れた外側は掴まない)", () => {
+    expect(hitTestObjectOutline(hole, { x: 100, y: 130 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(hole, { x: 150, y: 160 }, 6, W, H)).toBe(true);
+    // 角も掴める(穴は角丸ではない)
+    expect(hitTestObjectOutline(hole, { x: 200, y: 100 }, 6, W, H)).toBe(true);
+    expect(hitTestObjectOutline(hole, { x: 150, y: 130 }, 6, W, H)).toBe(false);
+    expect(hitTestObjectOutline(hole, { x: 150, y: 40 }, 6, W, H)).toBe(false);
+    expect(pickObjectAt([obj(1, hole)], { x: 150, y: 130 }, 6, W, H)).toBeNull();
+  });
+
+  it("pickBurnTarget: 穴と番号スタンプを飛ばす", () => {
+    expect(pickBurnTarget([obj(1, hole), obj(2, numberStamp), obj(3, hole), obj(4, arrow)])).toBe(3);
+  });
+
+  it("pickBurnTarget: 全部が穴(または穴と番号スタンプだけ)なら null", () => {
+    expect(pickBurnTarget([obj(1, hole), obj(2, hole)])).toBeNull();
+    expect(pickBurnTarget([obj(1, hole), obj(2, numberStamp)])).toBeNull();
   });
 });
