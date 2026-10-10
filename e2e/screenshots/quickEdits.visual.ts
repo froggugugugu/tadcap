@@ -3,7 +3,9 @@
 //! QE-T13: スタンプ — 番号 1 桁・2 桁と記号 4 種 × 小・中・大を明るい画像・暗い画像に置き、
 //! 黄の丸の黒い記号と選択の輪も写す。あわせてスタンプの種類を出したツールバーを撮る。
 //! 画像は UI §2.3 の例と同じ 2080 × 1204(直径 小 47・中 70・大 104px)。
-//! スポットライト(QE-T16)・トリミング(QE-T23)はそれぞれのタスクで本ファイルに足す。
+//! QE-T16: スポットライト — 重なる穴 2 つと離れた穴 1 つ(選択中: 四隅の丸ハンドル + 破線の枠)、
+//! 穴の外の矢印・スタンプを明るい画像・暗い画像で撮る。あわせてスポットライトを選んだツールバーを撮る。
+//! トリミング(QE-T23)はそのタスクで本ファイルに足す。
 //!
 //! 出力: `output/reports/ui/quick-edits-*.png`。本ファイルだけを撮るとき:
 //! `npx playwright test --config=e2e/screenshots/playwright.config.ts e2e/screenshots/quickEdits.visual.ts`
@@ -160,6 +162,73 @@ test.describe("スタンプ(QE-T13)", () => {
     // ボタンの色の切り替わり(150ms の transition)を終えてから撮る。
     await toolbar.screenshot({
       path: path.join(OUTPUT_DIR, "quick-edits-toolbar-stamp.png"),
+      animations: "disabled",
+    });
+  });
+});
+
+async function dragAt(page: Page, canvas: Locator, from: Point, to: Point): Promise<void> {
+  const box = await canvas.boundingBox();
+  if (!box) {
+    throw new Error("#capture-canvas is not visible");
+  }
+  const toViewport = (p: Point): Point => [box.x + (p[0] * box.width) / WIDTH, box.y + (p[1] * box.height) / HEIGHT];
+  const [fx, fy] = toViewport(from);
+  const [tx, ty] = toViewport(to);
+  await page.mouse.move(fx, fy);
+  await page.mouse.down();
+  await page.mouse.move(tx, ty, { steps: 8 });
+  await page.mouse.up();
+}
+
+/**
+ * 重なる穴 2 つ(左上)と離れた穴 1 つ(右下、最後に開けて選択中のまま)を開け、穴の外に矢印と
+ * 番号スタンプを置く(穴の外の注釈は明るいまま、UI §3.2)。選択中の穴は四隅の丸ハンドル + 白の実線と
+ * 濃い破線の枠(UI §3.3)。
+ */
+async function placeSpotlightSheet(page: Page, canvas: Locator): Promise<void> {
+  await page.getByRole("button", { name: "矢印(A)" }).click();
+  await dragAt(page, canvas, [1100, 260], [1700, 260]);
+  await page.getByRole("button", { name: "スタンプ(N)" }).click();
+  await clickAt(page, canvas, [1850, 260]);
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "スポットライト(S)" }).click();
+  const holes: Array<[Point, Point]> = [
+    [[160, 140], [760, 560]],
+    [[560, 420], [1060, 860]],
+    [[1300, 640], [1900, 1060]],
+  ];
+  for (const [i, [from, to]] of holes.entries()) {
+    await dragAt(page, canvas, from, to);
+    if (i < holes.length - 1) {
+      await page.keyboard.press("Escape");
+    }
+  }
+  await expect(page.getByRole("button", { name: "最背面へ(⌘⇧B)" })).toBeEnabled();
+}
+
+test.describe("スポットライト(QE-T16)", () => {
+  test("明るい画像: 重なる穴 2 つ・選択中の穴、穴の外の矢印・スタンプ", async ({ page }) => {
+    const canvas = await openWithImage(page, LIGHT_PNG);
+    await placeSpotlightSheet(page, canvas);
+    await nextFrame(page);
+    await page.locator(".canvas-area").screenshot({ path: path.join(OUTPUT_DIR, "quick-edits-spotlight-light.png") });
+  });
+
+  test("暗い画像: 重なる穴 2 つ・選択中の穴、穴の外の矢印・スタンプ", async ({ page }) => {
+    const canvas = await openWithImage(page, DARK_PNG);
+    await placeSpotlightSheet(page, canvas);
+    await nextFrame(page);
+    await page.locator(".canvas-area").screenshot({ path: path.join(OUTPUT_DIR, "quick-edits-spotlight-dark.png") });
+  });
+
+  test("ツールバー: スポットライトを選んだ状態(モザイクの後ろ)", async ({ page }) => {
+    await openWithImage(page, LIGHT_PNG);
+    await page.getByRole("button", { name: "スポットライト(S)" }).click();
+    await expect(page.getByRole("button", { name: "スポットライト(S)" })).toHaveAttribute("aria-pressed", "true");
+    await page.locator("header.toolbar").screenshot({
+      path: path.join(OUTPUT_DIR, "quick-edits-toolbar-spotlight.png"),
       animations: "disabled",
     });
   });

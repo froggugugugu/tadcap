@@ -31,6 +31,7 @@
 //! 区切りは見た目だけで、グループの `role="group"` は 1 つのまま。
 //!
 //! QE-T13: スタンプ(N)のボタンを描く注釈の組の最後(テキストの直後)に加えた(UI_quick-edits §1.1・§1.2)。
+//! QE-T16: スポットライト(S)のボタンを画像を変える組のモザイクの後ろに加えた(UI_quick-edits §1.1・§1.2)。
 
 import {
   getCanvasState,
@@ -110,6 +111,16 @@ const TOOLS: ToolDefinition[] = [
       '<rect x="11" y="3" width="6" height="6" rx="1" fill="currentColor" opacity="0.45"/>' +
       '<rect x="3" y="11" width="6" height="6" rx="1" fill="currentColor" opacity="0.45"/>' +
       '<rect x="11" y="11" width="6" height="6" rx="1" fill="currentColor"/>' +
+      "</svg>",
+  },
+  {
+    // QE-T16: スポットライト(S)。外側を薄く塗り、穴を輪郭で示す(UI_quick-edits §1.2)。モザイクの後ろ。
+    id: "spotlight",
+    group: "image",
+    icon:
+      '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
+      '<path d="M2 3.5h16v13H2ZM5.5 7v6h9V7Z" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>' +
+      '<rect x="5.5" y="7" width="9" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
       "</svg>",
   },
 ];

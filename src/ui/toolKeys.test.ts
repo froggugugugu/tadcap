@@ -41,6 +41,7 @@ describe("toolKeyTarget", () => {
     ["KeyT", "text"],
     ["KeyN", "stamp"],
     ["KeyM", "mosaic"],
+    ["KeyS", "spotlight"],
   ] as const)("%s は %s を返す", (code, tool) => {
     expect(toolKeyTarget(keyEvent(code), context())).toBe(tool);
   });
@@ -105,8 +106,7 @@ describe("toolKeyTarget", () => {
     expect(toolKeyTarget(keyEvent("Digit1"), context())).toBeNull();
   });
 
-  it("まだ無いツールのキー(KeyS・KeyC)は扱わない", () => {
-    expect(toolKeyTarget(keyEvent("KeyS"), context())).toBeNull();
+  it("まだ無いツールのキー(KeyC)は扱わない", () => {
     expect(toolKeyTarget(keyEvent("KeyC"), context())).toBeNull();
   });
 
@@ -124,6 +124,7 @@ describe("toolLabel", () => {
     expect(toolLabel("text")).toBe("テキスト(T)");
     expect(toolLabel("stamp")).toBe("スタンプ(N)");
     expect(toolLabel("mosaic")).toBe("モザイク(M)");
+    expect(toolLabel("spotlight")).toBe("スポットライト(S)");
   });
 
   it("全ツールが「名前(キー)」の形(半角かっこ・空白なし・大文字 1 文字)", () => {

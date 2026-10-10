@@ -146,6 +146,9 @@ Undoスタックのエントリでは「焼き込み前」、Redoスタックの
 上限の焼き込みは番号スタンプを選ばない(全部が番号スタンプなら追加しない)。
 これから置くスタンプの種類は`toolSettings.stampKind`(`StampGlyph`、既定`"number"`。取り消し対象外・永続化しない。
 `ui/stampKindPicker.ts`で切り替え、選択中のスタンプの`glyph`は変えない。QE-T12・T13)。
+【QE-T15・T16】スポットライトの穴`SpotlightShape = {kind:"spotlight", rect}`(`shapeEdit.ts`。色・文字サイズを持たず、`setSelectedColor()`・`setSelectedFontSize()`は穴では何もしない)。
+穴そのものは何も描かず、合成でベースの上に穴の和の外側を`SPOTLIGHT_SHADE`(黒 50%)で 1 回だけ塗る(下書きの穴も含む)。穴以外の注釈は暗さの上に描くので明るいまま。
+**上限で焼き込まない種類**: 穴と番号スタンプ(`pickBurnTarget()`が飛ばす。全部がこの 2 種なら追加しない)。ツールは`ToolId`の`"spotlight"`(`S`キー)。
 テキストの`x`/`top`は行ボックスの左端・上端、フォント実寸は`fontSize`と画像サイズから算出、`metrics`は`measureText()`の
 `width`・`actualBoundingBox{Left,Right,Ascent,Descent}`・`fontBoundingBox{Ascent,Descent}`)。
 `hiddenId`(T33): 再編集中で描画から一時的に外しているテキストのid(取り消し対象外)。

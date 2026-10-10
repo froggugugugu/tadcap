@@ -25,6 +25,10 @@
 //! (`placedStamp()`)。選択中のスタンプは円の外側に輪を描く(ハンドルは出さない、UI_quick-edits §2.5)。
 //! 50個の上限で追加されなかったら`onObjectLimit`を呼ぶ(通知は`main.ts`が結ぶ。`canvas/`→`ui/`の
 //! 依存を作らない、TASK_quick-edits【要確認】#5)。
+//!
+//! QE-T16: スポットライトツールは矩形と同じドラッグで穴の下書きを出し、離して`addShapeObject()`(1手。
+//! 上限はQE-T12の通知)。選択中の穴は四隅の丸ハンドル + 白の実線と濃い破線の枠をオーバーレイに描く
+//! (UI_quick-edits §3.3。穴そのものは合成で何も描かないため、枠が無いと選択が分からない)。
 
 import {
   getCanvasState,
@@ -179,6 +183,24 @@ function renderOverlay(
     ctx.restore();
   }
 
+  // QE-T16: 穴は合成で何も描かない(暗さの境目だけ)ため、選択中は穴の矩形に枠を描く
+  // (白の実線 + 濃色の破線。明るい地・暗い地のどちらでも見えるように、UI_quick-edits §3.3)。
+  if (shape.kind === "spotlight") {
+    const topLeft = toCss({ x: shape.rect.x, y: shape.rect.y });
+    const x = topLeft.x + 0.5;
+    const y = topLeft.y + 0.5;
+    const w = shape.rect.width * scaleX;
+    const h = shape.rect.height * scaleY;
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = HANDLE_FILL;
+    ctx.strokeRect(x, y, w, h);
+    ctx.strokeStyle = HANDLE_STROKE;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  }
+
   // T33: テキストはハンドルを持たないため、行ボックスを枠で示す(白の実線+濃色の点線にして
   // 明るい背景・暗い背景のどちらでも見えるようにする)。
   if (shape.kind === "text") {
@@ -240,7 +262,7 @@ export interface ShapeToolsOptions {
 }
 
 /**
- * 矢印・矩形・円・スタンプツールとオブジェクトの選択・編集をCanvasへ結線する(DOM依存、E2Eで検証)。
+ * 矢印・矩形・円・スタンプ・スポットライトツールとオブジェクトの選択・編集をCanvasへ結線する(DOM依存、E2Eで検証)。
  * 戻り値は購読解除関数。
  */
 export function bindShapeTools(canvas: HTMLCanvasElement, options: ShapeToolsOptions = {}): () => void {
@@ -306,7 +328,11 @@ export function bindShapeTools(canvas: HTMLCanvasElement, options: ShapeToolsOpt
       canvas.style.cursor = "";
       return;
     }
-    const { objects } = getDocumentState();
+    // QE-T16: スポットライトツールは穴だけを掴む(`decidePointerDown()`と同じ)。
+    const objects =
+      tool === "spotlight"
+        ? getDocumentState().objects.filter((object) => object.shape.kind === "spotlight")
+        : getDocumentState().objects;
     const shape = selectedShape();
     const tolerance = hitTolerance();
     const hit = shape ? hitTestShape(shape, point, tolerance, canvas.width, canvas.height) : null;

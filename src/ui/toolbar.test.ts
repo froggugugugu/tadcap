@@ -100,7 +100,7 @@ describe("toolButtonAttributes", () => {
 // QE-T03: ツールの 2 組(描く注釈 ┆ 画像を変える)と区切り(UI_quick-edits §1.1)。
 describe("toolbarItems(ツールの並びと組の区切り)", () => {
   it("描く注釈の組 → 区切り → 画像を変える組の順に並ぶ", () => {
-    expect(toolbarItems()).toEqual(["arrow", "rectangle", "ellipse", "text", "stamp", "divider", "mosaic"]);
+    expect(toolbarItems()).toEqual(["arrow", "rectangle", "ellipse", "text", "stamp", "divider", "mosaic", "spotlight"]);
   });
 
   it("区切りは組の間に 1 本だけ(先頭・末尾・連続には入らない)", () => {
@@ -125,6 +125,7 @@ describe("toolbarItems(ツールの並びと組の区切り)", () => {
       ["text", "annotate"],
       ["stamp", "annotate"],
       ["mosaic", "image"],
+      ["spotlight", "image"],
     ]);
   });
 

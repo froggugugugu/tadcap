@@ -92,7 +92,7 @@ test.describe("ツールの 1 キー切替(QE-T02)", () => {
     await page.keyboard.press("m");
     await expect(toolButton(page, "モザイク(M)")).toHaveAttribute("aria-pressed", "false");
     // 割り当てのないキー・まだ無いツールのキーは何もしない。
-    for (const key of ["z", "1", "s", "c"]) {
+    for (const key of ["z", "1", "c"]) {
       await page.keyboard.press(key);
     }
     await expect(page.locator(".tool-toolbar__button[aria-pressed='true']")).toHaveCount(0);
