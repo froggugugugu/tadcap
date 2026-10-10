@@ -563,3 +563,77 @@ describe("穴(スポットライト、QE-T15、ARCH_quick-edits §5.3)", () => {
     });
   });
 });
+
+describe("moveShape: はみ出した注釈の移動(QE-T19、ARCH_quick-edits §5.3)", () => {
+  // 移動の範囲は [min(0, -左端), max(0, 幅 - 右端)](縦も同じ)。トリミングで一部がはみ出した注釈は
+  // はみ出しを増やさない方向には動かせ、範囲が逆転して勝手に跳ばない。
+  const outLeft: BoxShape = { ...rectShape, rect: { x: -30, y: 100, width: 100, height: 50 } };
+
+  it("左へはみ出した矩形は、左へは動かず(跳ばない)、右へは動かせる", () => {
+    expect(moveShape(outLeft, { x: -50, y: 0 }, W, H)).toEqual(outLeft);
+    expect(moveShape(outLeft, { x: 0, y: 0 }, W, H)).toEqual(outLeft);
+    expect(moveShape(outLeft, { x: 50, y: 0 }, W, H)).toEqual({
+      ...outLeft,
+      rect: { ...outLeft.rect, x: 20 },
+    });
+    // 縦は画像の内側なので今と同じ範囲。
+    expect(moveShape(outLeft, { x: 0, y: 1000 }, W, H)).toEqual({
+      ...outLeft,
+      rect: { ...outLeft.rect, y: H - 50 },
+    });
+  });
+
+  it("画像より大きくて両側へはみ出した形は、その向きには動かない(範囲が逆転しない)", () => {
+    const wide: BoxShape = { ...rectShape, rect: { x: -50, y: 100, width: 500, height: 50 } };
+    expect(moveShape(wide, { x: 80, y: 0 }, W, H)).toEqual(wide);
+    expect(moveShape(wide, { x: -80, y: 0 }, W, H)).toEqual(wide);
+    expect(moveShape(wide, { x: 0, y: -20 }, W, H)).toEqual({ ...wide, rect: { ...wide.rect, y: 80 } });
+  });
+
+  it("円・穴も矩形と同じ範囲", () => {
+    const ellipse: BoxShape = { ...outLeft, kind: "ellipse" };
+    expect(moveShape(ellipse, { x: -50, y: 0 }, W, H)).toEqual(ellipse);
+    const hole: SpotlightShape = { kind: "spotlight", rect: outLeft.rect, styleBasis: 900 };
+    expect(moveShape(hole, { x: -50, y: 0 }, W, H)).toEqual(hole);
+    expect(moveShape(hole, { x: 10, y: 0 }, W, H)).toEqual({ ...hole, rect: { ...hole.rect, x: -20 } });
+  });
+
+  it("右へはみ出した矢印は、右へは動かず、左へは動かせる", () => {
+    const arrow: ArrowShape = { ...arrowShape, start: { x: 350, y: 150 }, end: { x: 450, y: 150 } };
+    expect(moveShape(arrow, { x: 100, y: 0 }, W, H)).toEqual(arrow);
+    expect(moveShape(arrow, { x: -100, y: 0 }, W, H)).toEqual({
+      ...arrow,
+      start: { x: 250, y: 150 },
+      end: { x: 350, y: 150 },
+    });
+  });
+
+  it("下へはみ出したテキストは、下へは動かず、上へは動かせる(行ボックスで測る)", () => {
+    // 400x300 の「中」= 行の高さ 23px。top 290 なら下端 313(13px はみ出し)。
+    const text: TextShape = {
+      kind: "text",
+      text: "Hi",
+      x: 100,
+      top: 290,
+      fontSize: "medium",
+      color: COLOR,
+      metrics: { width: 40, left: 0, right: 38, ascent: 13, descent: 1, fontAscent: 17, fontDescent: 4 },
+    };
+    expect(moveShape(text, { x: 0, y: 10 }, W, H)).toEqual(text);
+    expect(moveShape(text, { x: 0, y: -10 }, W, H)).toEqual({ ...text, top: 280 });
+  });
+
+  it("はみ出した形を動かしても、はみ出しは増えない(各方向の差分で確かめる)", () => {
+    for (const delta of [
+      { x: -500, y: -500 },
+      { x: 500, y: 500 },
+      { x: -7, y: 3 },
+      { x: 13, y: -9 },
+    ]) {
+      const moved = moveShape(outLeft, delta, W, H) as BoxShape;
+      const overhang = (r: BoxShape["rect"]) =>
+        Math.max(0, -r.x) + Math.max(0, r.x + r.width - W) + Math.max(0, -r.y) + Math.max(0, r.y + r.height - H);
+      expect(overhang(moved.rect)).toBeLessThanOrEqual(overhang(outLeft.rect));
+    }
+  });
+});

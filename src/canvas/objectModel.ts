@@ -7,8 +7,9 @@
 import type { Point, Rect } from "./coords";
 import { hitTestShape, type EditableShape } from "./shapeEdit";
 import { hitStamp, isNumberStamp } from "./tools/stampShape";
-import { computeEllipseCenterAndRadii, ellipseLineWidth } from "./tools/ellipseTool";
-import { rectangleCornerRadius, rectangleLineWidth } from "./tools/rectangleTool";
+import { shapeStyleDiagonal } from "./styleBasis";
+import { computeEllipseCenterAndRadii, ellipseLineWidthForDiagonal } from "./tools/ellipseTool";
+import { rectangleCornerRadius, rectangleLineWidthForDiagonal } from "./tools/rectangleTool";
 
 /**
  * 1画像あたりのオブジェクト上限(人間決定 2026-09-24)。超えた分は重ね順の奥から
@@ -85,7 +86,8 @@ function canBurn(shape: EditableShape): boolean {
  *
  * 【設計判断】選択中のオブジェクト(`shapeEdit.ts::hitTestShape()`)と違い内側は含めない。
  * 内側でも掴めると、大きな枠の中に新しい図形を描こうとしたドラッグが枠の移動になってしまうため。
- * 許容幅は「線の太さ+`tolerance`」(細い線でも画面上一定の幅で掴めるように)。
+ * 許容幅は「線の太さ+`tolerance`」(細い線でも画面上一定の幅で掴めるように)。線の太さは描画と同じく
+ * `shapeStyleDiagonal()`の対角線で決める(トリミング後の`styleBasis`を見る、QE-T19)。
  */
 export function hitTestObjectOutline(
   shape: EditableShape,
@@ -103,19 +105,20 @@ export function hitTestObjectOutline(
     return hitTestShape(shape, point, tolerance, canvasWidth, canvasHeight)?.type === "body";
   }
   const { rect } = shape;
+  const diagonal = shapeStyleDiagonal(shape, canvasWidth, canvasHeight);
   if (shape.kind === "spotlight") {
     // 穴は枠の付近だけ(内側では掴まない、ARCH_quick-edits §5.3)。線は描かないが、掴める幅は矩形と
     // 同じ「線の太さ+`tolerance`」にそろえる。角は丸めない(QE-T15)。
-    const reach = rectangleLineWidth(canvasWidth, canvasHeight) + tolerance;
+    const reach = rectangleLineWidthForDiagonal(diagonal) + tolerance;
     return Math.abs(roundedRectSignedDistance(point, rect, 0)) <= reach;
   }
   if (shape.kind === "rectangle") {
-    const lineWidth = rectangleLineWidth(canvasWidth, canvasHeight);
+    const lineWidth = rectangleLineWidthForDiagonal(diagonal);
     const reach = lineWidth + tolerance;
     // 角丸の枠線(描画と同じ半径)からの距離が掴める幅以内か。角の外側(丸めて線が無い所)は当たらない。
     return Math.abs(roundedRectSignedDistance(point, rect, rectangleCornerRadius(rect, lineWidth))) <= reach;
   }
-  const reach = ellipseLineWidth(canvasWidth, canvasHeight) + tolerance;
+  const reach = ellipseLineWidthForDiagonal(diagonal) + tolerance;
   const { center, radiusX, radiusY } = computeEllipseCenterAndRadii(rect);
   const outer = normalizedRadius(point, center, radiusX + reach, radiusY + reach);
   const innerRx = radiusX - reach;

@@ -279,6 +279,14 @@ export function resizeShape(
 /**
  * 図形を`delta`だけ平行移動する。Canvas外へはみ出さないよう移動量をクランプする
  * (形・大きさは変えない。はみ出した分をクリップすると図形が縮んでしまうため)。
+ *
+ * 移動の範囲は`[min(0, -左端), max(0, 幅 - 右端)]`(縦も同じ、QE-T19、ARCH_quick-edits §5.3)。
+ * 画像の内側の注釈は今と同じ範囲になり、トリミングで一部がはみ出した注釈は「はみ出しを増やさない
+ * 方向」には動かせる(範囲が逆転して勝手に跳ばない)。
+ *
+ * 【設計判断】スタンプは従来どおり中心を半径の分だけ内側へ収める。置く位置を収める
+ * `tools/shapeTools.ts::placedStamp()`が`moveShape(shape, {0, 0})`でこの収め方を使っており、
+ * QE-T19 の変更ファイルに含まれないため(はみ出したスタンプを動かすと内側へ寄る)。
  */
 export function moveShape(
   shape: EditableShape,
@@ -288,8 +296,8 @@ export function moveShape(
 ): EditableShape {
   if (shape.kind === "text") {
     const box = textShapeBox(shape, canvasWidth, canvasHeight);
-    const dx = clamp(delta.x, -box.x, canvasWidth - (box.x + box.width));
-    const dy = clamp(delta.y, -box.y, canvasHeight - (box.y + box.height));
+    const dx = clampMove(delta.x, box.x, box.x + box.width, canvasWidth);
+    const dy = clampMove(delta.y, box.y, box.y + box.height, canvasHeight);
     return { ...shape, x: shape.x + dx, top: shape.top + dy };
   }
   if (shape.kind === "stamp") {
@@ -314,8 +322,8 @@ export function moveShape(
           minY: shape.rect.y,
           maxY: shape.rect.y + shape.rect.height,
         };
-  const dx = clamp(delta.x, -bounds.minX, canvasWidth - bounds.maxX);
-  const dy = clamp(delta.y, -bounds.minY, canvasHeight - bounds.maxY);
+  const dx = clampMove(delta.x, bounds.minX, bounds.maxX, canvasWidth);
+  const dy = clampMove(delta.y, bounds.minY, bounds.maxY, canvasHeight);
   if (shape.kind === "arrow") {
     return {
       ...shape,
@@ -576,6 +584,14 @@ function distanceToSegment(p: Point, a: Point, b: Point): number {
 
 function clampPoint(p: Point, canvasWidth: number, canvasHeight: number): Point {
   return { x: clamp(p.x, 0, canvasWidth), y: clamp(p.y, 0, canvasHeight) };
+}
+
+/**
+ * 1 軸の移動量を`[min(0, -start), max(0, size - end)]`に収める(範囲は常に 0 を含み、逆転しない)。
+ * `start`・`end`は形の左端・右端(上端・下端)、`size`は画像の幅(高さ)。
+ */
+function clampMove(delta: number, start: number, end: number, size: number): number {
+  return clamp(delta, Math.min(0, -start), Math.max(0, size - end));
 }
 
 function clamp(value: number, min: number, max: number): number {

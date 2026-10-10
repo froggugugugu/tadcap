@@ -208,3 +208,34 @@ describe("穴(スポットライト、QE-T15)", () => {
     expect(pickBurnTarget([obj(1, hole), obj(2, numberStamp)])).toBeNull();
   });
 });
+
+describe("hitTestObjectOutline の掴める幅は styleBasis の対角線で決まる(QE-T19)", () => {
+  // 400x300(対角線 500)では線幅 2px。styleBasis 4000 なら線幅 14px(上限)。許容 0 で比べる。
+  const basis = 4000;
+  // 左の辺(x=100)から 10px 外側の点。線幅 2 では届かず、14 なら届く。
+  const nearLeft = { x: 90, y: 130 };
+
+  it("矩形: styleBasis 無しは今と同じ、有りならその対角線の線幅で掴める", () => {
+    expect(hitTestObjectOutline(rect, nearLeft, 0, W, H)).toBe(false);
+    expect(hitTestObjectOutline({ ...rect, styleBasis: basis }, nearLeft, 0, W, H)).toBe(true);
+  });
+
+  it("円: 同じく styleBasis の対角線の線幅で掴める", () => {
+    expect(hitTestObjectOutline(ellipse, nearLeft, 0, W, H)).toBe(false);
+    expect(hitTestObjectOutline({ ...ellipse, styleBasis: basis }, nearLeft, 0, W, H)).toBe(true);
+  });
+
+  it("穴: 同じく styleBasis の対角線の線幅で掴める", () => {
+    const hole: SpotlightShape = { kind: "spotlight", rect: rect.rect };
+    expect(hitTestObjectOutline(hole, nearLeft, 0, W, H)).toBe(false);
+    expect(hitTestObjectOutline({ ...hole, styleBasis: basis }, nearLeft, 0, W, H)).toBe(true);
+  });
+
+  it("画像が小さくなっても(トリミング後)、styleBasis があれば掴める幅は切る前と同じ", () => {
+    // 4000x3000(対角線 5000)で描いた矩形を 400x300 に切った状況: 切る前の線幅は 14px。
+    const before = { ...rect };
+    const after = { ...rect, styleBasis: 5000 };
+    expect(hitTestObjectOutline(before, nearLeft, 0, 4000, 3000)).toBe(true);
+    expect(hitTestObjectOutline(after, nearLeft, 0, W, H)).toBe(true);
+  });
+});
