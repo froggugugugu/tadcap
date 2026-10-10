@@ -17,6 +17,8 @@
 //! 何も描かない(選択の枠・ハンドルはオーバーレイ)。暗さは表示canvasにだけ入り、ベースには入らないため、
 //! コピー・履歴(表示canvasを読む)には写り、自動マスキング・モザイク(ベースを読む、`exportBase()`・
 //! `read()`)は暗さの影響を受けない。合成は`composeDocument()`(偽の`ctx`でユニットテストする)。
+//!
+//! QE-T20: `swapAll()`でベースと表示canvasを同時に別の大きさへ入れ替える(トリミング、ADR-002)。
 
 import type { Rect } from "./coords";
 import { SPOTLIGHT_SHADE, spotlightShadeRects } from "./spotlight";
@@ -251,6 +253,23 @@ export function createDocumentSurface(display: HTMLCanvasElement): DocumentSurfa
         baseCtx.putImageData(toImageData(image), rect.x, rect.y);
         touch();
       }
+    },
+    // トリミングの確定・取り消し・やり直し(QE-T20)。合成は「表示とベースが同じ大きさ」のときだけ描くため、
+    // 両方を同時に`image`の大きさにする(大きさの代入で中身は消える。表示は直後の`render()`で描き直す)。
+    swapAll: (image: ImageDataLike): ImageDataLike => {
+      const previous: ImageDataLike =
+        base.width > 0 && base.height > 0
+          ? baseCtx.getImageData(0, 0, base.width, base.height)
+          : { data: new Uint8ClampedArray(0), width: 0, height: 0 };
+      base.width = image.width;
+      base.height = image.height;
+      display.width = image.width;
+      display.height = image.height;
+      if (image.width > 0 && image.height > 0) {
+        baseCtx.putImageData(toImageData(image), 0, 0);
+      }
+      touch();
+      return previous;
     },
     burn: (shape: EditableShape) => {
       drawEditableShape(baseCtx, shape, base.width, base.height);

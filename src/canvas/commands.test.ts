@@ -15,18 +15,37 @@ const COLOR = "#FF5C8A";
 const box = (x: number): BoxShape => ({ kind: "rectangle", rect: { x, y: 0, width: 10, height: 10 }, color: COLOR });
 const obj = (id: number, x = id * 10): AnnotationObject => ({ id, shape: box(x) });
 
-/** 1チャンネル相当の値で矩形の中身を表す偽のベース(矩形ごとに値を1つ持つ)。 */
-function fakePixels(initial: Record<string, number> = {}): PixelStore & { values: Record<string, number> } {
+/**
+ * 1チャンネル相当の値で矩形の中身を表す偽のベース(矩形ごとに値を1つ持つ)。`whole`はベース全体
+ * (`swapAll`で入れ替わる、QE-T20)。
+ */
+function fakePixels(
+  initial: Record<string, number> = {},
+): PixelStore & { values: Record<string, number>; whole: ImageDataLike } {
   const values = { ...initial };
   const key = (r: Rect) => `${r.x},${r.y},${r.width},${r.height}`;
-  return {
+  const store = {
     values,
-    read: (r) => ({ data: new Uint8ClampedArray([values[key(r)] ?? 0]), width: 1, height: 1 }),
-    write: (r, image) => {
+    whole: { data: new Uint8ClampedArray(0), width: 0, height: 0 } as ImageDataLike,
+    read: (r: Rect) => ({ data: new Uint8ClampedArray([values[key(r)] ?? 0]), width: 1, height: 1 }),
+    write: (r: Rect, image: ImageDataLike) => {
       values[key(r)] = image.data[0]!;
     },
+    swapAll: (image: ImageDataLike) => {
+      const previous = store.whole;
+      store.whole = image;
+      return previous;
+    },
   };
+  return store;
 }
+
+/** `width`×`height`のベース全体(中身は`v`で埋める)。 */
+const wholeImg = (v: number, width: number, height: number): ImageDataLike => ({
+  data: new Uint8ClampedArray(width * height).fill(v),
+  width,
+  height,
+});
 
 const img = (v: number): ImageDataLike => ({ data: new Uint8ClampedArray([v]), width: 1, height: 1 });
 const R: Rect = { x: 0, y: 0, width: 4, height: 4 };
@@ -116,5 +135,50 @@ describe("group", () => {
     const redone = redoCommand(undone.objects, undone.command, pixels);
     expect(redone.objects).toEqual([obj(2), obj(3)]);
     expect(pixels.values[K]).toBe(99);
+  });
+});
+
+describe("crop(トリミング、ベース全体の入れ替え、QE-T20・ADR-002)", () => {
+  const CROP: Rect = { x: 2, y: 3, width: 4, height: 5 };
+
+  it("取り消しで元の大きさのベース全体を書き戻し、切り詰めたベースをやり直し用に持ち替える", () => {
+    const pixels = fakePixels();
+    const cropped = wholeImg(7, 4, 5);
+    const original = wholeImg(1, 10, 10);
+    pixels.whole = cropped; // 実行後の状態: 切り詰めたベース
+    const cmd: DocumentCommand = { type: "crop", rect: CROP, image: original };
+    const undone = undoCommand([obj(1)], cmd, pixels);
+    expect(pixels.whole).toBe(original);
+    expect(undone.objects).toEqual([obj(1)]);
+    expect(undone.command).toEqual({ type: "crop", rect: CROP, image: cropped });
+
+    const redone = redoCommand(undone.objects, undone.command, pixels);
+    expect(pixels.whole).toBe(cropped);
+    expect(redone.command).toEqual(cmd);
+  });
+
+  it("group[crop, update, remove] の取り消しで、消した注釈・形・ベースの大きさが 1 回で戻り、やり直しで再び切り詰める", () => {
+    const pixels = fakePixels();
+    const cropped = wholeImg(7, 4, 5);
+    const original = wholeImg(1, 10, 10);
+    pixels.whole = cropped;
+    const shifted: AnnotationObject = { id: 2, shape: { ...box(18), styleBasis: 500 } };
+    const cmd: DocumentCommand = {
+      type: "group",
+      commands: [
+        { type: "crop", rect: CROP, image: original },
+        { type: "update", id: 2, before: box(20), after: shifted.shape },
+        { type: "remove", object: obj(1), index: 0 },
+        { type: "remove", object: obj(3), index: 1 },
+      ],
+    };
+    // 実行後の状態: obj(1)・obj(3)は消え、obj(2)はずれている。
+    const undone = undoCommand([shifted], cmd, pixels);
+    expect(undone.objects).toEqual([obj(1), obj(2), obj(3)]);
+    expect(pixels.whole).toBe(original);
+
+    const redone = redoCommand(undone.objects, undone.command, pixels);
+    expect(redone.objects).toEqual([shifted]);
+    expect(pixels.whole).toBe(cropped);
   });
 });

@@ -231,6 +231,7 @@ describe("applyMosaicToBase(ベースへのモザイク、粗さは captureSize)
       render: () => {},
       read: (r) => ({ data: new Uint8ClampedArray(r.width * r.height * 4), width: r.width, height: r.height }),
       write: () => {},
+    swapAll: (image) => image,
     };
     return { surface, size };
   }

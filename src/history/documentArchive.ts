@@ -13,7 +13,8 @@
 //! - 取り消しスタックのピクセル(モザイク・上限超過の焼き込み)は、退避時に合計
 //!   [`ARCHIVED_UNDO_BYTES_LIMIT`]へ収める(古い取り消しから捨てる。捨てた操作は取り消せなくなるだけで、
 //!   結果はベース・オブジェクトに残る)。オブジェクトの追加・変更・削除・重ね順はピクセルを持たないため
-//!   ほぼ無料で残る。
+//!   ほぼ無料で残る。トリミング(`crop`)は切る前のベース全体を持つため、上限を超えるとそれより古い手と
+//!   一緒に捨てられ、退避から戻った後はトリミング後の画像から続ける(ADR-002 で許容、QE-T20)。
 //! - 履歴の上限超過で消えた項目の退避は`deleteArchivedDocument()`で消す(`main.ts`)。
 //! - 履歴全体の合計バイト数の上限(`historyStore.ts::HISTORY_BYTES_LIMIT`)の判定には、
 //!   [`archivedDocumentBytes`]の実測値(ベースPNGの`Blob.size` + 取り消しスタックのピクセル)を使う。
@@ -31,11 +32,15 @@ export interface ArchivedDocument {
   snapshot: DocumentSnapshot;
 }
 
-/** コマンドが持つピクセルのバイト数(`pixels`・`flatten`、`group`は中身の合計)。 */
+/**
+ * コマンドが持つピクセルのバイト数(`pixels`・`flatten`・`crop`、`group`は中身の合計)。
+ * `crop`(トリミング、QE-T20)は反対側のベース全体を持つため大きい(5K で約 59MB、ARCH_quick-edits §6.4)。
+ */
 export function commandPixelBytes(command: DocumentCommand): number {
   switch (command.type) {
     case "pixels":
     case "flatten":
+    case "crop":
       return command.image.data.byteLength;
     case "group":
       return command.commands.reduce((sum, child) => sum + commandPixelBytes(child), 0);

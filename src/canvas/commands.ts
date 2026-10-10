@@ -9,6 +9,9 @@
 //! ベースを変える操作はすべてコマンド経由でスタック順に適用されるため、入れ替え時のベースは
 //! 常にそのコマンドの直後(取り消し時)・直前(やり直し時)の状態と一致する。
 //!
+//! トリミング(`crop`、QE-T20・ADR-002)も同じ入れ替え方式で、矩形ではなくベース全体(大きさごと)を
+//! `PixelStore.swapAll()`で入れ替える。
+//!
 //! ベースへの読み書きは`PixelStore`越しに行い、Canvas APIに依存しない(Vitestでは偽物を使う)。
 
 import type { Rect } from "./coords";
@@ -35,6 +38,11 @@ export interface ImageDataLike {
 export interface PixelStore {
   read(rect: Rect): ImageDataLike;
   write(rect: Rect, image: ImageDataLike): void;
+  /**
+   * ベース全体を`image`に入れ替える(大きさも`image`に合わせる。表示側も同じ大きさにする)。
+   * 入れ替える前のベース全体を返す(トリミングの取り消し・やり直し、QE-T20)。
+   */
+  swapAll(image: ImageDataLike): ImageDataLike;
 }
 
 export type DocumentCommand =
@@ -48,6 +56,11 @@ export type DocumentCommand =
   | { type: "pixels"; rect: Rect; image: ImageDataLike }
   /** 上限超過でオブジェクトをベースへ焼き込んだ(`image`は反対側の状態の`rect`のピクセル)。 */
   | { type: "flatten"; object: AnnotationObject; index: number; rect: Rect; image: ImageDataLike }
+  /**
+   * トリミング(QE-T20、ARCH_quick-edits §5.4)。`rect`は切り詰める前の座標での範囲(参照用)、
+   * `image`は反対側の状態のベース全体(取り消し用は切る前、やり直し用は切った後)。
+   */
+  | { type: "crop"; rect: Rect; image: ImageDataLike }
   /** 重ね順の変更(最前面・最背面、T34)。`from`/`to`は配列位置。 */
   | { type: "reorder"; id: number; from: number; to: number }
   /** 1操作で起きた複数のコマンド(追加+焼き込みなど)。 */
@@ -108,6 +121,8 @@ function apply(
       };
     case "pixels":
       return { objects: [...objects], command: { ...command, image: swapPixels(pixels, command.rect, command.image) } };
+    case "crop":
+      return { objects: [...objects], command: { ...command, image: pixels.swapAll(command.image) } };
     case "flatten": {
       const image = swapPixels(pixels, command.rect, command.image);
       return {

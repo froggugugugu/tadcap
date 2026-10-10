@@ -21,6 +21,19 @@ const add = (id: number): DocumentCommand => ({
   object: { id, shape: { kind: "rectangle", rect, color: "#FF5C8A" } },
   index: 0,
 });
+/** トリミング 1 手(`group[crop, update]`)。`bytes`は切る前のベース全体のバイト数(QE-T20)。 */
+const crop = (bytes: number): DocumentCommand => ({
+  type: "group",
+  commands: [
+    { type: "crop", rect, image: img(bytes) },
+    {
+      type: "update",
+      id: 1,
+      before: { kind: "rectangle", rect: { x: 5, y: 5, width: 1, height: 1 }, color: "#FF5C8A" },
+      after: { kind: "rectangle", rect, color: "#FF5C8A", styleBasis: 500 },
+    },
+  ],
+});
 
 describe("commandPixelBytes", () => {
   it("ピクセルを持つコマンド(pixels・flatten、groupの中も)のバイト数を数える", () => {
@@ -32,6 +45,13 @@ describe("commandPixelBytes", () => {
         commands: [add(1), { type: "flatten", object: { id: 2, shape: { kind: "rectangle", rect, color: "#000000" } }, index: 0, rect, image: img(40) }],
       }),
     ).toBe(40);
+  });
+});
+
+describe("commandPixelBytes の crop(トリミング、QE-T20)", () => {
+  it("crop の image(反対側のベース全体)を数え、group の中でも合計する", () => {
+    expect(commandPixelBytes({ type: "crop", rect, image: img(5000) })).toBe(5000);
+    expect(commandPixelBytes(crop(5000))).toBe(5000);
   });
 });
 
@@ -48,6 +68,13 @@ describe("trimUndoToBudget(退避する取り消しスタックのメモリ上�
     // 上限30 → undoのピクセルを捨て切っても35 → redoの最も遠い(先頭)pixels(30)も捨てる。
     // 取り消しは古い方から連続して捨てる(途中だけ抜くと戻す順序が壊れるため)。
     expect(trimUndoToBudget(state, 30)).toEqual({ undo: [], redo: [pixels(5)] });
+  });
+
+  it("トリミング(crop)が捨てられるとそれより古い手も捨てられ、後の手は残る(QE-T20・ARCH_quick-edits §6.4)", () => {
+    const state = { undo: [pixels(10), add(1), crop(100), add(2), pixels(5)], redo: [] };
+    expect(trimUndoToBudget(state, 50)).toEqual({ undo: [add(2), pixels(5)], redo: [] });
+    // 上限に収まるなら crop も残る。
+    expect(trimUndoToBudget(state, 200)).toBe(state);
   });
 
   it("既定の上限は8MB", () => {

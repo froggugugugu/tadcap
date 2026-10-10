@@ -16,6 +16,7 @@
 
 import { redoCommand, undoCommand, type DocumentCommand, type PixelStore } from "./commands";
 import { clipRectToCanvas, roundRect, type Rect } from "./coords";
+import { normalizeCropRect, planCrop } from "./crop";
 import {
   OBJECT_LIMIT,
   findObject,
@@ -271,6 +272,38 @@ export function applyBaseEdits(
   pushCommand({ type: "group", commands });
   commit();
   return commands.length;
+}
+
+/**
+ * トリミングを確定する(QE-T20、ARCH_quick-edits §5.4・§7.1 C-3〜5、ADR-002「取り消しの手の形」)。
+ *
+ * `normalizeCropRect()`で整数化し、何もしない範囲(幅・高さが0、画像全体と同じ)やサーフェスが無ければ
+ * 何も積まず`false`。それ以外は`planCrop()`の計画どおり、残す部分を読んで`swapAll()`でベース(と表示)を
+ * 切り詰め、`group[crop, update…(配列順), remove…(先頭から、消した時点のindex)]`を取り消し1手として積む。
+ * 消えた注釈の選択・非表示は外し、下書きは消す。`captureSize`(モザイクの粗さの基準)は変えない。
+ */
+export function applyCrop(rect: Rect): boolean {
+  if (!surface) {
+    return false;
+  }
+  const { width, height } = surface.size();
+  const area = normalizeCropRect(rect, width, height);
+  if (!area) {
+    return false;
+  }
+  const plan = planCrop(state.objects, area, width, height);
+  const before = surface.swapAll(surface.read(area));
+  const commands: DocumentCommand[] = [
+    { type: "crop", rect: area, image: before },
+    ...plan.updates.map(({ id, before: from, after }): DocumentCommand => ({ type: "update", id, before: from, after })),
+    ...plan.removals.map(({ object, index }): DocumentCommand => ({ type: "remove", object, index })),
+  ];
+  const objects = plan.objects;
+  const keep = (id: number | null): number | null => (findObject(objects, id) ? id : null);
+  state = { objects, selectedId: keep(state.selectedId), draft: null, hiddenId: keep(state.hiddenId) };
+  pushCommand({ type: "group", commands });
+  commit();
+  return true;
 }
 
 /** 最新の操作を取り消す。取り消せなければ`false`。 */

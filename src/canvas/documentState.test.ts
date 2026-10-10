@@ -4,6 +4,7 @@ import type { Rect } from "./coords";
 import {
   addShapeObject,
   applyBaseEdit,
+  applyCrop,
   applyBaseEdits,
   arrangeSelected,
   exportDocumentBase,
@@ -64,6 +65,9 @@ const box = (x: number, y = 10): BoxShape => ({
 
 interface FakeSurface extends DocumentSurface {
   base: Uint8ClampedArray;
+  /** ベースの今の大きさ(トリミングの`swapAll`で変わる、QE-T20)。 */
+  width: number;
+  height: number;
   burned: EditableShape[];
   renders: { objects: readonly AnnotationObject[]; draft: ShapeDraft | null }[];
   resets: number;
@@ -72,38 +76,48 @@ interface FakeSurface extends DocumentSurface {
 
 /** 1画素=1バイトの配列をベースに見立てた偽のサーフェス(DOM無しで状態遷移を検証する)。 */
 function createFakeSurface(): FakeSurface {
-  const base = new Uint8ClampedArray(W * H);
   const fill = (r: Rect, value: number) => {
     for (let y = r.y; y < r.y + r.height; y += 1) {
-      base.fill(value, y * W + r.x, y * W + r.x + r.width);
+      surface.base.fill(value, y * surface.width + r.x, y * surface.width + r.x + r.width);
     }
   };
   const surface: FakeSurface = {
-    base,
+    base: new Uint8ClampedArray(W * H),
+    width: W,
+    height: H,
     burned: [],
     renders: [],
     resets: 0,
     loaded: [],
-    size: () => ({ width: W, height: H }),
+    size: () => ({ width: surface.width, height: surface.height }),
     reset: () => {
       surface.resets += 1;
-      base.fill(0);
+      surface.base.fill(0);
     },
     read: (r) => {
       const data = new Uint8ClampedArray(r.width * r.height);
+      const stride = surface.width;
       for (let y = 0; y < r.height; y += 1) {
-        data.set(base.subarray((r.y + y) * W + r.x, (r.y + y) * W + r.x + r.width), y * r.width);
+        data.set(surface.base.subarray((r.y + y) * stride + r.x, (r.y + y) * stride + r.x + r.width), y * r.width);
       }
       return { data, width: r.width, height: r.height };
     },
     write: (r, image) => {
+      const stride = surface.width;
       for (let y = 0; y < r.height; y += 1) {
-        base.set(image.data.subarray(y * r.width, (y + 1) * r.width), (r.y + y) * W + r.x);
+        surface.base.set(image.data.subarray(y * r.width, (y + 1) * r.width), (r.y + y) * stride + r.x);
       }
+    },
+    swapAll: (image) => {
+      const previous = { data: surface.base, width: surface.width, height: surface.height };
+      surface.base = new Uint8ClampedArray(image.data);
+      surface.width = image.width;
+      surface.height = image.height;
+      return previous;
     },
     burn: (shape) => {
       surface.burned.push(shape);
-      fill(shapeUndoRect(shape, W, H), BURNED);
+      fill(shapeUndoRect(shape, surface.width, surface.height), BURNED);
     },
     editBase: (draw) => draw(null as unknown as CanvasRenderingContext2D),
     load: (image) => {
@@ -949,5 +963,155 @@ describe("captureSize(モザイクの粗さの基準、QE-T18・ADR-002)", () =>
     setDocumentSurface(null);
     resetDocument();
     expect(getCaptureSize()).toBeNull();
+  });
+});
+
+describe("applyCrop(トリミングの確定、QE-T20・ARCH_quick-edits §5.4・§7.1 C・ADR-002)", () => {
+  /** ベースを位置ごとに違う値で埋める(切り詰め・戻しの中身を確かめるため)。 */
+  function paintBase(): Uint8ClampedArray {
+    for (let i = 0; i < surface.base.length; i += 1) {
+      surface.base[i] = i % 251;
+    }
+    return surface.base.slice();
+  }
+  const DIAGONAL = Math.hypot(W, H);
+  const CROP: Rect = { x: 5, y: 5, width: 100, height: 80 };
+
+  it("確定で大きさ・注釈の位置が変わり、範囲の外へ完全に出た注釈は消え、選んでいれば選択が外れる", () => {
+    const original = paintBase();
+    const inside = add(box(10)); // (10,10)-(30,30): 残る
+    const outside = add(box(300, 200)); // 範囲の外: 消える
+    expect(getDocumentState().selectedId).toBe(outside.id);
+    const undoDepth = getUndoStackState().undo.length;
+
+    // 端数は四捨五入される(5.4 → 5、4.6 → 5)。
+    expect(applyCrop({ x: 5.4, y: 4.6, width: 100, height: 80 })).toBe(true);
+
+    expect(surface.size()).toEqual({ width: 100, height: 80 });
+    expect(surface.base[0]).toBe(original[5 * W + 5]);
+    expect(surface.base[79 * 100 + 99]).toBe(original[84 * W + 104]);
+    expect(getDocumentState().objects).toEqual([
+      { id: inside.id, shape: { ...box(5, 5), styleBasis: DIAGONAL } },
+    ]);
+    expect(getDocumentState().selectedId).toBeNull();
+    expect(getDocumentState().draft).toBeNull();
+    // 取り消し 1 手(group[crop, update, remove])。
+    expect(getUndoStackState().undo).toHaveLength(undoDepth + 1);
+    const top = last(getUndoStackState().undo)!;
+    expect(top.type).toBe("group");
+    expect(top.type === "group" && top.commands.map((c) => c.type)).toEqual(["crop", "update", "remove"]);
+    // 撮った時点の大きさ(モザイクの粗さの基準)は変えない。
+    expect(getCaptureSize()).toEqual({ width: W, height: H });
+    // 再描画・通知された。
+    expect(last(surface.renders)?.objects).toEqual(getDocumentState().objects);
+  });
+
+  it("選んでいた注釈が残るなら選択を保つ", () => {
+    paintBase();
+    const inside = add(box(10));
+    applyCrop(CROP);
+    expect(getDocumentState().selectedId).toBe(inside.id);
+  });
+
+  it("1 回の取り消しで元の大きさ・中身・注釈の位置・消えた注釈が戻り、やり直しで再び切り詰める", () => {
+    const original = paintBase();
+    const inside = add(box(10));
+    const outside = add(box(300, 200));
+    applyCrop(CROP);
+    const cropped = surface.base.slice();
+    const croppedObjects = getDocumentState().objects;
+
+    expect(undoDocument()).toBe(true);
+    expect(surface.size()).toEqual({ width: W, height: H });
+    expect(surface.base).toEqual(original);
+    expect(getDocumentState().objects).toEqual([inside, outside]);
+
+    expect(redoDocument()).toBe(true);
+    expect(surface.size()).toEqual({ width: 100, height: 80 });
+    expect(surface.base).toEqual(cropped);
+    expect(getDocumentState().objects).toEqual(croppedObjects);
+  });
+
+  it("トリミングより前のモザイク(pixels)・追加(add)を続けて戻せる", () => {
+    const original = paintBase();
+    const a = add(box(10));
+    const mosaic: Rect = { x: 0, y: 0, width: 50, height: 50 };
+    applyBaseEdit(mosaic, () => {
+      surface.write(mosaic, { data: new Uint8ClampedArray(50 * 50).fill(3), width: 50, height: 50 });
+    });
+    const mosaicked = surface.base.slice();
+    applyCrop(CROP);
+
+    undoDocument(); // トリミング
+    expect(surface.base).toEqual(mosaicked);
+    expect(getDocumentState().objects).toEqual([a]);
+    undoDocument(); // モザイク
+    expect(surface.base).toEqual(original);
+    undoDocument(); // 追加
+    expect(getDocumentState().objects).toEqual([]);
+    expect(canUndo()).toBe(false);
+
+    // やり直しも順に戻る。
+    redoDocument();
+    redoDocument();
+    redoDocument();
+    expect(surface.size()).toEqual({ width: 100, height: 80 });
+    expect(getDocumentState().objects).toEqual([{ id: a.id, shape: { ...box(5, 5), styleBasis: DIAGONAL } }]);
+  });
+
+  it("何もしない範囲(全体と同じ・幅や高さが 0)では手を積まず、画像も変えない", () => {
+    paintBase();
+    add(box(10));
+    const depth = getUndoStackState().undo.length;
+    const renders = surface.renders.length;
+    expect(applyCrop({ x: 0, y: 0, width: W, height: H })).toBe(false);
+    expect(applyCrop({ x: -10, y: -10, width: W + 20, height: H + 20 })).toBe(false);
+    expect(applyCrop({ x: 10, y: 10, width: 0, height: 50 })).toBe(false);
+    expect(applyCrop({ x: 10, y: 10, width: 0.2, height: 50 })).toBe(false);
+    expect(getUndoStackState().undo).toHaveLength(depth);
+    expect(surface.size()).toEqual({ width: W, height: H });
+    expect(surface.renders.length).toBe(renders);
+  });
+
+  it("サーフェスが無ければ何もしない", () => {
+    setDocumentSurface(null);
+    expect(applyCrop(CROP)).toBe(false);
+  });
+
+  it("2 回のトリミングを 2 回の取り消しで順に戻せる(2 回目は styleBasis を変えない)", () => {
+    const original = paintBase();
+    const a = add(box(10));
+    applyCrop(CROP); // 100×80、a は (5,5)
+    const firstBase = surface.base.slice();
+    const firstObjects = getDocumentState().objects;
+    applyCrop({ x: 2, y: 3, width: 50, height: 40 }); // 50×40、a は (3,2)
+    expect(surface.size()).toEqual({ width: 50, height: 40 });
+    expect(getDocumentState().objects).toEqual([{ id: a.id, shape: { ...box(3, 2), styleBasis: DIAGONAL } }]);
+
+    undoDocument();
+    expect(surface.size()).toEqual({ width: 100, height: 80 });
+    expect(surface.base).toEqual(firstBase);
+    expect(getDocumentState().objects).toEqual(firstObjects);
+    undoDocument();
+    expect(surface.size()).toEqual({ width: W, height: H });
+    expect(surface.base).toEqual(original);
+    expect(getDocumentState().objects).toEqual([a]);
+  });
+
+  it("消えた注釈を再編集中(非表示)なら非表示も外す", () => {
+    paintBase();
+    const outside = add(box(300, 200));
+    setHiddenObject(outside.id);
+    applyCrop(CROP);
+    expect(getDocumentState().hiddenId).toBeNull();
+  });
+
+  it("取り消しの手は切る前のベース全体を数える(commandPixelBytes)", () => {
+    paintBase();
+    applyCrop(CROP);
+    expect(commandPixelBytes(last(getUndoStackState().undo)!)).toBe(W * H);
+    undoDocument();
+    // 取り消した後のやり直し側は切り詰めたベースを持つ。
+    expect(commandPixelBytes(last(getUndoStackState().redo)!)).toBe(100 * 80);
   });
 });
