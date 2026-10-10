@@ -22,7 +22,7 @@
 //!
 //! QE-T12: スタンプツールで空白を押すと(`decidePointerDown()`の`place`)押した位置に下書きを出し、
 //! ドラッグで追従、離した位置で`addShapeObject()`(1手)。中心は半径の分だけ画像の内側に収める
-//! (`placedStamp()`)。選択中のスタンプは円の外側に輪を描く(ハンドルは出さない、UI_quick-edits §2.5)。
+//! (`placedStamp()`。移動の範囲とは別の専用の収め方、QE-T21)。選択中のスタンプは円の外側に輪を描く(ハンドルは出さない、UI_quick-edits §2.5)。
 //! 50個の上限で追加されなかったら`onObjectLimit`を呼ぶ(通知は`main.ts`が結ぶ。`canvas/`→`ui/`の
 //! 依存を作らない、TASK_quick-edits【要確認】#5)。
 //!
@@ -55,7 +55,6 @@ import {
   getShapeHandles,
   hitTestShape,
   isShapeTool,
-  moveShape,
   type EditableShape,
   type EditSession,
 } from "../shapeEdit";
@@ -86,7 +85,8 @@ export interface StampStyle {
 
 /**
  * 押した(離した)位置に置くスタンプ(QE-T12、ARCH_quick-edits §7.1 S)。中心は半径の分だけ
- * 画像の内側に収める(移動と同じ`moveShape()`の収め方)。
+ * 画像の内側に収める。移動の`moveShape()`は「はみ出しを増やさない」範囲で、端で押した位置を
+ * 内側へ寄せないため、置くときは専用の収め方を使う(QE-T21)。直径が画像より大きい向きは中央に置く。
  */
 export function placedStamp(
   point: Point,
@@ -95,7 +95,22 @@ export function placedStamp(
   canvasHeight: number,
 ): StampShape {
   const shape: StampShape = { kind: "stamp", center: { x: point.x, y: point.y }, ...style };
-  return moveShape(shape, { x: 0, y: 0 }, canvasWidth, canvasHeight) as StampShape;
+  const radius = stampShapeDiameter(shape, canvasWidth, canvasHeight) / 2;
+  return {
+    ...shape,
+    center: {
+      x: clampCenterInside(point.x, radius, canvasWidth),
+      y: clampCenterInside(point.y, radius, canvasHeight),
+    },
+  };
+}
+
+/** 中心を`[radius, size - radius]`に収める。範囲が逆転する(直径 > 大きさ)ときは中央。 */
+function clampCenterInside(value: number, radius: number, size: number): number {
+  if (size < radius * 2) {
+    return size / 2;
+  }
+  return Math.min(Math.max(value, radius), size - radius);
 }
 
 /**
@@ -324,6 +339,10 @@ export function bindShapeTools(canvas: HTMLCanvasElement, options: ShapeToolsOpt
       canvas.style.cursor = over ? "move" : "crosshair";
       return;
     }
+    if (tool === "crop") {
+      // QE-T21: トリミング中のカーソルは`cropTool.ts`が決める(ここで上書きしない)。
+      return;
+    }
     if (tool !== null && !isShapeTool(tool)) {
       canvas.style.cursor = "";
       return;
@@ -468,7 +487,8 @@ export function bindShapeTools(canvas: HTMLCanvasElement, options: ShapeToolsOpt
   };
 
   const unsubscribeDocument = subscribeDocument((state) => {
-    if (state.selectedId === null && !session && !placing && getCanvasState().activeTool !== "stamp") {
+    const tool = getCanvasState().activeTool;
+    if (state.selectedId === null && !session && !placing && tool !== "stamp" && tool !== "crop") {
       canvas.style.cursor = "";
     }
     redrawOverlay();
@@ -480,7 +500,8 @@ export function bindShapeTools(canvas: HTMLCanvasElement, options: ShapeToolsOpt
       // ツール切替で選択を外す(T31の「ツール切替で確定」に相当)。
       selectObject(null);
       // QE-T12: スタンプツールの空白は置ける印(`crosshair`)。ほかのツールへ移ったら既定に戻す。
-      canvas.style.cursor = state.activeTool === "stamp" ? "crosshair" : "";
+      // QE-T21: トリミングも範囲を描ける印(`cropTool.ts`と同じ値。購読の順に依らずそろう)。
+      canvas.style.cursor = state.activeTool === "stamp" || state.activeTool === "crop" ? "crosshair" : "";
     }
     redrawOverlay();
   });

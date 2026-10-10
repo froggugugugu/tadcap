@@ -35,6 +35,19 @@ describe("placedStamp", () => {
   });
 });
 
+describe("placedStamp: 置く位置の収め方(moveShape の移動範囲とは別)", () => {
+  it("画像の端で押しても、移動の範囲(はみ出しを増やさない)ではなく中心を内側に収める", () => {
+    const radius = stampDiameter("medium", Math.hypot(1000, 600)) / 2;
+    expect(placedStamp({ x: 3, y: 600 }, style, 1000, 600).center).toEqual({ x: radius, y: 600 - radius });
+  });
+
+  it("直径が画像より大きいときは、その向きの中央に置く(範囲が逆転しない)", () => {
+    const diameter = stampDiameter("large", Math.hypot(30, 600));
+    expect(diameter).toBeGreaterThan(30);
+    expect(placedStamp({ x: 0, y: 300 }, { ...style, fontSize: "large" }, 30, 600).center).toEqual({ x: 15, y: 300 });
+  });
+});
+
 describe("addShapeOrNotifyLimit", () => {
   const shape: EditableShape = { kind: "rectangle", rect: { x: 0, y: 0, width: 10, height: 10 }, color: "#FF5C8A" };
 

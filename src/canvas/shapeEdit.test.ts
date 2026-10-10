@@ -282,6 +282,16 @@ describe("decidePointerDown(T32: オブジェクト一般化)", () => {
     }
   });
 
+  it("トリミングツール中は注釈を掴まない(範囲の操作は cropTool、QE-T21)", () => {
+    const point = { x: 101, y: 125 };
+    expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: null, activeTool: "crop" })).toEqual({
+      type: "ignore",
+    });
+    expect(decidePointerDown({ ...base, point, objects: [rectObj], selectedId: 1, activeTool: "crop" })).toEqual({
+      type: "deselect",
+    });
+  });
+
   it("選択中のidが配列に無ければ未選択と同じに扱う", () => {
     expect(
       decidePointerDown({ ...base, objects: [], selectedId: 9, activeTool: "rectangle" }),
@@ -596,6 +606,26 @@ describe("moveShape: はみ出した注釈の移動(QE-T19、ARCH_quick-edits §
     const hole: SpotlightShape = { kind: "spotlight", rect: outLeft.rect, styleBasis: 900 };
     expect(moveShape(hole, { x: -50, y: 0 }, W, H)).toEqual(hole);
     expect(moveShape(hole, { x: 10, y: 0 }, W, H)).toEqual({ ...hole, rect: { ...hole.rect, x: -20 } });
+  });
+
+  it("左上へはみ出したスタンプも同じ範囲(円の外接矩形で測る。左・上へは動かず、右・下へは動かせる)", () => {
+    // 内側へ寄せる収め方はしない(置くときだけ shapeTools.ts の placedStamp() が収める)。
+    const stamp: StampShape = {
+      kind: "stamp",
+      center: { x: -5, y: -3 },
+      glyph: "number",
+      color: COLOR,
+      fontSize: "medium",
+      styleBasis: 500,
+    };
+    expect(moveShape(stamp, { x: -50, y: -50 }, W, H)).toEqual(stamp);
+    expect(moveShape(stamp, { x: 0, y: 0 }, W, H)).toEqual(stamp);
+    expect(moveShape(stamp, { x: 20, y: 10 }, W, H)).toEqual({ ...stamp, center: { x: 15, y: 7 } });
+    const radius = stampShapeDiameter(stamp, W, H) / 2;
+    expect((moveShape(stamp, { x: 1000, y: 1000 }, W, H) as StampShape).center).toEqual({
+      x: W - radius,
+      y: H - radius,
+    });
   });
 
   it("右へはみ出した矢印は、右へは動かず、左へは動かせる", () => {

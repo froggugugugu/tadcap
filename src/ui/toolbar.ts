@@ -32,6 +32,7 @@
 //!
 //! QE-T13: スタンプ(N)のボタンを描く注釈の組の最後(テキストの直後)に加えた(UI_quick-edits §1.1・§1.2)。
 //! QE-T16: スポットライト(S)のボタンを画像を変える組のモザイクの後ろに加えた(UI_quick-edits §1.1・§1.2)。
+//! QE-T21: トリミング(C)のボタンを画像を変える組の最後(ツールの並びの最後)に加えた(UI_quick-edits §1.1・§1.2)。
 
 import {
   getCanvasState,
@@ -121,6 +122,15 @@ const TOOLS: ToolDefinition[] = [
       '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
       '<path d="M2 3.5h16v13H2ZM5.5 7v6h9V7Z" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>' +
       '<rect x="5.5" y="7" width="9" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+      "</svg>",
+  },
+  {
+    // QE-T21: トリミング(C)。かぎ形 2 つ(UI_quick-edits §1.2)。画像の大きさを変える一番強い操作なので最後。
+    id: "crop",
+    group: "image",
+    icon:
+      '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
+      '<path d="M6 2.5V14H17.5M2.5 6H14V17.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
       "</svg>",
   },
 ];

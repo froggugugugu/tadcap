@@ -54,8 +54,8 @@ export function canvasImagePixelRatio(image: CanvasImage | null): CanvasPixelRat
 /** 編集ツールの識別子(T09で型定義、T10で `ui/toolbar.ts` に `"mosaic"` の選択肢を追加、
  * T25で `"rectangle"` を追加した。T26で `"ellipse"` を追加した。T27で `"text"` を追加した。
  * QE-T11で `"stamp"`(番号・記号スタンプ)を追加した。QE-T15で `"spotlight"`(スポットライトの穴)を
- * 追加した。ツールバーのボタン・キーは QE-T16)。 */
-export type ToolId = "arrow" | "mosaic" | "rectangle" | "ellipse" | "text" | "stamp" | "spotlight";
+ * 追加した。ツールバーのボタン・キーは QE-T16)。QE-T21で `"crop"`(トリミング)を追加した。 */
+export type ToolId = "arrow" | "mosaic" | "rectangle" | "ellipse" | "text" | "stamp" | "spotlight" | "crop";
 
 export interface CanvasState {
   image: CanvasImage | null;

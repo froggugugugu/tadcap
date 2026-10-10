@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ToolId } from "../canvas/canvasState";
-import { TOOL_IDS, toolButtonState, type ToolButtonContext } from "./toolbar";
+import { TOOL_IDS, toolButtonState, toolGroupOf, type ToolButtonContext } from "./toolbar";
 import { TOOL_KEYS, toolKeyTarget, toolLabel, type ToolKeyContext, type ToolKeyEvent } from "./toolKeys";
 
 // 修飾キーなしの 1 キーでツールを切り替える判定(QE-T02、ARCH_quick-edits §7.1 手順 K、FR-013)。
@@ -42,6 +42,7 @@ describe("toolKeyTarget", () => {
     ["KeyN", "stamp"],
     ["KeyM", "mosaic"],
     ["KeyS", "spotlight"],
+    ["KeyC", "crop"],
   ] as const)("%s は %s を返す", (code, tool) => {
     expect(toolKeyTarget(keyEvent(code), context())).toBe(tool);
   });
@@ -106,8 +107,16 @@ describe("toolKeyTarget", () => {
     expect(toolKeyTarget(keyEvent("Digit1"), context())).toBeNull();
   });
 
-  it("まだ無いツールのキー(KeyC)は扱わない", () => {
-    expect(toolKeyTarget(keyEvent("KeyC"), context())).toBeNull();
+  it("トリミング(KeyC)は修飾なしだけ。⌘C(コピー)は奪わない(QE-T21)", () => {
+    expect(toolKeyTarget(keyEvent("KeyC"), context())).toBe("crop");
+    expect(toolKeyTarget(keyEvent("KeyC", { metaKey: true }), context())).toBeNull();
+  });
+
+  it("自動マスキングの処理中・確認中はトリミングを始められない(キー・ボタンとも無効、QE-T21)", () => {
+    expect(toolKeyTarget(keyEvent("KeyC"), context({ isMasking: true }))).toBeNull();
+    expect(toolButtonState("crop", { activeTool: null, isDrawing: false, isMasking: true }).disabled).toBe(true);
+    expect(toolButtonState("crop", { activeTool: "crop", isDrawing: false, isMasking: true }).disabled).toBe(true);
+    expect(toolButtonState("crop", { activeTool: null, isDrawing: false, isMasking: false }).disabled).toBe(false);
   });
 
   it("event.key が日本語入力の文字でも event.code で引ける", () => {
@@ -125,6 +134,7 @@ describe("toolLabel", () => {
     expect(toolLabel("stamp")).toBe("スタンプ(N)");
     expect(toolLabel("mosaic")).toBe("モザイク(M)");
     expect(toolLabel("spotlight")).toBe("スポットライト(S)");
+    expect(toolLabel("crop")).toBe("トリミング(C)");
   });
 
   it("全ツールが「名前(キー)」の形(半角かっこ・空白なし・大文字 1 文字)", () => {
@@ -142,6 +152,11 @@ describe("表の整合(toolbar の TOOLS と TOOL_KEYS)", () => {
   it("code が重複しない", () => {
     const codes = TOOL_KEYS.map((entry) => entry.code);
     expect(new Set(codes).size).toBe(codes.length);
+  });
+
+  it("トリミングはツールバーの最後(画像を変える組の最後、UI_quick-edits §1.1)", () => {
+    expect(TOOL_IDS[TOOL_IDS.length - 1]).toBe("crop");
+    expect(toolGroupOf("crop")).toBe("image");
   });
 
   it("code は修飾なしの英字キー(KeyX)", () => {

@@ -36,6 +36,8 @@ const TOOL_KEYS = [
   { key: "t", name: "テキスト(T)", shortcut: "T" },
   { key: "n", name: "スタンプ(N)", shortcut: "N" },
   { key: "m", name: "モザイク(M)", shortcut: "M" },
+  { key: "s", name: "スポットライト(S)", shortcut: "S" },
+  { key: "c", name: "トリミング(C)", shortcut: "C" },
 ] as const;
 
 function toolButton(page: Page, name: string): Locator {
@@ -88,11 +90,12 @@ test.describe("ツールの 1 キー切替(QE-T02)", () => {
         await expect(toolButton(page, other.name)).toHaveAttribute("aria-pressed", "false");
       }
     }
-    // 最後に選んだモザイクの M をもう一度押すと選択が外れる。
-    await page.keyboard.press("m");
-    await expect(toolButton(page, "モザイク(M)")).toHaveAttribute("aria-pressed", "false");
+    // 最後に選んだツールのキーをもう一度押すと選択が外れる。
+    const last = TOOL_KEYS[TOOL_KEYS.length - 1];
+    await page.keyboard.press(last.key);
+    await expect(toolButton(page, last.name)).toHaveAttribute("aria-pressed", "false");
     // 割り当てのないキー・まだ無いツールのキーは何もしない。
-    for (const key of ["z", "1", "c"]) {
+    for (const key of ["z", "1"]) {
       await page.keyboard.press(key);
     }
     await expect(page.locator(".tool-toolbar__button[aria-pressed='true']")).toHaveCount(0);
@@ -110,7 +113,7 @@ test.describe("ツールの 1 キー切替(QE-T02)", () => {
     const copiesBefore = await getClipboardWriteCount(page);
     await page.keyboard.press("Meta+C");
     await expect.poll(() => getClipboardWriteCount(page)).toBe(copiesBefore + 1);
-    // ⌘C の C(トリミングの予定のキー)でツールは変わらない。
+    // ⌘C の C(トリミングのキー)でもツールは変わらない(修飾付きは奪わない)。
     await expect(toolButton(page, "矩形(R)")).toHaveAttribute("aria-pressed", "true");
 
     await page.keyboard.press("Meta+Z");

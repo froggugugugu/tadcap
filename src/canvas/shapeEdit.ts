@@ -284,9 +284,9 @@ export function resizeShape(
  * 画像の内側の注釈は今と同じ範囲になり、トリミングで一部がはみ出した注釈は「はみ出しを増やさない
  * 方向」には動かせる(範囲が逆転して勝手に跳ばない)。
  *
- * 【設計判断】スタンプは従来どおり中心を半径の分だけ内側へ収める。置く位置を収める
- * `tools/shapeTools.ts::placedStamp()`が`moveShape(shape, {0, 0})`でこの収め方を使っており、
- * QE-T19 の変更ファイルに含まれないため(はみ出したスタンプを動かすと内側へ寄る)。
+ * スタンプも円の外接矩形(中心 ± 半径)で同じ範囲を当てる(QE-T21)。画像の内側のスタンプは従来の
+ * 「中心を半径の分だけ内側に収める」と同じ範囲になる。置く位置を内側へ収めるのは
+ * `tools/shapeTools.ts::placedStamp()`の専用の収め方で、本関数は使わない。
  */
 export function moveShape(
   shape: EditableShape,
@@ -301,11 +301,11 @@ export function moveShape(
     return { ...shape, x: shape.x + dx, top: shape.top + dy };
   }
   if (shape.kind === "stamp") {
-    // 中心を半径の分だけ画像の内側に収める(円が画像の外へはみ出さない、QE-T11)。
+    // 円の外接矩形で測る(画像の内側なら円が画像の外へはみ出さない、QE-T11・QE-T21)。
     const radius = stampShapeDiameter(shape, canvasWidth, canvasHeight) / 2;
     const { center } = shape;
-    const dx = clamp(delta.x, radius - center.x, canvasWidth - radius - center.x);
-    const dy = clamp(delta.y, radius - center.y, canvasHeight - radius - center.y);
+    const dx = clampMove(delta.x, center.x - radius, center.x + radius, canvasWidth);
+    const dy = clampMove(delta.y, center.y - radius, center.y + radius, canvasHeight);
     return { ...shape, center: { x: center.x + dx, y: center.y + dy } };
   }
   const bounds =
@@ -401,7 +401,8 @@ export function decidePointerDown(input: PointerDownInput): PointerDownDecision 
   const selected = findObject(objects, input.selectedId);
   const blank: PointerDownDecision =
     activeTool === "stamp" ? { type: "place", point } : selected ? { type: "deselect" } : { type: "ignore" };
-  if (activeTool === "mosaic") {
+  // モザイク・トリミング(QE-T21)は注釈を掴まない(範囲の操作は各ツールが処理する)。
+  if (activeTool === "mosaic" || activeTool === "crop") {
     return blank;
   }
   const grabbable = grabbableObjects(objects, activeTool);
