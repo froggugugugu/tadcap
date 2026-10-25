@@ -4,7 +4,9 @@
 //! 当たり半径 10px)でリサイズ、範囲の内側のドラッグで移動する。範囲の外の暗さ・白の枠・ハンドルは
 //! Canvas に重ねたオーバーレイ(`pointer-events: none`)にだけ描き、合成には描かない(確定前のコピー・
 //! 履歴は切り詰めていない画像のまま)。Enter で確定(`applyCrop()` → `cancelCrop()` → `onCropped`)、
-//! Esc でやめる。範囲が無いときの Enter / Esc は何もしない(選択の解除などへ渡す)。
+//! Esc でやめる。範囲が無いときの Enter / Esc は何もしない(選択の解除などへ渡す)。帯の「やめる」「確定」
+//! など押せる要素にフォーカスがあるときの Enter はその要素の押下に任せる(`isActivatableTarget()`。
+//! 「やめる」で Enter を押しても確定にならない、UI_quick-edits §4.3、レビュー 2026-10-26)。
 //!
 //! 確定の通知(トースト)は`onCropped`で`main.ts`から受ける(`canvas/`→`ui/`の依存を作らない、
 //! TASK_quick-edits【要確認】#5)。やめる条件(ツールの変化・自動マスキングの開始・ドキュメントの大きさの
@@ -171,6 +173,35 @@ export function cropShadeRects(rect: Rect, canvasWidth: number, canvasHeight: nu
   return rects.filter((r) => r.width > 0 && r.height > 0);
 }
 
+/** keydown の`target`のうち判定に使う部分(`HTMLElement`がそのまま当てはまる。テストでは素のオブジェクト)。 */
+export interface CropKeyTargetLike {
+  tagName?: string;
+  /** `role`属性(`Element.role`の反映)。 */
+  role?: string | null;
+  isContentEditable?: boolean;
+}
+
+/** Enter に既定の動作(押下・送信・改行)がある要素のタグ。 */
+const ACTIVATABLE_TAGS = new Set(["BUTTON", "A", "INPUT", "SELECT", "TEXTAREA", "SUMMARY"]);
+
+/**
+ * フォーカス中の要素が Enter で操作できる要素(`button`・`a`・`input`・`select`・`textarea`・`summary`・
+ * `role="button"`・contenteditable)か。`true`ならトリミングは Enter を扱わず既定の動作(ボタンの押下)に任せる。
+ */
+export function isActivatableTarget(target: CropKeyTargetLike | null | undefined): boolean {
+  if (!target) {
+    return false;
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  const tag = target.tagName?.toUpperCase();
+  if (tag !== undefined && ACTIVATABLE_TAGS.has(tag)) {
+    return true;
+  }
+  return target.role?.toLowerCase() === "button";
+}
+
 /** キーの判定に使う`KeyboardEvent`の部分(テストで組み立てられるように)。 */
 export interface CropKeyEvent {
   key: string;
@@ -180,6 +211,8 @@ export interface CropKeyEvent {
   shiftKey: boolean;
   isComposing: boolean;
   defaultPrevented: boolean;
+  /** フォーカス中の要素(`event.target`)。 */
+  target: CropKeyTargetLike | null;
 }
 
 export interface CropKeyContext {
@@ -193,7 +226,8 @@ export interface CropKeyContext {
 /**
  * keydown をトリミングが受けるか(UI_quick-edits §4.2)。範囲がある間の Enter = 確定・Esc = やめる。
  * 範囲が無いとき・ほかのツール・修飾キー付き・IME の変換中・処理済みは`null`(選択の解除などへ渡す)。
- * ドラッグ中は Esc(やめる)だけを受ける。
+ * ドラッグ中は Esc(やめる)だけを受ける。押せる要素(帯の「やめる」「確定」など、`isActivatableTarget()`)に
+ * フォーカスがあるときの Enter も`null`(その要素の押下に任せる。Esc はフォーカス位置に関わらずやめる)。
  */
 export function cropKeyAction(event: CropKeyEvent, context: CropKeyContext): "apply" | "cancel" | null {
   if (
@@ -211,7 +245,7 @@ export function cropKeyAction(event: CropKeyEvent, context: CropKeyContext): "ap
   if (event.key === "Escape") {
     return "cancel";
   }
-  if (event.key === "Enter" && !context.dragging) {
+  if (event.key === "Enter" && !context.dragging && !isActivatableTarget(event.target)) {
     return "apply";
   }
   return null;
@@ -420,11 +454,14 @@ export function bindCropTool(canvas: HTMLCanvasElement, options: CropToolOptions
   };
 
   const handleKeydown = (event: KeyboardEvent): void => {
-    const action = cropKeyAction(event, {
-      activeTool: getCanvasState().activeTool,
-      hasRange: getCropSession() !== null,
-      dragging: drag !== null,
-    });
+    const action = cropKeyAction(
+      { ...pickKeyFields(event), target: event.target as CropKeyTargetLike | null },
+      {
+        activeTool: getCanvasState().activeTool,
+        hasRange: getCropSession() !== null,
+        dragging: drag !== null,
+      },
+    );
     if (!action) {
       return;
     }
@@ -562,6 +599,19 @@ function renderCropOverlay(
       ctx.stroke();
     }
   }
+}
+
+/** `KeyboardEvent`から判定に使うキーと修飾の状態だけを写す(`target`は呼び出し側で付ける)。 */
+function pickKeyFields(event: KeyboardEvent): Omit<CropKeyEvent, "target"> {
+  return {
+    key: event.key,
+    metaKey: event.metaKey,
+    ctrlKey: event.ctrlKey,
+    altKey: event.altKey,
+    shiftKey: event.shiftKey,
+    isComposing: event.isComposing,
+    defaultPrevented: event.defaultPrevented,
+  };
 }
 
 function clamp(value: number, min: number, max: number): number {

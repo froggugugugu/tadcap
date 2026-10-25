@@ -13,6 +13,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { captureAndWaitReady } from "./fixtures/captureReady";
 import { createFixtureCapturePng } from "./fixtures/sampleCapturePng";
 import {
+  emitTauriEvent,
   getClipboardImageStats,
   getClipboardWriteCount,
   installTauriMocks,
@@ -263,5 +264,34 @@ test.describe("キャプチャ→編集→クリップボードコピー→履�
     await expect(page.locator("#capture-status")).toHaveText(
       "画面収録の権限が必要です。",
     );
+  });
+
+  // SHOULD(レビュー 2026-10-26): トレイ・グローバルショートカット起点の失敗(入口2)は、権限未許可以外も黙らず
+  // トーストで知らせる。文言はボタン経由と同じ `captureErrorMessage()` を通し、Rust 側の生の文字列は画面に出さない。
+  test("トレイ・ショートカット起点のキャプチャ失敗(capture://error)は権限以外でもトーストで知らせ、生の文字列は出さない", async ({
+    page,
+  }) => {
+    await installTauriMocks(page, {
+      initialPermissionState: "granted",
+      capture: { kind: "success", result: sampleCaptureResult },
+      captureImageBase64,
+    });
+    await page.goto("/");
+    const banner = page.locator(".permission-banner");
+    const status = page.locator("#capture-status");
+    await expect(banner).toBeHidden();
+    await expect(status).toHaveText("");
+
+    const rawError = "screencapture exited with status 1";
+    await emitTauriEvent(page, "capture://error", rawError);
+    await expect(status).toHaveText("キャプチャに失敗しました。");
+    await expect(banner).toBeHidden();
+    // 原因調査用の生の文字列は console にだけ残す。
+    expect(pageErrors.some((message) => message.includes(rawError))).toBe(true);
+
+    // 権限未許可はこれまでどおりバナー(入口2)。
+    await emitTauriEvent(page, "capture://error", "permission_denied");
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText("画面収録の権限が許可されていません。");
   });
 });

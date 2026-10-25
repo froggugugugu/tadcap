@@ -4,15 +4,16 @@
 //! `aria-keyshortcuts`(`toolbar.ts`)と、`window` の keydown の判定の両方がここを読む。
 //! 判定は `event.code`(物理キー)で引くので、日本語入力がオンでも同じキーで切り替わる。
 //!
-//! 押せるかどうかはツールボタンと同じ `toolButtonState()`(`toolbar.ts`)で決める。`toolbar.ts` が
-//! 本モジュールの `toolLabel()` を読むため、循環を避けて可否の判定は `bindToolKeys()` の引数で
-//! 受け取る(`main.ts` が `toolButtonState()` を渡す)。
+//! 押せるかどうか(画像の有無・描画中・自動マスキングの処理中/確認中)はツールボタンと同じ `toolButtonState()`
+//! (`toolbar.ts`)だけで決め、ここでは判定を持たない(レビュー 2026-10-26)。`toolbar.ts` が本モジュールの
+//! `toolLabel()` を読むため、循環を避けて可否の判定は `bindToolKeys()` の引数で受け取る(`main.ts` が
+//! `toolButtonState()` を渡す)。
 //!
 //! 新しいツールは、ツールを追加するタスクで `TOOL_KEYS` に 1 行足す(PRD_quick-edits §9 Phase 1)。
 //! スタンプ `KeyN` は QE-T13、スポットライト `KeyS` は QE-T16、トリミング `KeyC` は QE-T21 で足した
 //! (修飾なしの C だけ。⌘C のコピーは修飾キー付きなので奪わない)。
 
-import { getCanvasState, toggleActiveTool, type ToolId } from "../canvas/canvasState";
+import { toggleActiveTool, type ToolId } from "../canvas/canvasState";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
 
 export interface ToolKeyEntry {
@@ -69,9 +70,7 @@ export interface ToolKeyEvent {
 }
 
 export interface ToolKeyContext {
-  /** 画像を表示しているか。無いときは切り替えない。 */
-  hasImage: boolean;
-  /** ツールボタンが無効か(`toolButtonState(id, context).disabled`。描画中・自動マスキングの処理中/確認中)。 */
+  /** ツールボタンが無効か(`toolButtonState(id, context).disabled`。画像なし・描画中・自動マスキングの処理中/確認中)。 */
   isToolDisabled: (id: ToolId) => boolean;
 }
 
@@ -97,7 +96,7 @@ export function toolKeyTarget(event: ToolKeyEvent, context: ToolKeyContext): Too
     return null;
   }
   const entry = TOOL_KEYS.find((candidate) => candidate.code === event.code);
-  if (!entry || !context.hasImage || context.isToolDisabled(entry.tool)) {
+  if (!entry || context.isToolDisabled(entry.tool)) {
     return null;
   }
   return entry.tool;
@@ -123,7 +122,7 @@ export function bindToolKeys(isToolDisabled: (id: ToolId) => boolean): () => voi
         defaultPrevented: event.defaultPrevented,
         target: event.target as EditableTargetLike | null,
       },
-      { hasImage: getCanvasState().image !== null, isToolDisabled },
+      { isToolDisabled },
     );
     if (!tool) {
       return;

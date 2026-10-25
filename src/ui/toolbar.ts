@@ -33,6 +33,10 @@
 //! QE-T13: スタンプ(N)のボタンを描く注釈の組の最後(テキストの直後)に加えた(UI_quick-edits §1.1・§1.2)。
 //! QE-T16: スポットライト(S)のボタンを画像を変える組のモザイクの後ろに加えた(UI_quick-edits §1.1・§1.2)。
 //! QE-T21: トリミング(C)のボタンを画像を変える組の最後(ツールの並びの最後)に加えた(UI_quick-edits §1.1・§1.2)。
+//!
+//! レビュー 2026-10-26: 画像が無いとき(起動直後・履歴の全削除)は全ツールボタンを無効にする(1 キー切替が先に
+//! 画像なしを弾いていたのでボタンも同じ判定にそろえる)。画像を消すと選択中のツールも外れる
+//! (`canvasState.ts::withoutImage`)。
 
 import {
   getCanvasState,
@@ -187,24 +191,26 @@ export interface ToolButtonContext {
   isDrawing: boolean;
   /** 自動マスキングの処理中・確認中(`maskSession` が `idle` 以外、AM-T13・AM-T25-F1)。 */
   isMasking: boolean;
+  /** 画像を表示しているか(`canvasState.image !== null`)。無いときはツールを選べない。 */
+  hasImage: boolean;
 }
 
 /** 今のストア(`canvasState`・`maskSession`)からボタンの文脈を組み立てる。 */
 export function currentToolButtonContext(): ToolButtonContext {
-  const { activeTool, isDrawing } = getCanvasState();
-  return { activeTool, isDrawing, isMasking: isMaskSessionActive() };
+  const { activeTool, isDrawing, image } = getCanvasState();
+  return { activeTool, isDrawing, isMasking: isMaskSessionActive(), hasImage: image !== null };
 }
 
 /**
- * ツールボタン 1 つの押下・無効。描画中は選択中以外を、確認中は選択中も含めて全ボタンを無効に
- * する(確認中は押下状態を変えず、確認が終われば同じツールのまま続けられる)。
+ * ツールボタン 1 つの押下・無効。画像が無ければ全ボタンを無効にする。描画中は選択中以外を、確認中は
+ * 選択中も含めて全ボタンを無効にする(確認中は押下状態を変えず、確認が終われば同じツールのまま続けられる)。
  */
 export function toolButtonState(
   id: ToolId,
   context: ToolButtonContext,
 ): { pressed: boolean; disabled: boolean } {
   const pressed = context.activeTool === id;
-  return { pressed, disabled: context.isMasking || (context.isDrawing && !pressed) };
+  return { pressed, disabled: !context.hasImage || context.isMasking || (context.isDrawing && !pressed) };
 }
 
 /**

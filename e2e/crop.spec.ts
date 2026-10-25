@@ -22,8 +22,11 @@ import {
   getClipboardImageStats,
   getClipboardWriteCount,
   getLastClipboardImageSize,
+  getTextScanCalls,
   installTauriMocks,
+  releaseTextScans,
   routeCrossOriginAssets,
+  setTextScanBehavior,
   type MockCaptureResult,
   type MockScanCandidate,
 } from "./fixtures/tauriMock";
@@ -728,6 +731,99 @@ test.describe("トリミング(QE-T23)", () => {
     await expect(cropOverlay(page)).toBeHidden();
     await page.keyboard.press("Enter");
     expect(await canvasSize(canvas)).toEqual({ width: 300, height: 200 });
+    expect(await diffFromSnapshot(canvas, "original")).toBe(0);
+    expect(pageErrors).toEqual([]);
+  });
+
+  // SHOULD(レビュー 2026-10-26): 帯の「やめる」にフォーカスを移して Enter を押しても確定にならない
+  // (Enter は押せる要素の押下に任せる。UI_quick-edits §4.3: Tab の順は「やめる」→「確定」)。
+  test("帯の「やめる」にフォーカスして Enter を押すと範囲が消えるだけで画像の大きさは変わらず、「確定」で Enter なら 1 回だけ切り詰める", async ({
+    page,
+  }) => {
+    const pageErrors = trackPageErrors(page);
+    const png = createFixtureCapturePng();
+    await routeCrossOriginAssets(page, png);
+    await installTauriMocks(page, {
+      initialPermissionState: "granted",
+      capture: { kind: "success", result: captureResult(1) },
+      captureImageBase64: png.toString("base64"),
+    });
+    await page.goto("/");
+    const canvas = await captureAndWaitReady(page);
+    await saveSnapshot(canvas, "original");
+    const rect: Rect = { x: 60, y: 48, width: 120, height: 96 };
+    await cropButton(page).click();
+    await selectRange(page, canvas, rect);
+    const cancel = cropBar(page).getByRole("button", { name: /やめる/ });
+    const confirm = cropBar(page).getByRole("button", { name: /確定/ });
+    await expect(confirm).toBeEnabled();
+
+    // Tab の順は「やめる」→「確定」。
+    await cancel.focus();
+    await expect(cancel).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(cancel).toBeFocused();
+
+    // 「やめる」で Enter: 範囲が消えるだけ(画像はそのまま、ツールはトリミングのまま)。
+    await page.keyboard.press("Enter");
+    await expect(cropOverlay(page)).toBeHidden();
+    await expect(cancel).toBeHidden();
+    expect(await canvasSize(canvas)).toEqual({ width: 300, height: 200 });
+    expect(await diffFromSnapshot(canvas, "original")).toBe(0);
+    await expect(cropBar(page)).toContainText("ドラッグで残す範囲を囲んでください。");
+    await expect(cropButton(page)).toHaveAttribute("aria-pressed", "true");
+
+    // 「確定」で Enter: ボタンの押下として 1 回だけ切り詰める。
+    await selectRange(page, canvas, rect);
+    await confirm.focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(() => canvasSize(canvas)).toEqual({ width: rect.width, height: rect.height });
+    await expect(cropOverlay(page)).toBeHidden();
+    await expect(page.locator("#capture-status")).toHaveText("切り抜きました。⌘Z で戻せます。");
+    expect(pageErrors).toEqual([]);
+  });
+
+  // SHOULD(レビュー 2026-10-26): 自動マスキングの処理中・確認中は帯を隠し、結果バーと 2 本並ばない。
+  test("範囲を囲んで自動マスキングを始めると帯が消え、確認を終えるとツールはそのままで帯が戻る", async ({ page }) => {
+    const pageErrors = trackPageErrors(page);
+    const png = createFixtureCapturePng();
+    const candidates: MockScanCandidate[] = [{ x: 20, y: 20, width: 80, height: 30, kind: "contact" }];
+    await routeCrossOriginAssets(page, png);
+    await installTauriMocks(page, {
+      initialPermissionState: "granted",
+      capture: { kind: "success", result: captureResult(1) },
+      captureImageBase64: png.toString("base64"),
+      textScan: { candidates },
+    });
+    await page.goto("/");
+    const canvas = await captureAndWaitReady(page);
+    await saveSnapshot(canvas, "original");
+    await page.keyboard.press("c");
+    await selectRange(page, canvas, { x: 60, y: 48, width: 120, height: 96 });
+    await expect(cropBar(page)).toBeVisible();
+
+    // 処理中: 結果バーだけが出て帯は無い。範囲も捨てられる。
+    await setTextScanBehavior(page, { candidates, hold: true });
+    await page.getByRole("button", { name: "機密らしい箇所を探す(⌘⇧M)" }).click();
+    const maskBar = page.locator("#mask-bar");
+    await expect(maskBar).toBeVisible();
+    await expect(cropBar(page)).toBeHidden();
+    await expect(cropOverlay(page)).toBeHidden();
+    await expect.poll(async () => (await getTextScanCalls(page)).length).toBe(1);
+    await releaseTextScans(page);
+
+    // 確認中: まだ帯は無い。
+    await expect(page.locator(".mask-bar__count")).toHaveText("候補 1 件");
+    await expect(cropBar(page)).toBeHidden();
+
+    // 確認を終える(やめる): ツールはトリミングのままで、範囲なしの案内の帯が戻る。
+    await maskBar.getByRole("button", { name: /やめる/ }).click();
+    await expect(maskBar).toBeHidden();
+    await expect(cropButton(page)).toHaveAttribute("aria-pressed", "true");
+    await expect(cropBar(page)).toBeVisible();
+    await expect(cropBar(page)).toContainText("ドラッグで残す範囲を囲んでください。");
     expect(await diffFromSnapshot(canvas, "original")).toBe(0);
     expect(pageErrors).toEqual([]);
   });

@@ -29,8 +29,8 @@ function context(
   overrides: Partial<ToolButtonContext> = {},
   hasImage = true,
 ): ToolKeyContext {
-  const button: ToolButtonContext = { activeTool: null, isDrawing: false, isMasking: false, ...overrides };
-  return { hasImage, isToolDisabled: (id: ToolId) => toolButtonState(id, button).disabled };
+  const button: ToolButtonContext = { activeTool: null, isDrawing: false, isMasking: false, hasImage, ...overrides };
+  return { isToolDisabled: (id: ToolId) => toolButtonState(id, button).disabled };
 }
 
 describe("toolKeyTarget", () => {
@@ -98,8 +98,10 @@ describe("toolKeyTarget", () => {
     expect(toolKeyTarget(keyEvent("KeyR"), context({ activeTool: "arrow", isDrawing: true }))).toBeNull();
   });
 
-  it("画像が無いときは扱わない", () => {
+  // SHOULD(レビュー 2026-10-26): 画像なしの判定もボタン(`toolButtonState`)に寄せ、キーとボタンで食い違わない。
+  it("画像が無いときは扱わない(ボタンと同じ判定)", () => {
     expect(toolKeyTarget(keyEvent("KeyA"), context({}, false))).toBeNull();
+    expect(toolKeyTarget(keyEvent("KeyC"), context({ hasImage: false }))).toBeNull();
   });
 
   it("割り当てのないキー(KeyZ・Digit1)は扱わない", () => {
@@ -114,9 +116,9 @@ describe("toolKeyTarget", () => {
 
   it("自動マスキングの処理中・確認中はトリミングを始められない(キー・ボタンとも無効、QE-T21)", () => {
     expect(toolKeyTarget(keyEvent("KeyC"), context({ isMasking: true }))).toBeNull();
-    expect(toolButtonState("crop", { activeTool: null, isDrawing: false, isMasking: true }).disabled).toBe(true);
-    expect(toolButtonState("crop", { activeTool: "crop", isDrawing: false, isMasking: true }).disabled).toBe(true);
-    expect(toolButtonState("crop", { activeTool: null, isDrawing: false, isMasking: false }).disabled).toBe(false);
+    expect(toolButtonState("crop", { activeTool: null, isDrawing: false, isMasking: true, hasImage: true }).disabled).toBe(true);
+    expect(toolButtonState("crop", { activeTool: "crop", isDrawing: false, isMasking: true, hasImage: true }).disabled).toBe(true);
+    expect(toolButtonState("crop", { activeTool: null, isDrawing: false, isMasking: false, hasImage: true }).disabled).toBe(false);
   });
 
   it("event.key が日本語入力の文字でも event.code で引ける", () => {

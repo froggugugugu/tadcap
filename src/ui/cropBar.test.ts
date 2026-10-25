@@ -9,7 +9,7 @@ const W = 1600;
 const H = 900;
 
 function input(rect: Rect | null, overrides: Partial<CropBarInput> = {}): CropBarInput {
-  return { activeTool: "crop", rect, canvasWidth: W, canvasHeight: H, dragging: false, ...overrides };
+  return { activeTool: "crop", rect, canvasWidth: W, canvasHeight: H, dragging: false, masking: false, ...overrides };
 }
 
 describe("formatCropSize(寸法の書式)", () => {
@@ -22,6 +22,14 @@ describe("cropBarView(帯の表示、UI §4.2・§4.3)", () => {
   it("トリミング以外のツール・ツールなしでは隠す", () => {
     expect(cropBarView(input(null, { activeTool: "arrow" })).hidden).toBe(true);
     expect(cropBarView(input(null, { activeTool: null })).hidden).toBe(true);
+  });
+
+  // SHOULD(レビュー 2026-10-26): 自動マスキングの処理中・確認中は帯を隠す(結果バーと 2 本並ばない。範囲は
+  // `cropTool.ts::bindCropCancelConditions()` が捨てる)。確認が終わればツールはそのままなので帯が戻る。
+  it("自動マスキングの処理中・確認中は隠す(終われば戻る)", () => {
+    expect(cropBarView(input(null, { masking: true })).hidden).toBe(true);
+    expect(cropBarView(input({ x: 0, y: 0, width: 10, height: 10 }, { masking: true })).hidden).toBe(true);
+    expect(cropBarView(input(null, { masking: false })).hidden).toBe(false);
   });
 
   it("ツールを選んだ時点(範囲なし)で出し、案内の文だけ。ボタンは出さない", () => {

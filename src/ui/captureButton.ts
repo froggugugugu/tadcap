@@ -59,17 +59,16 @@ async function handleCaptureClick(
 }
 
 /**
- * `invoke()` のreject値から最小限のエラーメッセージを組み立てる純粋関数。
+ * `invoke()` のreject値・`capture://error` のpayloadから利用者向けのエラーメッセージを組み立てる純粋関数。
+ * ボタン経由(本モジュール)とトレイ・ショートカット経由(`main.ts`)の両方がこれを通す。
  *
- * `"permission_denied"` 専用の案内UI(バナー + システム設定を開く導線)は
- * T08で実装するため、T07ではここに最小限の文言を留める。
+ * `"permission_denied"` 専用の案内UI(バナー + システム設定を開く導線)はT08の
+ * `permissionBanner.ts`。それ以外は Rust 側の生の文字列(`AppError::Internal` の中身)を画面に
+ * 出さず汎用の文言にする(原因調査用の詳細は呼び出し側の `console.error` に残す、レビュー 2026-10-26)。
  */
 export function captureErrorMessage(error: unknown): string {
   if (error === "permission_denied") {
     return "画面収録の権限が必要です。";
-  }
-  if (typeof error === "string") {
-    return `キャプチャに失敗しました: ${error}`;
   }
   return "キャプチャに失敗しました。";
 }

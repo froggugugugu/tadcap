@@ -2,6 +2,9 @@
 //!
 //! 自動マスキングの結果バーと同じ作り・同じ位置(ツールバー直後の流し込み、`#crop-bar`)。トリミングツールを
 //! 選んだ時点で出し(範囲を描き始めてから出すと Canvas の位置が下へずれるため)、ツールを外すと消す。
+//! 自動マスキングの処理中・確認中(`maskSession` が `idle` 以外)も隠し、結果バーと 2 本並ばないようにする
+//! (範囲は `cropTool.ts::bindCropCancelConditions()` が捨てる。確認が終わればツールはそのままなので帯が戻る、
+//! レビュー 2026-10-26)。
 //! 状態の文(範囲なし: 案内 / 範囲あり: `残す範囲 W × H` + 補足)と「やめる」「確定」を出す。
 //! 寸法は`normalizeCropRect()`と同じ四捨五入で整数にした画像の実ピクセル(確定した結果と一致する)。
 //! 範囲が画像全体と同じ・幅か高さが 0 のときは確定を押せない(FR-005: 何も変わらない)。
@@ -17,6 +20,7 @@ import type { Rect } from "../canvas/coords";
 import { normalizeCropRect } from "../canvas/crop";
 import { cancelCrop, getCropSession, subscribeCropSession } from "../canvas/cropSession";
 import { subscribeDocument } from "../canvas/documentState";
+import { isMaskSessionActive, subscribeMaskSession } from "../canvas/maskSession";
 import { confirmCrop } from "../canvas/tools/cropTool";
 
 /** 文言(UI_quick-edits §6)。 */
@@ -44,6 +48,8 @@ export interface CropBarInput {
   canvasHeight: number;
   /** 範囲をドラッグ中(`canvasState.isDrawing`)。 */
   dragging: boolean;
+  /** 自動マスキングの処理中・確認中(`isMaskSessionActive()`)。この間は帯を隠す。 */
+  masking: boolean;
 }
 
 export interface CropBarView {
@@ -58,9 +64,9 @@ export interface CropBarView {
   busy: boolean;
 }
 
-/** 帯の表示(UI_quick-edits §4.2・§4.3)。 */
+/** 帯の表示(UI_quick-edits §4.2・§4.3)。トリミングツール以外・自動マスキングの処理中・確認中は隠す。 */
 export function cropBarView(input: CropBarInput): CropBarView {
-  const hidden = input.activeTool !== "crop";
+  const hidden = input.activeTool !== "crop" || input.masking;
   if (!input.rect) {
     return { hidden, status: CROP_BAR_MESSAGES.empty, hint: "", showButtons: false, confirmEnabled: false, busy: false };
   }
@@ -98,8 +104,8 @@ export interface CropBarOptions {
 }
 
 /**
- * `#crop-bar`(`index.html`のツールバー直後)に帯を組み立て、`canvasState`・`cropSession`・`documentState`と
- * 結線する。戻り値は解除関数。
+ * `#crop-bar`(`index.html`のツールバー直後)に帯を組み立て、`canvasState`・`cropSession`・`documentState`・
+ * `maskSession`と結線する。戻り値は解除関数。
  */
 export function initCropBar(mount: HTMLElement, options: CropBarOptions): () => void {
   mount.replaceChildren();
@@ -126,6 +132,7 @@ export function initCropBar(mount: HTMLElement, options: CropBarOptions): () => 
       canvasWidth: options.canvas.width,
       canvasHeight: options.canvas.height,
       dragging: isDrawing,
+      masking: isMaskSessionActive(),
     });
     mount.hidden = view.hidden;
     status.setAttribute("aria-busy", view.busy ? "true" : "false");
@@ -148,6 +155,7 @@ export function initCropBar(mount: HTMLElement, options: CropBarOptions): () => 
     subscribeCanvasState(render),
     subscribeCropSession(render),
     subscribeDocument(render),
+    subscribeMaskSession(render),
   ];
   render();
 

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { clearCanvasImage, setCanvasImage } from "../canvas/canvasState";
 import { beginScan, discardMaskSession } from "../canvas/maskSession";
 import {
   TOOL_GROUP_ORDER,
@@ -13,7 +14,7 @@ import {
 
 // ツールボタンの押下・無効の判定(DOM 結線の `initToolbar` は E2E で確認する)。
 describe("toolButtonState", () => {
-  const base = { activeTool: "arrow" as const, isDrawing: false, isMasking: false };
+  const base = { activeTool: "arrow" as const, isDrawing: false, isMasking: false, hasImage: true };
 
   it("選択中のツールだけ押下状態、通常は全ボタン有効", () => {
     expect(toolButtonState("arrow", base)).toEqual({ pressed: true, disabled: false });
@@ -54,6 +55,23 @@ describe("toolButtonState", () => {
       disabled: false,
     });
   });
+
+  // SHOULD(レビュー 2026-10-26): 画像が無いとき(起動直後・履歴の全削除)はツールを選べない。1 キー切替
+  // (`toolKeys.ts`)が先に画像なしを弾いていたので、ボタンも同じ判定にそろえる(見た目は自動マスキング中の
+  // 無効化と同じ `disabled`)。
+  it("画像が無いときは全ボタンを無効にする", () => {
+    const empty = { ...base, activeTool: null, hasImage: false };
+    expect(toolButtonState("arrow", empty)).toEqual({ pressed: false, disabled: true });
+    expect(toolButtonState("stamp", empty)).toEqual({ pressed: false, disabled: true });
+    expect(toolButtonState("crop", empty)).toEqual({ pressed: false, disabled: true });
+  });
+
+  it("画像があれば元どおり押せる", () => {
+    expect(toolButtonState("crop", { ...base, activeTool: null, hasImage: true })).toEqual({
+      pressed: false,
+      disabled: false,
+    });
+  });
 });
 
 // AM-T25-F1 SHOULD-1: 処理中(`scanning`)も確認中と同じく全ボタンを無効にする。
@@ -64,6 +82,18 @@ describe("currentToolButtonContext(ストアから組み立てる文脈)", () =>
 
   it("idle では isMasking: false(既存どおり押せる)", () => {
     expect(currentToolButtonContext().isMasking).toBe(false);
+  });
+
+  it("画像の有無を hasImage に写す(無ければ全ボタンが無効)", () => {
+    clearCanvasImage();
+    const empty = currentToolButtonContext();
+    expect(empty.hasImage).toBe(false);
+    expect(toolButtonState("arrow", empty).disabled).toBe(true);
+    setCanvasImage({ assetUrl: "blob:toolbar", capture: null });
+    const loaded = currentToolButtonContext();
+    expect(loaded.hasImage).toBe(true);
+    expect(toolButtonState("arrow", loaded).disabled).toBe(false);
+    clearCanvasImage();
   });
 
   it("処理中は isMasking: true になり、全ボタンが無効", () => {

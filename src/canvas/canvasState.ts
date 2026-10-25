@@ -75,9 +75,13 @@ export function withImage(state: CanvasState, image: CanvasImage): CanvasState {
   return { ...state, image };
 }
 
-/** 画像をクリアした新しい状態を返す純粋関数(イミュータブル)。 */
+/**
+ * 画像をクリアし、選択中のツールも外した新しい状態を返す純粋関数(イミュータブル)。画像が無いときはツールを
+ * 選べない(`ui/toolbar.ts::toolButtonState`)ので、履歴の全削除・最後の 1 件の削除で空に戻した画面に
+ * トリミングの帯・スタンプの種類が残らないようにする(レビュー 2026-10-26)。
+ */
 export function withoutImage(state: CanvasState): CanvasState {
-  return { ...state, image: null };
+  return { ...state, image: null, activeTool: null };
 }
 
 /** 選択中ツールをセットした新しい状態を返す純粋関数(イミュータブル、T09)。 */
@@ -136,7 +140,7 @@ export function setCanvasImage(image: CanvasImage): void {
   notify();
 }
 
-/** 画像をクリアし、購読者へ通知する。 */
+/** 画像をクリアし(選択中のツールも外れる、`withoutImage()`)、購読者へ通知する。 */
 export function clearCanvasImage(): void {
   state = withoutImage(state);
   notify();

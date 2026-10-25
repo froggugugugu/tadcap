@@ -57,7 +57,7 @@ import {
   checkScreenRecordingPermission,
   isPermissionDeniedError,
 } from "./ipc/permissions";
-import { initCaptureButton } from "./ui/captureButton";
+import { captureErrorMessage, initCaptureButton } from "./ui/captureButton";
 import { initClipboardButton, isClipboardCopyEnabled } from "./ui/clipboardButton";
 import { initColorPicker } from "./ui/colorPicker";
 import { initFontSizePicker } from "./ui/fontSizePicker";
@@ -107,6 +107,16 @@ function notifyObjectLimit(): void {
   if (statusEl) {
     showToast(statusEl, OBJECT_LIMIT_MESSAGE, "error");
   }
+}
+
+/**
+ * 確定前の編集(自動マスキングの候補・トリミングの範囲。どちらもメモリだけに持つ)を捨てる。画像を差し替える・
+ * 消す経路(新規キャプチャ・履歴の切替・消去)は、差し替えの前と、await を挟んだ差し替えの直後にこれを呼ぶ
+ * (AM-T15・AM-T25-F1・QE-T22。ARCH_auto-masking §7.1 手順11、ARCH_quick-edits §7.1 C-6)。
+ */
+function discardPendingEdits(): void {
+  discardMaskSession();
+  cancelCrop();
 }
 let permissionBanner: PermissionBannerController | null = null;
 /** キャプチャ直後の自動コピー(`ui/clipboardButton.ts`、v0.2.2後)。初期化前は`null`。 */
@@ -184,8 +194,7 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
   try {
     // AM-T15: 画像を差し替える前に自動マスキングの候補を捨てる(処理中の結果も、token の照合で
     // 捨てられる。ARCH_auto-masking §7.1 手順11)。QE-T22: 確定前のトリミング範囲も捨てる。
-    discardMaskSession();
-    cancelCrop();
+    discardPendingEdits();
     // T27: 差し替え前に入力中のテキストを確定し、下の履歴保存に含める(T32: 図形は
     // オブジェクトとして常に表示canvasへ合成済みのため確定は不要)。
     commitPendingText();
@@ -213,8 +222,7 @@ async function handleCaptureCompleted(result: CaptureResult): Promise<void> {
     // AM-T25-F1: 上の await の間(画像が変わる前)に始めた自動マスキングの処理・結果を捨てる
     // (`ui/autoMask.ts::bindMaskSessionToCanvasImage` も画像の変化で捨てる。念のため差し替え直後にも)。
     // QE-T22: 同じ隙間に囲んだトリミング範囲も捨てる(同じ大きさの画像では大きさの変化で捨てられない)。
-    discardMaskSession();
-    cancelCrop();
+    discardPendingEdits();
     const assets = await captureHistoryAssets(canvasEl);
     const evicted = addHistoryItem({
       id: result.id,
@@ -286,10 +294,16 @@ function handleClipboardCopySuccess(): void {
   if (!canvasEl || canvasEl.width === 0 || canvasEl.height === 0) {
     return;
   }
-  void captureHistoryAssets(canvasEl).then((assets) => {
-    updateSelectedItemImage(assets);
-    enforceHistoryMemoryBudget();
-  });
+  void captureHistoryAssets(canvasEl)
+    .then((assets) => {
+      updateSelectedItemImage(assets);
+      enforceHistoryMemoryBudget();
+    })
+    .catch((error: unknown) => {
+      // コピー自体は済んでいるので利用者には知らせない。履歴の画像が前のまま残るだけで、次の保存点
+      // (履歴の切替・次のコピー)で上書きされる。
+      console.warn("コピー後の履歴画像の更新に失敗しました", error);
+    });
 }
 
 /**
@@ -320,8 +334,7 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
   commitPendingText();
   // AM-T15: 画像を差し替える前に自動マスキングの候補を捨てる(ARCH_auto-masking §7.1 手順11)。
   // QE-T22: 確定前のトリミング範囲も捨てる。
-  discardMaskSession();
-  cancelCrop();
+  discardPendingEdits();
   try {
     // T34: 退避したドキュメントがあれば、ベース・オブジェクト・取り消しスタックごと戻す
     // (戻った後もオブジェクトを再調整・取り消しできる)。
@@ -333,8 +346,7 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
       // QE-T08: 履歴の項目の倍率を画像へ戻す(開き直しても同じ大きさで縮む)。
       setCanvasImage({ assetUrl: item.image, capture: null, pixelRatio: historyItemPixelRatio(item) });
       // AM-T25-F1: 上の await の間に始めた自動マスキングの処理・結果を捨てる(新規キャプチャと同じ)。
-      discardMaskSession();
-      cancelCrop();
+      discardPendingEdits();
       return;
     }
     const image = await loadImage(item.image);
@@ -343,8 +355,7 @@ async function reloadHistoryItemIntoCanvas(item: HistoryItem): Promise<void> {
     // T24と同じ理由)。退避が無い場合(T34以前の経路・失敗時)のフォールバック。
     resetDocument();
     setCanvasImage({ assetUrl: item.image, capture: null, pixelRatio: historyItemPixelRatio(item) });
-    discardMaskSession();
-    cancelCrop();
+    discardPendingEdits();
   } catch (error) {
     // 読めなかった項目の選択とCanvasの中身(前の画像)がずれたまま次の保存点を迎えると、別の項目の
     // 内容で上書きしてしまう。エディタを空にして未選択にし、履歴から選び直してもらう(人間の決定)。
@@ -372,8 +383,7 @@ function clearEditor(): void {
   commitPendingText();
   // AM-T15: 画像を消す前に自動マスキングの候補を捨てる(ARCH_auto-masking §7.1 手順11)。
   // QE-T22: 確定前のトリミング範囲も捨てる。
-  discardMaskSession();
-  cancelCrop();
+  discardPendingEdits();
   canvasEl.width = 0;
   canvasEl.height = 0;
   resetDocument();
@@ -553,17 +563,29 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   // 入口2: トレイ・グローバルショートカット起点の `capture://error` イベント
-  // (T15で新設、payloadは `invoke` reject値と同じ文字列形式)。
+  // (T15で新設、payloadは `invoke` reject値と同じ文字列形式)。権限未許可はバナー、それ以外はボタン経由
+  // (`ui/captureButton.ts`)と同じ `captureErrorMessage()` を通したトースト(error)で知らせる(黙って捨てない。
+  // Rust 側の生の文字列は画面に出さず console に残す、レビュー 2026-10-26)。
   void onCaptureError((message) => {
     if (isPermissionDeniedError(message)) {
       showPermissionDeniedBanner();
+      return;
+    }
+    console.error("キャプチャに失敗しました(トレイ・ショートカット起点)", message);
+    if (statusEl) {
+      showToast(statusEl, captureErrorMessage(message), "error");
     }
   });
 
   // 入口3: 起動時の事前確認(ARCH §11 フロントエンド初期化順序#3)。
-  void checkScreenRecordingPermission().then((state) => {
-    if (shouldShowPermissionBanner(state)) {
-      showPermissionDeniedBanner();
-    }
-  });
+  void checkScreenRecordingPermission()
+    .then((state) => {
+      if (shouldShowPermissionBanner(state)) {
+        showPermissionDeniedBanner();
+      }
+    })
+    .catch((error: unknown) => {
+      // 確認できなければバナーは出さない(撮ろうとしたときの失敗で知らせる)。
+      console.warn("画面収録の権限を確認できませんでした", error);
+    });
 });

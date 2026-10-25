@@ -13,6 +13,7 @@ import {
   cropKeyAction,
   cropShadeRects,
   hitTestCrop,
+  isActivatableTarget,
   moveCropRect,
   resizeCropRect,
   shouldCancelCrop,
@@ -165,6 +166,7 @@ function key(keyName: string, overrides: Partial<CropKeyEvent> = {}): CropKeyEve
     shiftKey: false,
     isComposing: false,
     defaultPrevented: false,
+    target: null,
     ...overrides,
   };
 }
@@ -202,6 +204,40 @@ describe("cropKeyAction", () => {
   it("ほかのキーは扱わない", () => {
     expect(cropKeyAction(key("a"), active)).toBeNull();
     expect(cropKeyAction(key("Delete"), active)).toBeNull();
+  });
+
+  // SHOULD(レビュー 2026-10-26): 帯の「やめる」「確定」など、押せる要素にフォーカスがあるときの Enter は
+  // その要素の押下(既定動作)に任せる(UI_quick-edits §4.3: Tab の順は「やめる」→「確定」。「やめる」で
+  // Enter を押しても確定にならない)。Esc はどこにフォーカスがあってもやめる。
+  it("操作できる要素(button・a・input・select・textarea・role=button)にフォーカスがあるときの Enter は扱わない", () => {
+    const targets = [
+      { tagName: "BUTTON" },
+      { tagName: "A" },
+      { tagName: "INPUT" },
+      { tagName: "SELECT" },
+      { tagName: "TEXTAREA" },
+      { tagName: "DIV", role: "button" },
+      { tagName: "div", role: "Button" },
+      { tagName: "DIV", isContentEditable: true },
+    ];
+    for (const target of targets) {
+      expect(cropKeyAction(key("Enter", { target }), active)).toBeNull();
+      expect(isActivatableTarget(target)).toBe(true);
+    }
+  });
+
+  it("canvas・body・操作できない要素にフォーカスがあるときの Enter は確定", () => {
+    expect(cropKeyAction(key("Enter", { target: null }), active)).toBe("apply");
+    expect(cropKeyAction(key("Enter", { target: { tagName: "BODY" } }), active)).toBe("apply");
+    expect(cropKeyAction(key("Enter", { target: { tagName: "CANVAS" } }), active)).toBe("apply");
+    expect(cropKeyAction(key("Enter", { target: { tagName: "DIV", role: "group" } }), active)).toBe("apply");
+    expect(isActivatableTarget(null)).toBe(false);
+    expect(isActivatableTarget({ tagName: "P", role: null })).toBe(false);
+  });
+
+  it("ボタンにフォーカスがあっても Esc はやめる", () => {
+    expect(cropKeyAction(key("Escape", { target: { tagName: "BUTTON" } }), active)).toBe("cancel");
+    expect(cropKeyAction(key("Escape", { target: { tagName: "DIV", role: "button" } }), active)).toBe("cancel");
   });
 });
 

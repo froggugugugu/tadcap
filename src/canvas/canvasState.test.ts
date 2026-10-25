@@ -61,6 +61,36 @@ describe("withoutImage", () => {
 
     expect(next.image).toBeNull();
   });
+
+  // SHOULD(レビュー 2026-10-26): 画像が無いときはツールを選べない(`ui/toolbar.ts::toolButtonState`)ので、
+  // 画像を消すときに選択中のツールも外す。履歴の全削除・最後の 1 件の削除(`main.ts::clearEditor`)で、
+  // 空の画面にトリミングの帯・スタンプの種類が残らない。
+  it("選択中のツールも外す(画像が無いときはツールを選べない)", () => {
+    const state = withActiveTool(
+      withImage(createCanvasState(), { assetUrl: "asset://localhost/x.png", capture }),
+      "crop",
+    );
+
+    const next = withoutImage(state);
+
+    expect(next.image).toBeNull();
+    expect(next.activeTool).toBeNull();
+    expect(state.activeTool).toBe("crop");
+  });
+
+  it("clearCanvasImage() でも選択中のツールが外れ、購読者に通知される", () => {
+    setCanvasImage({ assetUrl: "asset://localhost/x.png", capture });
+    setActiveTool("stamp");
+    const seen: Array<string | null> = [];
+    const unsubscribe = subscribeCanvasState((s) => seen.push(s.activeTool));
+
+    clearCanvasImage();
+
+    unsubscribe();
+    expect(getCanvasState().image).toBeNull();
+    expect(getCanvasState().activeTool).toBeNull();
+    expect(seen).toEqual([null]);
+  });
 });
 
 describe("withActiveTool", () => {
