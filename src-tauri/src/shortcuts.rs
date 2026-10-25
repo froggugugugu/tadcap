@@ -275,12 +275,29 @@ pub(crate) struct CaptureShortcutManager {
 }
 
 impl CaptureShortcutManager {
+    /// 起動時の状態(現在のキーは `current`、OS 未登録、記録中でない)で作る。
+    fn new(current: Shortcut) -> Self {
+        Self {
+            state: Mutex::new(CaptureShortcutState {
+                current,
+                registered: false,
+                recording: false,
+            }),
+            change_lock: tauri::async_runtime::Mutex::new(()),
+        }
+    }
+
     fn snapshot(&self) -> CaptureShortcutState {
         *self.state.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn update(&self, f: impl FnOnce(&mut CaptureShortcutState)) {
         f(&mut self.state.lock().unwrap_or_else(|e| e.into_inner()));
+    }
+
+    /// 設定画面でキーを記録している最中かを変える。
+    fn set_recording(&self, recording: bool) {
+        self.update(|state| state.recording = recording);
     }
 }
 
@@ -315,8 +332,19 @@ pub(crate) fn capture_shortcut_info(app: &AppHandle) -> CaptureShortcutInfo {
 
 /// キーを記録している最中かを設定する(`set_shortcut_recording`)。
 pub(crate) fn set_recording(app: &AppHandle, recording: bool) {
-    app.state::<CaptureShortcutManager>()
-        .update(|state| state.recording = recording);
+    app.state::<CaptureShortcutManager>().set_recording(recording);
+}
+
+/// 記録中フラグを下ろす(`lib.rs` の webview のページ読み込み・ウィンドウの閉じる要求・破棄から呼ぶ)。
+///
+/// フラグを立てる・下ろすのはフロントの IPC(`set_shortcut_recording`)だけなので、記録中に webview が
+/// 再読込・クラッシュすると `false` が届かず、再起動までキャプチャのキーが効かなくなる。それらの時点では
+/// 設定モーダルは存在しない(=記録中ではありえない)ため、ここで無条件に下ろす。
+/// 管理状態がまだ無ければ何もしない(最初のページ読み込みが `setup` より先に来ても panic しない)。
+pub(crate) fn reset_recording(app: &AppHandle) {
+    if let Some(manager) = app.try_state::<CaptureShortcutManager>() {
+        manager.set_recording(false);
+    }
 }
 
 /// キャプチャのキーを保存する(既定キーなら項目を書かない)。[`SettingsStore`] で
@@ -383,14 +411,7 @@ pub(crate) fn register_capture_shortcut(app: &App) -> tauri::Result<()> {
     // 設定は `lib.rs` の `setup()` の最初に `manage()` した `SettingsStore` から読む(QE-T05)。
     let saved = app.state::<SettingsStore>().get();
     let shortcut = initial_capture_shortcut(saved.capture_shortcut.as_deref());
-    app.manage(CaptureShortcutManager {
-        state: Mutex::new(CaptureShortcutState {
-            current: shortcut,
-            registered: false,
-            recording: false,
-        }),
-        change_lock: tauri::async_runtime::Mutex::new(()),
-    });
+    app.manage(CaptureShortcutManager::new(shortcut));
 
     let plugin_result = app.handle().plugin(
         tauri_plugin_global_shortcut::Builder::new()
@@ -535,6 +556,30 @@ mod tests {
         assert!(!should_trigger_capture(&state, &default_capture_shortcut(), ShortcutState::Pressed));
         let recording = CaptureShortcutState { recording: true, ..state };
         assert!(!should_trigger_capture(&recording, &sc("alt+super+KeyK"), ShortcutState::Pressed));
+    }
+
+    /// 記録中フラグを下ろす経路(webview の再読込完了・ウィンドウの閉じる要求・破棄)が呼ぶ
+    /// [`CaptureShortcutManager::set_recording`] で、キャプチャのキーが再び効くことを確かめる。
+    #[test]
+    fn 記録中フラグを下ろすとキャプチャのキーが再び通る() {
+        let manager = CaptureShortcutManager::new(default_capture_shortcut());
+        let pressed = default_capture_shortcut();
+        assert!(should_trigger_capture(&manager.snapshot(), &pressed, ShortcutState::Pressed));
+
+        manager.set_recording(true);
+        assert!(
+            !should_trigger_capture(&manager.snapshot(), &pressed, ShortcutState::Pressed),
+            "記録中は現在のキーを押してもキャプチャしない"
+        );
+
+        manager.set_recording(false);
+        assert!(
+            should_trigger_capture(&manager.snapshot(), &pressed, ShortcutState::Pressed),
+            "下ろした後は再びキャプチャする"
+        );
+        // 下ろす経路は何度呼んでも(既に下りていても)害が無い
+        manager.set_recording(false);
+        assert!(!manager.snapshot().recording);
     }
 
     #[test]

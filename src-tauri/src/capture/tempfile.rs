@@ -29,8 +29,24 @@ pub fn capture_dir() -> PathBuf {
 /// `create_dir_all` を行う。
 pub fn generate_capture_path() -> std::io::Result<PathBuf> {
     let dir = capture_dir();
-    std::fs::create_dir_all(&dir)?;
+    create_capture_dir(&dir)?;
     Ok(dir.join(unique_filename()))
+}
+
+/// キャプチャ用一時ディレクトリ(とその親)を作る。既にあれば何もしない(権限も変えない)。
+///
+/// 撮った画面の画像を置く場所なので、所有者だけが読み書きできる `0o700` を明示する
+/// (`create_dir_all` の既定は umask 依存で、通常 `0o755` = 他ユーザーも読める)。
+/// 本アプリは macOS 専用のため `#[cfg(unix)]` で十分。
+fn create_capture_dir(dir: &Path) -> std::io::Result<()> {
+    let mut builder = std::fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder.create(dir)
 }
 
 /// プロセスID・ナノ秒タイムスタンプ・連番を組み合わせた一意なファイル名を返す
@@ -232,6 +248,35 @@ mod tests {
             "tadcap-cleanup-test-{label}-{nanos}-{}",
             std::process::id()
         ))
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_capture_dir_は所有者だけが読み書きできる権限0o700で作る() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = unique_test_dir("mode").join("tadcap-captures");
+        create_capture_dir(&dir).expect("ディレクトリの作成に失敗した");
+
+        let mode = std::fs::metadata(&dir).expect("metadata が取れない").permissions().mode();
+        std::fs::remove_dir_all(dir.parent().unwrap()).ok();
+        assert_eq!(mode & 0o777, 0o700, "mode = {mode:o}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_capture_dir_は既にあるディレクトリの権限を変えない() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = unique_test_dir("mode-existing");
+        std::fs::create_dir_all(&dir).expect("ディレクトリの作成に失敗した");
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).expect("権限の変更に失敗した");
+
+        create_capture_dir(&dir).expect("既にあるディレクトリでも成功するはず");
+
+        let mode = std::fs::metadata(&dir).expect("metadata が取れない").permissions().mode();
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(mode & 0o777, 0o755, "mode = {mode:o}");
     }
 
     #[test]

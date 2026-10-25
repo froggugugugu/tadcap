@@ -5,7 +5,9 @@
 //! `{ "version": 1, "captureShortcut": "shift+super+KeyK", "shrinkCopy": true }` で、
 //! `captureShortcut` が無ければ既定キー、`shrinkCopy` が無ければオフ(QE-T05)。
 //!
-//! - 読込: ファイルが無い・壊れている場合は既定値で起動する(ログのみ。次の保存で上書きされる)
+//! - 読込: ファイルが無い・JSON として壊れている場合は既定値で起動する(ログのみ。次の保存で上書きされる)。
+//!   項目ごとに緩く読み、型が違う項目(例 `"shrinkCopy": "yes"`)はその項目だけ既定値にして他の項目は読む
+//!   (1 項目の型違いで全項目が既定に戻り、次の保存で消えてしまわないように)
 //! - 書込: 同じディレクトリの一時ファイルへ書いてから `rename` する(書きかけのファイルを残さない)。
 //!   ディレクトリが無ければ作る
 //! - 書くのは [`SettingsStore`] だけ(QE-T05)。今の設定を読んで 1 項目だけ変えて書くので、
@@ -18,7 +20,8 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use serde_json::{Map, Value};
 use tauri::{AppHandle, Manager};
 
 /// 設定ファイルの名前(`app_config_dir()` 直下)。
@@ -27,20 +30,27 @@ const SETTINGS_FILE_NAME: &str = "settings.json";
 /// 現在の設定ファイルの形式の版。
 const SETTINGS_VERSION: u32 = 1;
 
-/// アプリ設定(永続化する値)。
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// ファイル上のキー名(読込側。書込側は `#[serde(rename_all = "camelCase")]` の導出に任せる。
+/// 両者の一致は往復テストで確かめる)。
+const KEY_VERSION: &str = "version";
+const KEY_CAPTURE_SHORTCUT: &str = "captureShortcut";
+const KEY_SHRINK_COPY: &str = "shrinkCopy";
+
+/// アプリ設定(永続化する値)。読込は [`settings_from_map`](項目ごとに緩く読む)で行うので
+/// `Deserialize` は導出しない。
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AppSettings {
     /// キャプチャのショートカット(`global-hotkey` の文字列形式。例 `"shift+super+KeyK"`)。
     /// `None` は既定キー(⌘⇧2)。
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub capture_shortcut: Option<String>,
     /// コピーするとき画面の倍率ぶん縮めるか(QE-T05、FR-011)。オフのときはキーを書かない。
-    #[serde(default, skip_serializing_if = "is_false")]
+    #[serde(skip_serializing_if = "is_false")]
     pub shrink_copy: bool,
     /// このアプリが知らない項目(新しい版が書いたもの)。保存し直しても消さないように持っておく。
     #[serde(flatten)]
-    pub extra: serde_json::Map<String, serde_json::Value>,
+    pub extra: Map<String, Value>,
 }
 
 fn is_false(value: &bool) -> bool {
@@ -48,17 +58,53 @@ fn is_false(value: &bool) -> bool {
 }
 
 /// ファイル上の形(版番号を付ける)。
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SettingsFile {
-    #[serde(default = "default_version")]
     version: u32,
     #[serde(flatten)]
     settings: AppSettings,
 }
 
-fn default_version() -> u32 {
-    SETTINGS_VERSION
+/// 型が違う項目を既定値にしたことを知らせる(値そのものはログに出さない)。
+fn warn_wrong_type(key: &str) {
+    eprintln!("設定ファイルの {key} の型が違うため、この項目だけ既定値にします");
+}
+
+/// JSON オブジェクトから項目ごとに緩く設定を読む純粋関数。
+///
+/// - `captureShortcut`: 文字列のときだけ採用(無い・`null` は既定キー)
+/// - `shrinkCopy`: 真偽値のときだけ採用(無い・`null` はオフ)
+/// - `version`: 整数以外なら知らせるだけ(値は保持しない。保存時に現在の版を書く)
+/// - 型が違う項目は既定値にし、`extra` にも持ち越さない(保存し直したときにキーが重複しないように)
+/// - それ以外の知らない項目は `extra` に保持する
+fn settings_from_map(mut map: Map<String, Value>) -> AppSettings {
+    let capture_shortcut = match map.remove(KEY_CAPTURE_SHORTCUT) {
+        None | Some(Value::Null) => None,
+        Some(Value::String(accelerator)) => Some(accelerator),
+        Some(_) => {
+            warn_wrong_type(KEY_CAPTURE_SHORTCUT);
+            None
+        }
+    };
+    let shrink_copy = match map.remove(KEY_SHRINK_COPY) {
+        None | Some(Value::Null) => false,
+        Some(Value::Bool(enabled)) => enabled,
+        Some(_) => {
+            warn_wrong_type(KEY_SHRINK_COPY);
+            false
+        }
+    };
+    match map.remove(KEY_VERSION) {
+        None | Some(Value::Null) => {}
+        Some(Value::Number(n)) if n.is_u64() => {}
+        Some(_) => warn_wrong_type(KEY_VERSION),
+    }
+    AppSettings {
+        capture_shortcut,
+        shrink_copy,
+        extra: map,
+    }
 }
 
 /// 設定ファイルのパス(`app_config_dir()` が取れない環境では `None`)。
@@ -69,7 +115,8 @@ pub(crate) fn settings_path(app: &AppHandle) -> Option<PathBuf> {
         .map(|dir| dir.join(SETTINGS_FILE_NAME))
 }
 
-/// 設定を読む。ファイルが無い・読めない・壊れている場合は既定値を返す(壊れているときはログを出す)。
+/// 設定を読む。ファイルが無い・読めない・JSON として壊れている・オブジェクトでない場合は既定値を返す
+/// (壊れているときはログを出す)。項目ごとの型違いは [`settings_from_map`] がその項目だけ既定値にする。
 pub(crate) fn load_settings(path: &Path) -> AppSettings {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
@@ -79,8 +126,12 @@ pub(crate) fn load_settings(path: &Path) -> AppSettings {
             return AppSettings::default();
         }
     };
-    match serde_json::from_str::<SettingsFile>(&text) {
-        Ok(file) => file.settings,
+    match serde_json::from_str::<Value>(&text) {
+        Ok(Value::Object(map)) => settings_from_map(map),
+        Ok(_) => {
+            eprintln!("設定ファイルがオブジェクトではありません。既定の設定で起動します");
+            AppSettings::default()
+        }
         Err(err) => {
             eprintln!("設定ファイルが壊れています。既定の設定で起動します: {err}");
             AppSettings::default()
@@ -259,6 +310,73 @@ mod tests {
 
     fn read_json(path: &Path) -> serde_json::Value {
         serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+    }
+
+    // ---- 項目ごとに緩く読む(1 項目の型違いで全項目が既定に戻らない)----
+
+    #[test]
+    fn shrink_copyが文字列のファイルはshrink_copyだけ既定にしてキーは読む() {
+        let dir = temp_dir("lenient-shrink");
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("settings.json");
+        fs::write(
+            &path,
+            r#"{ "version": 1, "captureShortcut": "alt+super+KeyK", "shrinkCopy": "yes", "future": 1 }"#,
+        )
+        .unwrap();
+
+        let loaded = load_settings(&path);
+        assert!(!loaded.shrink_copy, "型違いの shrinkCopy はオフ(既定)のはず");
+        assert_eq!(loaded.capture_shortcut.as_deref(), Some("alt+super+KeyK"), "他の項目は読めるはず");
+        assert_eq!(loaded.extra.get("future"), Some(&serde_json::json!(1)));
+        assert!(loaded.extra.get("shrinkCopy").is_none(), "型違いの値を未知の項目として持ち越さない");
+
+        // 保存し直すと型違いの値は消え、他の項目は残る(キーの重複した壊れた JSON を書かない)
+        save_settings(&path, &loaded).unwrap();
+        let value = read_json(&path);
+        assert!(value.get("shrinkCopy").is_none());
+        assert_eq!(value["captureShortcut"], "alt+super+KeyK");
+        assert_eq!(value["future"], 1);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn capture_shortcutが数値のファイルはキーだけ既定にしてshrink_copyは読む() {
+        let dir = temp_dir("lenient-shortcut");
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("settings.json");
+        fs::write(&path, r#"{ "version": 1, "captureShortcut": 42, "shrinkCopy": true }"#).unwrap();
+
+        let loaded = load_settings(&path);
+        assert_eq!(loaded.capture_shortcut, None, "型違いの captureShortcut は既定キーのはず");
+        assert!(loaded.shrink_copy, "他の項目は読めるはず");
+        assert!(loaded.extra.get("captureShortcut").is_none());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn versionが整数でなくても他の項目は読み_nullのキーは既定にする() {
+        let dir = temp_dir("lenient-version");
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("settings.json");
+        fs::write(&path, r#"{ "version": "1", "captureShortcut": null, "shrinkCopy": true }"#).unwrap();
+
+        let loaded = load_settings(&path);
+        assert!(loaded.shrink_copy);
+        assert_eq!(loaded.capture_shortcut, None);
+        assert!(loaded.extra.get("version").is_none());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn jsonとして正しくてもオブジェクトでないファイルは既定値として読む() {
+        let dir = temp_dir("not-object");
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("settings.json");
+        fs::write(&path, "[1, 2]").unwrap();
+
+        assert_eq!(load_settings(&path), AppSettings::default());
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

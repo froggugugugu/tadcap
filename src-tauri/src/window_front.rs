@@ -198,8 +198,17 @@ pub(crate) struct FrontSnapshot {
     /// メニューバー等のシステムのウィンドウも数えるため0にはならないことがある。
     pub(crate) z_index: Option<usize>,
     pub(crate) z_total: usize,
-    /// 最前面アプリのバンドルID。
-    pub(crate) frontmost: String,
+    /// 最前面アプリのバンドルID。デバッグビルドだけ `Some`(利用者が使っていたアプリ名を
+    /// リリースの端末ログに残さない。[`frontmost_for_log`])。
+    pub(crate) frontmost: Option<String>,
+}
+
+/// 最前面アプリのバンドル ID を診断ログに載せるかを決め、載せるときだけ `read` で取得する(純粋関数)。
+///
+/// リリースビルド(`debug_build == false`)では `read` を呼ばず `None` を返す(文字列を作らない)。
+/// デバッグビルドでは取得できなければ `"unknown"`。NFR-001 の `[tadcap:latency]` 行は対象外(変えない)。
+fn frontmost_for_log(debug_build: bool, read: impl FnOnce() -> Option<String>) -> Option<String> {
+    debug_build.then(|| read().unwrap_or_else(|| "unknown".to_string()))
 }
 
 /// 診断ログ1行を整形する(純粋関数)。`[tadcap:latency]` と同じく `key=value` の空白区切り。
@@ -223,7 +232,7 @@ pub(crate) fn format_front_log(
             .map_or_else(|| "none".to_string(), |i| i.to_string());
         line.push_str(&format!(
             " main_thread={} app_active={} win_visible={} win_minimized={} win_key={} \
-             on_active_space={} level={} occlusion_visible={} z_index={}/{} frontmost={}",
+             on_active_space={} level={} occlusion_visible={} z_index={}/{}",
             s.main_thread,
             s.app_active,
             s.win_visible,
@@ -234,8 +243,11 @@ pub(crate) fn format_front_log(
             s.occlusion_visible,
             z_index,
             s.z_total,
-            sanitize(&s.frontmost)
         ));
+        // リリースビルドでは `None` なのでキー自体を出さない
+        if let Some(frontmost) = &s.frontmost {
+            line.push_str(&format!(" frontmost={}", sanitize(frontmost)));
+        }
     }
     line
 }
@@ -469,7 +481,7 @@ mod native {
     };
     use tauri::WebviewWindow;
 
-    use super::FrontSnapshot;
+    use super::{frontmost_for_log, FrontSnapshot};
 
     fn main_thread() -> Result<MainThreadMarker, String> {
         MainThreadMarker::new().ok_or_else(|| "not_main_thread".to_string())
@@ -526,11 +538,13 @@ mod native {
                 }
                 None => (None, 0),
             };
-            let frontmost = NSWorkspace::sharedWorkspace()
-                .frontmostApplication()
-                .and_then(|a| a.bundleIdentifier())
-                .map(|id| id.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
+            // 最前面アプリのバンドル ID はデバッグビルドだけ取得・記録する
+            let frontmost = frontmost_for_log(cfg!(debug_assertions), || {
+                NSWorkspace::sharedWorkspace()
+                    .frontmostApplication()
+                    .and_then(|a| a.bundleIdentifier())
+                    .map(|id| id.to_string())
+            });
             FrontSnapshot {
                 main_thread: true,
                 app_active: app.isActive(),
@@ -742,7 +756,7 @@ mod tests {
             occlusion_visible: false,
             z_index: Some(4),
             z_total: 12,
-            frontmost: "com.apple.Terminal".into(),
+            frontmost: Some("com.apple.Terminal".into()),
         };
         assert_eq!(
             format_front_log("shortcut", "1/5", "OrderFrontRegardless", "ok", Some(&s)),
@@ -751,6 +765,41 @@ mod tests {
              on_active_space=true level=3 occlusion_visible=false z_index=4/12 \
              frontmost=com.apple.Terminal"
         );
+    }
+
+    #[test]
+    fn format_front_logは最前面アプリが無ければfrontmostのキー自体を出さない() {
+        let s = FrontSnapshot {
+            main_thread: true,
+            app_active: false,
+            win_visible: true,
+            win_minimized: false,
+            win_key: true,
+            on_active_space: true,
+            level: 3,
+            occlusion_visible: false,
+            z_index: Some(4),
+            z_total: 12,
+            frontmost: None,
+        };
+        let line = format_front_log("shortcut", "1/5", "OrderFrontRegardless", "ok", Some(&s));
+        assert!(!line.contains("frontmost"), "{line}");
+        assert!(line.ends_with(" z_index=4/12"), "{line}");
+    }
+
+    /// リリースビルドでは最前面アプリのバンドル ID を読まず、文字列も作らない(利用者のアプリ名を
+    /// 端末ログに残さない)。デバッグビルドだけ読み、取れなければ `unknown`。
+    #[test]
+    fn frontmost_for_logはリリースでは読まずにnoneを返しデバッグでは読む() {
+        assert_eq!(
+            frontmost_for_log(false, || panic!("リリースビルドでは最前面アプリを読まないはず")),
+            None
+        );
+        assert_eq!(
+            frontmost_for_log(true, || Some("com.apple.Terminal".to_string())),
+            Some("com.apple.Terminal".to_string())
+        );
+        assert_eq!(frontmost_for_log(true, || None), Some("unknown".to_string()));
     }
 
     #[test]
@@ -766,7 +815,7 @@ mod tests {
             occlusion_visible: false,
             z_index: None,
             z_total: 0,
-            frontmost: "My App".into(),
+            frontmost: Some("My App".into()),
         };
         let line = format_front_log("tray", "2/5", "Show", "err:not found", Some(&s));
         assert!(line.contains(" z_index=none/0 "), "{line}");

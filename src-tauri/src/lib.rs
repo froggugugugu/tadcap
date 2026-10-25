@@ -59,13 +59,23 @@ pub fn run() {
         })
         // アプリメニューの「設定…」(KS-T6)。トレイのメニューは`tray.rs`が別のIDで処理する。
         .on_menu_event(|app, event| app_menu::handle_menu_event(app, event.id().as_ref()))
+        // webview のページ読み込み(初回・再読込。`PageLoadEvent::Started` / `Finished` の両方)。
+        // どちらの時点でも前のページの設定モーダルは消えているので、ショートカットの記録中フラグを下ろす
+        // (記録中に再読込・クラッシュするとフロントの IPC で `false` が届かず、キャプチャのキーが
+        // 効かないままになるため。`Focused(false)` では下ろさない: モーダルを開いたまま他アプリを見る操作を
+        // 壊さないため)。
+        .on_page_load(|webview, _payload| shortcuts::reset_recording(webview.app_handle()))
         .on_window_event(|window, event| match event {
             // ウィンドウを閉じてもプロセスは継続する(終了はトレイメニューの「終了」と⌘Q・Dockの「終了」、
             // FR-009。閉じたエディタはDockのアイコン・トレイの「エディタを開く」で再表示する)。
+            // エディタを閉じる = 設定モーダルも使えなくなるので、記録中フラグも下ろす。
             tauri::WindowEvent::CloseRequested { api, .. } => {
+                shortcuts::reset_recording(window.app_handle());
                 window.hide().ok();
                 api.prevent_close();
             }
+            // ウィンドウ(webview)が破棄されたら記録中ではありえない。
+            tauri::WindowEvent::Destroyed => shortcuts::reset_recording(window.app_handle()),
             // v0.2.2: エディタがキーになったとき、アプリが非アクティブならアクティブ化を要求する
             // (日本語IMEはアクティブなアプリにだけ働くため。既にアクティブなら何もしない)。
             tauri::WindowEvent::Focused(true) => {
