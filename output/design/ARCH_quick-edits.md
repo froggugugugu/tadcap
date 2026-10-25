@@ -593,6 +593,7 @@ QE-T02〜QE-T25 の実装報告とレビューで、本書の記述と実装の�
 | ARCH_tadcap_mvp §5.2(v1.2.0) | `capture://error` は権限未許可の案内に使う | 権限未許可はバナーのみ、それ以外は「キャプチャに失敗しました。」の error トースト。`captureErrorMessage()` は Rust の生の文字列を画面に出さない(ボタン経由も同じ文言) | レビュー 2026-10-26 SHOULD-3(トレイ・ショートカット起点の失敗が無言だった) |
 | §16「キーの割り当て」・UI §7(v1.2.0 追加) | 1 キー切替はツールだけ | 修飾キーなしの `Digit1`〜`Digit6` で色見本の 1〜6 番目に切り替える(`ui/colorKeys.ts` → `colorPicker.ts::applyPresetColor()`。ボタンの click も同じ関数)。扱わない条件は `toolKeys.ts::isPlainShortcutKey()` とツールボタンの `toolButtonState()` を共有。色見本の `title` は「ピンク(1)」、`aria-keyshortcuts` 付き | 人間の指示「補完」(2026-10-26)。ツールの 1 キー切替と同じ作法で色も手を離さず選べるように |
 | UI §7(v1.2.0 追加) | 選択中の注釈はドラッグで動かす | 矢印キーで 1px(⇧ で 10px)動かす(`selectionKeys.ts::selectionMoveDelta()` → `documentState.ts::moveSelected()`)。画像の内側に収め、1 押下 = 取り消せる 1 手。端で動かない押下は手を積まない。入力欄・IME・⌘⌥⌃・自動マスキング中は扱わない | 同上。ピクセル単位の微調整 |
+| §11・UI §4.2(v1.2.0 リリース前レビュー) | Enter・Esc は `selectionKeys` が選択解除に使う | 選択中でも、ボタン等の押せる要素にフォーカスがあるときの Enter は `selectionKeys` も扱わず既定の押下に任せる(トリミングの帯・コピー・取り消しのボタンが Tab + Enter で押せる)。矢印キーの移動はドラッグ中(`isDrawing`)は扱わない(ドラッグの 1 手と混ざって ⌘Z 1 回で戻らなくなるのを防ぐ) | fresh context レビュー 2026-10-26 SHOULD |
 
 ### 実装での決定: スポットライトの穴がすべてトリミング範囲の外にある場合(2026-10-10、人間の決定)
 
