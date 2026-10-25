@@ -5,8 +5,8 @@
 //! Canvas に重ねたオーバーレイ(`pointer-events: none`)にだけ描き、合成には描かない(確定前のコピー・
 //! 履歴は切り詰めていない画像のまま)。Enter で確定(`applyCrop()` → `cancelCrop()` → `onCropped`)、
 //! Esc でやめる。範囲が無いときの Enter / Esc は何もしない(選択の解除などへ渡す)。帯の「やめる」「確定」
-//! など押せる要素にフォーカスがあるときの Enter はその要素の押下に任せる(`isActivatableTarget()`。
-//! 「やめる」で Enter を押しても確定にならない、UI_quick-edits §4.3、レビュー 2026-10-26)。
+//! など押せる要素にフォーカスがあるときの Enter はその要素の押下に任せる(`keyTarget.ts::isActivatableTarget()`、
+//! 選択中の注釈の Enter と共有。「やめる」で Enter を押しても確定にならない、UI_quick-edits §4.3、レビュー 2026-10-26)。
 //!
 //! 確定の通知(トースト)は`onCropped`で`main.ts`から受ける(`canvas/`→`ui/`の依存を作らない、
 //! TASK_quick-edits【要確認】#5)。やめる条件(ツールの変化・自動マスキングの開始・ドキュメントの大きさの
@@ -33,6 +33,7 @@ import {
   type CropSession,
 } from "../cropSession";
 import { applyCrop, subscribeDocument } from "../documentState";
+import { isActivatableTarget, type KeyTargetLike } from "../keyTarget";
 import { isMaskSessionActive, subscribeMaskSession } from "../maskSession";
 
 /** 範囲の外の暗さ(UI_quick-edits §4.1)。スポットライト(50%)より一段暗くし、焼き込まれる暗さと見分ける。 */
@@ -173,35 +174,6 @@ export function cropShadeRects(rect: Rect, canvasWidth: number, canvasHeight: nu
   return rects.filter((r) => r.width > 0 && r.height > 0);
 }
 
-/** keydown の`target`のうち判定に使う部分(`HTMLElement`がそのまま当てはまる。テストでは素のオブジェクト)。 */
-export interface CropKeyTargetLike {
-  tagName?: string;
-  /** `role`属性(`Element.role`の反映)。 */
-  role?: string | null;
-  isContentEditable?: boolean;
-}
-
-/** Enter に既定の動作(押下・送信・改行)がある要素のタグ。 */
-const ACTIVATABLE_TAGS = new Set(["BUTTON", "A", "INPUT", "SELECT", "TEXTAREA", "SUMMARY"]);
-
-/**
- * フォーカス中の要素が Enter で操作できる要素(`button`・`a`・`input`・`select`・`textarea`・`summary`・
- * `role="button"`・contenteditable)か。`true`ならトリミングは Enter を扱わず既定の動作(ボタンの押下)に任せる。
- */
-export function isActivatableTarget(target: CropKeyTargetLike | null | undefined): boolean {
-  if (!target) {
-    return false;
-  }
-  if (target.isContentEditable) {
-    return true;
-  }
-  const tag = target.tagName?.toUpperCase();
-  if (tag !== undefined && ACTIVATABLE_TAGS.has(tag)) {
-    return true;
-  }
-  return target.role?.toLowerCase() === "button";
-}
-
 /** キーの判定に使う`KeyboardEvent`の部分(テストで組み立てられるように)。 */
 export interface CropKeyEvent {
   key: string;
@@ -212,7 +184,7 @@ export interface CropKeyEvent {
   isComposing: boolean;
   defaultPrevented: boolean;
   /** フォーカス中の要素(`event.target`)。 */
-  target: CropKeyTargetLike | null;
+  target: KeyTargetLike | null;
 }
 
 export interface CropKeyContext {
@@ -455,7 +427,7 @@ export function bindCropTool(canvas: HTMLCanvasElement, options: CropToolOptions
 
   const handleKeydown = (event: KeyboardEvent): void => {
     const action = cropKeyAction(
-      { ...pickKeyFields(event), target: event.target as CropKeyTargetLike | null },
+      { ...pickKeyFields(event), target: event.target as KeyTargetLike | null },
       {
         activeTool: getCanvasState().activeTool,
         hasRange: getCropSession() !== null,

@@ -15,11 +15,18 @@
 //! すべて扱わない(ARCH_auto-masking §15 #4 A 案)。削除を止め、Esc は「やめる」(`ui/autoMask.ts`)に
 //! 任せる(`preventDefault()` もしない)。
 //!
+//! リリース前レビュー 2026-10-26: 注釈をドラッグ(描画・移動)している間(`canvasState.isDrawing`)の矢印キーは
+//! 扱わない(ドラッグの 1 手の間に移動の 1 手が挟まり、1 回の ⌘Z で戻らなくなるため)。押せる要素(ボタンなど、
+//! `canvas/keyTarget.ts::isActivatableTarget()`)にフォーカスがあるときの Enter は選択解除で奪わず、その押下に任せる
+//! (トリミングの Enter と同じ判定)。Esc・Delete の扱いは変えない。
+//!
 //! 判定は純粋関数(`selectionKeyAction`)、`window`への結線は`bindSelectionKeys`。
 //! テキスト入力中・IME変換中・修飾キー付きの入力は奪わない(`shortcutGuards.ts`と同じ方針)。
 
+import { getCanvasState } from "../canvas/canvasState";
 import type { Point } from "../canvas/coords";
 import { getDocumentState, moveSelected, removeShapeObject, selectObject } from "../canvas/documentState";
+import { isActivatableTarget, type KeyTargetLike } from "../canvas/keyTarget";
 import { isMaskSessionActive } from "../canvas/maskSession";
 import { isEditableTarget, type EditableTargetLike } from "./shortcutGuards";
 
@@ -33,6 +40,9 @@ export interface SelectionKeyEvent {
 }
 
 export type SelectionKeyAction = "deselect" | "delete" | null;
+
+/** keydown の `target`(入力欄の判定 `isEditableTarget()` と押せる要素の判定 `isActivatableTarget()` の両方が読む部分)。 */
+export type SelectionKeyTarget = EditableTargetLike & KeyTargetLike;
 
 /** 矢印キー 1 回の移動量(画像のピクセル)。`Shift` を押しながらなら `MOVE_STEP_SHIFT`(v1.2.0)。 */
 export const MOVE_STEP = 1;
@@ -53,7 +63,7 @@ const ARROW_DIRECTIONS: Readonly<Record<string, Point>> = {
 function acceptsSelectionKey(
   event: SelectionKeyEvent,
   hasSelection: boolean,
-  target: EditableTargetLike | null,
+  target: SelectionKeyTarget | null,
   isMasking: boolean,
 ): boolean {
   if (isMasking || !hasSelection || event.isComposing || event.metaKey || event.ctrlKey || event.altKey) {
@@ -64,12 +74,13 @@ function acceptsSelectionKey(
 
 /**
  * 選択中のオブジェクトに対するキー操作の判定。`isMasking`(自動マスキングの処理中・確認中、AM-T13・AM-T25-F1)が
- * `true` のときはどのキーも扱わない。矢印キーは `selectionMoveDelta()` の役目。
+ * `true` のときはどのキーも扱わない。矢印キーは `selectionMoveDelta()` の役目。押せる要素(ボタンなど)に
+ * フォーカスがあるときの Enter は `null`(その要素の押下に任せる。Esc・Delete はフォーカス位置に関わらず扱う)。
  */
 export function selectionKeyAction(
   event: SelectionKeyEvent,
   hasSelection: boolean,
-  target: EditableTargetLike | null,
+  target: SelectionKeyTarget | null,
   isMasking = false,
 ): SelectionKeyAction {
   if (!acceptsSelectionKey(event, hasSelection, target, isMasking)) {
@@ -78,22 +89,30 @@ export function selectionKeyAction(
   if (event.key === "Delete" || event.key === "Backspace") {
     return "delete";
   }
-  return event.key === "Enter" || event.key === "Escape" ? "deselect" : null;
+  if (event.key === "Escape") {
+    return "deselect";
+  }
+  if (event.key === "Enter") {
+    return isActivatableTarget(target) ? null : "deselect";
+  }
+  return null;
 }
 
 /**
  * 矢印キーによる選択中のオブジェクトの移動量(画像のピクセル、v1.2.0)。扱わないときは `null`。
  * `Shift` だけは「10px」の修飾として許し、⌘・⌥・⌃ 付きは奪わない。押し続け(`repeat`)は連続移動として扱う
  * (1 押下 = 1 手。見ないので判定に `repeat` は無い)。扱わない条件は `selectionKeyAction()` と同じで、
- * テキストの入力欄では文字カーソルが動くので奪わない。
+ * テキストの入力欄では文字カーソルが動くので奪わない。`isDrawing`(注釈のドラッグ中)も扱わない(ドラッグの
+ * 1 手の間に移動の 1 手を挟まない)。
  */
 export function selectionMoveDelta(
   event: SelectionKeyEvent,
   hasSelection: boolean,
-  target: EditableTargetLike | null,
+  target: SelectionKeyTarget | null,
   isMasking = false,
+  isDrawing = false,
 ): Point | null {
-  if (!acceptsSelectionKey(event, hasSelection, target, isMasking)) {
+  if (isDrawing || !acceptsSelectionKey(event, hasSelection, target, isMasking)) {
     return null;
   }
   const direction = ARROW_DIRECTIONS[event.key];
@@ -111,9 +130,9 @@ export function bindSelectionKeys(): () => void {
       return;
     }
     const hasSelection = getDocumentState().selectedId !== null;
-    const target = event.target as EditableTargetLike | null;
+    const target = event.target as SelectionKeyTarget | null;
     const isMasking = isMaskSessionActive();
-    const delta = selectionMoveDelta(event, hasSelection, target, isMasking);
+    const delta = selectionMoveDelta(event, hasSelection, target, isMasking, getCanvasState().isDrawing);
     if (delta) {
       // v1.2.0: 矢印キーで 1px(⇧ で 10px)動かす。画像の内側に収めて取り消せる 1 手にし(`moveSelected`)、
       // 端で動かなければ手は増えない。画面のスクロール(矢印キーの既定動作)は止める。

@@ -13,7 +13,6 @@ import {
   cropKeyAction,
   cropShadeRects,
   hitTestCrop,
-  isActivatableTarget,
   moveCropRect,
   resizeCropRect,
   shouldCancelCrop,
@@ -222,7 +221,6 @@ describe("cropKeyAction", () => {
     ];
     for (const target of targets) {
       expect(cropKeyAction(key("Enter", { target }), active)).toBeNull();
-      expect(isActivatableTarget(target)).toBe(true);
     }
   });
 
@@ -231,8 +229,6 @@ describe("cropKeyAction", () => {
     expect(cropKeyAction(key("Enter", { target: { tagName: "BODY" } }), active)).toBe("apply");
     expect(cropKeyAction(key("Enter", { target: { tagName: "CANVAS" } }), active)).toBe("apply");
     expect(cropKeyAction(key("Enter", { target: { tagName: "DIV", role: "group" } }), active)).toBe("apply");
-    expect(isActivatableTarget(null)).toBe(false);
-    expect(isActivatableTarget({ tagName: "P", role: null })).toBe(false);
   });
 
   it("ボタンにフォーカスがあっても Esc はやめる", () => {

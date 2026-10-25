@@ -48,6 +48,15 @@ describe("selectionMoveDelta(矢印キー)", () => {
     expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, null, false)).toEqual({ x: 1, y: 0 });
   });
 
+  // SHOULD(リリース前レビュー 2026-10-26): 注釈をドラッグ(描画・移動)している間の矢印キーは扱わない。扱うと
+  // `moveSelected()` の 1 手がドラッグの 1 手の間に挟まり、1 回の ⌘Z で戻らなくなる(`colorKeys.ts` の
+  // 「描画中は扱わない」と同じ判定。結線は `canvasState.isDrawing` を渡す)。
+  it("ドラッグ(描画・移動)中は矢印キーを扱わない", () => {
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, null, false, true)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowUp", shiftKey: true }, true, null, false, true)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, null, false, false)).toEqual({ x: 1, y: 0 });
+  });
+
   it("矢印キー以外は対象外(Enter・Delete は selectionKeyAction の役目)", () => {
     expect(selectionMoveDelta({ ...plain, key: "Enter" }, true, null)).toBeNull();
     expect(selectionMoveDelta({ ...plain, key: "Delete" }, true, null)).toBeNull();
@@ -89,6 +98,31 @@ describe("selectionKeyAction", () => {
 
   it("その他のキーは対象外", () => {
     expect(selectionKeyAction({ ...plain, key: "a" }, true, null)).toBeNull();
+  });
+
+  // SHOULD(リリース前レビュー 2026-10-26): 注釈を選択したまま Tab でボタン(コピー・取り消し・トリミングの帯の
+  // 「やめる」「確定」など)にフォーカスして Enter を押しても、選択解除で押下を奪わない(`isActivatableTarget()`、
+  // トリミングの Enter と同じ判定)。Esc・Delete の扱いは変えない。
+  it("押せる要素(button・a・input・select・textarea・summary・role=button)にフォーカスがあるときの Enter は扱わない", () => {
+    const targets = [
+      { tagName: "BUTTON" },
+      { tagName: "A" },
+      { tagName: "INPUT", type: "color" },
+      { tagName: "SELECT" },
+      { tagName: "SUMMARY" },
+      { tagName: "DIV", role: "button" },
+    ];
+    for (const target of targets) {
+      expect(selectionKeyAction({ ...plain, key: "Enter" }, true, target)).toBeNull();
+    }
+    expect(selectionKeyAction({ ...plain, key: "Enter" }, true, { tagName: "BODY" })).toBe("deselect");
+    expect(selectionKeyAction({ ...plain, key: "Enter" }, true, { tagName: "CANVAS" })).toBe("deselect");
+  });
+
+  it("ボタンにフォーカスがあっても Esc は選択解除、Delete は削除のまま", () => {
+    expect(selectionKeyAction({ ...plain, key: "Escape" }, true, { tagName: "BUTTON" })).toBe("deselect");
+    expect(selectionKeyAction({ ...plain, key: "Delete" }, true, { tagName: "BUTTON" })).toBe("delete");
+    expect(selectionKeyAction({ ...plain, key: "Backspace" }, true, { tagName: "DIV", role: "button" })).toBe("delete");
   });
 });
 

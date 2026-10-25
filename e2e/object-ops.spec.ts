@@ -10,6 +10,7 @@ import { captureAndWaitReady } from "./fixtures/captureReady";
 import { diffFromSnapshot, saveSnapshot } from "./fixtures/canvasSnapshot";
 import { createFixtureCapturePng } from "./fixtures/sampleCapturePng";
 import {
+  getClipboardWriteCount,
   installTauriMocks,
   routeCrossOriginAssets,
   type MockCaptureResult,
@@ -275,6 +276,38 @@ test.describe("選択中のオブジェクトの操作と履歴ごとの保持(T
     await expect.poll(() => canvas.evaluate((el: HTMLCanvasElement) => el.width)).toBe(220);
     await click(page, canvas, [20, 60]);
     expect(await overlayHasSelection(page)).toBe(true);
+    expect(pageErrors).toEqual([]);
+  });
+
+  // SHOULD(リリース前レビュー 2026-10-26): 注釈を選択したまま Tab でボタンにフォーカスして Enter を押しても、
+  // 選択解除で押下を奪わない(`selectionKeys.ts` は押せる要素の Enter を扱わない)。
+  test("矩形を選択したまま Tab でコピーボタンにフォーカスして Enter を押すと、コピーが実行され選択は残る", async ({ page }) => {
+    const canvas = await start(page);
+    const copyButton = page.getByRole("button", { name: "クリップボードにコピー" });
+    const front = page.getByRole("button", { name: "最前面へ" });
+    await page.getByRole("button", { name: "矩形" }).click();
+    await drag(page, canvas, [40, 40], [140, 120]); // 描いた直後は選択中
+    expect(await overlayHasSelection(page)).toBe(true);
+    await expect(front).toBeEnabled();
+    const writes = await getClipboardWriteCount(page);
+
+    // 実行ボタン(自動マスキング)から Tab で隣のコピーボタンへ。
+    await page.locator("#auto-mask-button").focus();
+    await page.keyboard.press("Tab");
+    await expect(copyButton).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect.poll(() => getClipboardWriteCount(page)).toBe(writes + 1);
+    await expect(page.locator("#clipboard-status")).toHaveText("クリップボードにコピーしました。");
+    expect(await overlayHasSelection(page)).toBe(true);
+    await expect(front).toBeEnabled();
+
+    // フォーカスを外した(body)ときの Enter はこれまでどおり選択解除。
+    await copyButton.blur();
+    await page.keyboard.press("Enter");
+    expect(await overlayHasSelection(page)).toBe(false);
+    await expect(front).toBeDisabled();
+    expect(await getClipboardWriteCount(page)).toBe(writes + 1);
     expect(pageErrors).toEqual([]);
   });
 });

@@ -3,6 +3,9 @@
 //! `clipboardButton.ts`(FR-005、T12)が持っていた `isEditableTarget()` を抽出し、
 //! `Cmd+C`・`Cmd+Z`/`Cmd+Shift+Z`(T29)・テキスト入力欄表示中の判定(T27)が同じ判定を
 //! 再利用できるようにする(ARCH §5.1改訂「`clipboardButton.ts`から抽出」)。挙動は変更しない。
+//!
+//! 押せる要素(ボタンなど、Enter に既定の動作がある要素)の判定 `isActivatableTarget()` は
+//! `canvas/keyTarget.ts`(`canvas/tools/cropTool.ts` からも読むため `canvas/` に置く、レビュー 2026-10-26)。
 
 export interface EditableTargetLike {
   tagName?: string;
