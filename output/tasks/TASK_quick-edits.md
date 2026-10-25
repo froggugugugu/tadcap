@@ -148,7 +148,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 1a(並行可能。QE-T01 の結果を待たない)
 
-- [ ] QE-T02 — 1 キー切替とツールボタンの名前(変更ファイル: `src/ui/toolKeys.ts`, `src/ui/toolKeys.test.ts`, `src/ui/toolbar.ts`, `src/ui/toolbar.test.ts`, `src/main.ts`, `e2e/tool-keys.spec.ts`, `e2e/annotation-tools.spec.ts`, `e2e/v020-feedback.spec.ts`, `e2e/screenshots/roundedRect.visual.ts`, `e2e/screenshots/landing.visual.ts`, `docs/docs/project.md` | 依存: なし)
+- [x] QE-T02 — 1 キー切替とツールボタンの名前(変更ファイル: `src/ui/toolKeys.ts`, `src/ui/toolKeys.test.ts`, `src/ui/toolbar.ts`, `src/ui/toolbar.test.ts`, `src/main.ts`, `e2e/tool-keys.spec.ts`, `e2e/annotation-tools.spec.ts`, `e2e/v020-feedback.spec.ts`, `e2e/screenshots/roundedRect.visual.ts`, `e2e/screenshots/landing.visual.ts`, `docs/docs/project.md` | 依存: なし)
   - `TOOL_KEYS` は `ReadonlyArray<{ tool: ToolId; code: string; label: string }>`(今は 5 ツール: `KeyA` 矢印・`KeyR` 矩形・`KeyO` 円・`KeyT` テキスト・`KeyM` モザイク)。新しいツールは追加するタスクで 1 行足す(PRD §9 Phase 1)
   - `toolKeyTarget(event, context): ToolId | null`(ARCH §7.1 手順 K): `defaultPrevented`・`repeat`・⌘/⇧/⌥/⌃ のどれか・`isComposing` または `keyCode === 229`・`isEditableTarget()`・`toolButtonState(id, context).disabled` なら `null`。`event.code` で引く
   - `toolLabel(id)` が `矢印(A)` を組み立て、`toolbar.ts` が `aria-label`・`title`・`aria-keyshortcuts` に使う(UI §1.3)
@@ -167,7 +167,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 1b(QE-T02 完了後)
 
-- [ ] QE-T03 — ツールバーの 2 組・折り返し・既定の窓幅(UI §1.1・§1.2 の区切り・§1.4)(変更ファイル: `index.html`, `src/styles.css`, `src/ui/toolbar.ts`, `src/ui/toolbar.test.ts`, `src-tauri/tauri.conf.json`, `e2e/screenshots/toolbar.visual.ts` | 依存: QE-T02)
+- [x] QE-T03 — ツールバーの 2 組・折り返し・既定の窓幅(UI §1.1・§1.2 の区切り・§1.4)(変更ファイル: `index.html`, `src/styles.css`, `src/ui/toolbar.ts`, `src/ui/toolbar.test.ts`, `src-tauri/tauri.conf.json`, `e2e/screenshots/toolbar.visual.ts` | 依存: QE-T02)
   - `TOOLS` に組の区切りを持たせ、`initToolbar()` が「描く注釈」と「画像を変える」の間に `.tool-toolbar__divider`(`aria-hidden="true"`)を 1 本入れる。モザイクは「画像を変える」組の先頭へ(キーは M のまま)
   - `index.html`: 右のまとまり(取り消し・やり直し〜コピー)を `.toolbar__end` で包み、`.toolbar__spacer` を外す。`src/styles.css`: `.toolbar` の `flex-wrap: wrap; height: auto; min-height: 40px; box-sizing: border-box; padding: 5px 8px; row-gap: 4px`、`.toolbar__end { display: flex; gap: 4px; margin-left: auto }`
   - `tauri.conf.json` の `width` を 1080 にする(高さ 600 のまま)
@@ -182,7 +182,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 2a(並行可能。QE-T04 は QE-T01 の判定が「進む」のときだけ。QE-T06・QE-T07 は Phase 1 と並行してもよい)
 
-- [ ] QE-T04 — Rust: PNG の pHYs から倍率を読み、撮影結果に載せる(ARCH §1.3 #10・§7.1 R-1〜2)(変更ファイル: `src-tauri/src/capture/pixel_ratio.rs`, `src-tauri/src/capture/mod.rs`, `src-tauri/src/commands.rs` | 依存: QE-T01)
+- [x] QE-T04 — Rust: PNG の pHYs から倍率を読み、撮影結果に載せる(ARCH §1.3 #10・§7.1 R-1〜2)(変更ファイル: `src-tauri/src/capture/pixel_ratio.rs`, `src-tauri/src/capture/mod.rs`, `src-tauri/src/commands.rs` | 依存: QE-T01)
   - `pixel_ratio_from_png(bytes: &[u8]) -> Option<u8>`(純粋)と `read_pixel_ratio(path) -> Option<u8>`(先頭から IDAT までのチャンク見出しと pHYs の 9 バイトだけを読む。画像は展開しない)。`masking/png.rs` とは共有しない(ARCH §3.2)
   - `CaptureResult` に `pixel_ratio: Option<u8>`(JSON は `pixelRatio`)。`run_capture()` が既存の `spawn_blocking` の中で読み、失敗しても撮影は成功のまま `None`(ARCH §5.5)
   - TDD(先に書くテスト、`#[cfg(test)]` でバイト列を組み立てる): 72dpi → `Some(1)` / 144dpi → `Some(2)` / ±2% の内側と外側の境目 / pHYs 無し → `None` / 単位 0(不明)→ `None` / 縦横が違う → `None` / 署名違い → `None` / チャンクの長さがファイルの残りを超える・2³¹−1 を超える → `None`(パニックしない)/ IDAT より後の pHYs は見ない / 途中で切れたバイト列 → `None` / `CaptureResult` の JSON に `pixelRatio` が出る(`null` を含む)
@@ -190,7 +190,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
     - [ ] 上記テストが緑、`SMOKE` 緑、`NODEPS` 出力なし
     - [ ] `pixel_ratio.rs` が `masking` を参照していない、`println!`・`eprintln!`・`dbg!` を足していない
   - 検証コマンド: `cargo test --manifest-path src-tauri/Cargo.toml capture::pixel_ratio` / `rg -n 'masking|println!|eprintln!|dbg!' src-tauri/src/capture/pixel_ratio.rs`(0 件)/ `SMOKE` / `NODEPS`
-- [ ] QE-T06 — 縮めた大きさと縮めた RGBA の取り出し(ARCH §1.3 #12)(変更ファイル: `src/canvas/copyScale.ts`, `src/canvas/copyScale.test.ts`, `src/canvas/render.ts` | 依存: なし)
+- [x] QE-T06 — 縮めた大きさと縮めた RGBA の取り出し(ARCH §1.3 #12)(変更ファイル: `src/canvas/copyScale.ts`, `src/canvas/copyScale.test.ts`, `src/canvas/render.ts` | 依存: なし)
   - `shrunkSize(w, h, ratio)`(四捨五入・最小 1px。`ratio` が 1 以下・有限でない値は元の大きさ)、`copyRatio(enabled, pixelRatio)`(オフ・1・`null`・不正値は 1)
   - `getCanvasImageData(canvas, ratio = 1)`: `ratio > 1` のときだけ `shrunkSize()` の大きさの canvas に `imageSmoothingQuality = "high"` で描いて RGBA を読む。`ratio = 1` は今と同じ経路
   - TDD(先に書くテスト): `shrunkSize` — 2 倍で 3024×1964 → 1512×982 / 奇数(3×5 → 2×3、四捨五入)/ 1×1 → 1×1(最小 1px)/ `ratio` 1・0.5・0・`NaN`・`Infinity` で元の大きさ。`copyRatio` — オフ・オン × 1・2・`null` の 6 通り。`render.ts` の縮小は DOM が要るため QE-T08 の E2E で確かめる(jsdom は入れない。既存方針)
@@ -198,7 +198,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
     - [ ] 上記テストが緑、`SMOKE` 緑(既存の `getCanvasImageData()` の呼び出しは引数なしで今と同じ結果)、`NODEPS` 出力なし
     - [ ] `copyScale.ts` が `ui/`・`ipc/` を import していない(`LAYER`)
   - 検証コマンド: `npx vitest run src/canvas/copyScale.test.ts` / `LAYER` / `SMOKE` / `NODEPS`
-- [ ] QE-T07 — IPC: 撮影結果の倍率の型と、縮めてコピーの取得・変更(ARCH §5.5)(変更ファイル: `src/ipc/capture.ts`, `src/ipc/capture.test.ts`, `src/ipc/settings.ts`, `src/ipc/settings.test.ts` | 依存: なし)
+- [x] QE-T07 — IPC: 撮影結果の倍率の型と、縮めてコピーの取得・変更(ARCH §5.5)(変更ファイル: `src/ipc/capture.ts`, `src/ipc/capture.test.ts`, `src/ipc/settings.ts`, `src/ipc/settings.test.ts` | 依存: なし)
   - `CaptureResult.pixelRatio: 1 | 2 | null`。`1 | 2 | null` 以外(3・1.5・文字列・欠落)は `null` として扱う(壊れた値で縮めない)
   - `getShrinkCopy(): Promise<boolean>`(コマンドが無い・失敗は `false`)、`setShrinkCopy(enabled): Promise<boolean>`(`settings_save_failed` を区別できる例外にする)
   - TDD(先に書くテスト。既存 `src/ipc/*.test.ts` の invoke の偽物の作法): `pixelRatio` の正規化(1・2・`null`・欠落・3・1.5・`"2"`)/ `get_shrink_copy` が真偽値以外を返したら `false` / 失敗で `false` / `set_shrink_copy` に `{ enabled }` を渡す / 保存失敗の例外
@@ -209,7 +209,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 2b(QE-T04 完了後。`commands.rs` が重なるため)
 
-- [ ] QE-T05 — Rust: `SettingsStore` と `get_shrink_copy`・`set_shrink_copy`(ARCH §1.3 #13・§5.5・§11)(変更ファイル: `src-tauri/src/settings.rs`, `src-tauri/src/shortcuts.rs`, `src-tauri/src/commands.rs`, `src-tauri/src/lib.rs`, `docs/docs/project.md`, `docs/docs/data-model.md`, `docs/docs/development-patterns.md`, `project-config.md`(§11) | 依存: QE-T04)
+- [x] QE-T05 — Rust: `SettingsStore` と `get_shrink_copy`・`set_shrink_copy`(ARCH §1.3 #13・§5.5・§11)(変更ファイル: `src-tauri/src/settings.rs`, `src-tauri/src/shortcuts.rs`, `src-tauri/src/commands.rs`, `src-tauri/src/lib.rs`, `docs/docs/project.md`, `docs/docs/data-model.md`, `docs/docs/development-patterns.md`, `project-config.md`(§11) | 依存: QE-T04)
   - `SettingsStore { path, settings: Mutex<AppSettings> }`: `load()`・`get()`・`update(f)`(今の設定に `f` を当てて既存の `save_settings()` で保存し、失敗したらメモリの値を戻す)。`AppSettings.shrink_copy` は `#[serde(default, skip_serializing_if = "is_false")]`
   - `shortcuts.rs` の保存(`shortcuts.rs:340` の `AppSettings { capture_shortcut }` でファイル全体を書く所)と起動時の読み込み(`shortcuts.rs:381`)を `SettingsStore` 経由にする。`lib.rs` の `setup()` の最初で `manage()`(ショートカットの登録より前)、`invoke_handler` に 2 コマンド
   - TDD(先に書くテスト): 項目の無いファイル → オフ / オフのときキーを書かない / オンで `"shrinkCopy": true` / **ショートカットを変えても `shrinkCopy` が消えない・逆も同じ**(今のコードで Red になることを確認)/ 保存失敗でメモリの値が戻り `settings_save_failed` / 知らない項目は無視(既存)/ 壊れたファイルは既定(既存)
@@ -221,7 +221,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 2c(Phase 2a・2b 完了後)
 
-- [ ] QE-T08 — 倍率の受け渡しとコピーの全経路で縮める(ARCH §5.2・§7.1 R-3〜5)(変更ファイル: `src/canvas/canvasState.ts`, `src/canvas/canvasState.test.ts`, `src/history/historyStore.ts`, `src/history/historyStore.test.ts`, `src/main.ts`, `e2e/fixtures/tauriMock.ts`, `e2e/fixtures/sampleCapturePng.ts`, `e2e/shrink-copy.spec.ts`, `docs/docs/data-model.md`, `docs/docs/architecture.md` | 依存: QE-T05, QE-T06, QE-T07)
+- [x] QE-T08 — 倍率の受け渡しとコピーの全経路で縮める(ARCH §5.2・§7.1 R-3〜5)(変更ファイル: `src/canvas/canvasState.ts`, `src/canvas/canvasState.test.ts`, `src/history/historyStore.ts`, `src/history/historyStore.test.ts`, `src/main.ts`, `e2e/fixtures/tauriMock.ts`, `e2e/fixtures/sampleCapturePng.ts`, `e2e/shrink-copy.spec.ts`, `docs/docs/data-model.md`, `docs/docs/architecture.md` | 依存: QE-T05, QE-T06, QE-T07)
   - `CanvasImage.pixelRatio`(1 か 2。不明は 1)、`HistoryItem.pixelRatio`。`handleCaptureCompleted` が `result.pixelRatio ?? 1` を両方に入れ、`reloadHistoryItemIntoCanvas` は `item.pixelRatio` を `CanvasImage` に戻す
   - `main.ts` が起動時に `getShrinkCopy()` を読んで `shrinkCopy` に持ち(読み終わるまではオフ)、`getClipboardPayload()` が `getCanvasImageData(canvasEl, copyRatio(shrinkCopy, image.pixelRatio))` を渡す。撮った直後の自動コピーも同じ関数を通る(`main.ts:228-236`)
   - `tauriMock.ts`: 撮影結果の `pixelRatio`(1・2・`null` を切り替え)、`get_shrink_copy`(初期値を切り替え)。`sampleCapturePng.ts`: 必要なら 144dpi の pHYs 付き PNG
@@ -233,7 +233,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 2d(QE-T08 完了後)
 
-- [ ] QE-T09 — 設定画面の「コピーを等倍に縮める」(UI §5.1・§6)(変更ファイル: `src/ui/settingsDialog.ts`, `src/ui/settingsDialog.test.ts`(新設), `src/styles.css`, `src/main.ts`, `e2e/fixtures/tauriMock.ts`, `e2e/shrink-copy.spec.ts` | 依存: QE-T08)
+- [x] QE-T09 — 設定画面の「コピーを等倍に縮める」(UI §5.1・§6)(変更ファイル: `src/ui/settingsDialog.ts`, `src/ui/settingsDialog.test.ts`(新設), `src/styles.css`, `src/main.ts`, `e2e/fixtures/tauriMock.ts`, `e2e/shrink-copy.spec.ts` | 依存: QE-T08)
   - ショートカットの項目の下に `<hr class="settings-dialog__divider">`・チェック・説明(`aria-describedby`)・状態の文(`role="status"`、失敗だけ)。「既定に戻す」の文言を「キーを既定に戻す」に変える
   - 開いたときに `getShrinkCopy()` で読み直す。切り替えたらすぐ `setShrinkCopy()`、保存中は `disabled`、失敗したらチェックを戻して「保存できませんでした。元の設定のままです。」。成功したら `main.ts` の `shrinkCopy` を更新(コールバックで渡す)
   - 文言は固定文字列を `textContent` で入れる
@@ -247,7 +247,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 3a(並行可能。いつ着手してもよい。ほかのタスクと変更ファイルが重ならない)
 
-- [ ] QE-T10 — スタンプの寸法・記号の色・番号・描画と、大きさの基準の関数(UI §2.3・§2.4、ARCH §5.1)(変更ファイル: `src/canvas/tools/stampShape.ts`, `src/canvas/tools/stampShape.test.ts`, `src/canvas/styleBasis.ts`, `src/canvas/styleBasis.test.ts` | 依存: なし)
+- [x] QE-T10 — スタンプの寸法・記号の色・番号・描画と、大きさの基準の関数(UI §2.3・§2.4、ARCH §5.1)(変更ファイル: `src/canvas/tools/stampShape.ts`, `src/canvas/tools/stampShape.test.ts`, `src/canvas/styleBasis.ts`, `src/canvas/styleBasis.test.ts` | 依存: なし)
   - `StampGlyph = "number" | "check" | "cross" | "exclamation" | "question"` と `StampShape { kind: "stamp"; center; glyph; color; fontSize; styleBasis? }` の型をここで定義する(`shapeEdit.ts` は QE-T11 で union に加える)
   - `shapeStyleDiagonal(shape, w, h) = shape.styleBasis ?? hypot(w, h)`
   - `stampDiameter(fontSize, diagonal)`: `max(20, round(computeFontSizePx 相当 × 1.2))`(UI §2.3 の定数を名前付きで)。`stampRingWidth`・`stampDigitPx(d, digits)`(1 桁 0.58・2 桁 0.48)・`stampStrokeWidth`
@@ -262,7 +262,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 3b(Phase 2・QE-T10 完了後)
 
-- [ ] QE-T11 — スタンプをオブジェクトの種類に加え、上限の焼き込みの選び方を変える(ARCH §5.3・§15 #2・#3)(変更ファイル: `src/canvas/canvasState.ts`, `src/canvas/shapeEdit.ts`, `src/canvas/shapeEdit.test.ts`, `src/canvas/objectModel.ts`, `src/canvas/objectModel.test.ts`, `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/canvas/tools/shapeTools.ts`, `src/canvas/tools/textTool.ts` | 依存: QE-T10)
+- [x] QE-T11 — スタンプをオブジェクトの種類に加え、上限の焼き込みの選び方を変える(ARCH §5.3・§15 #2・#3)(変更ファイル: `src/canvas/canvasState.ts`, `src/canvas/shapeEdit.ts`, `src/canvas/shapeEdit.test.ts`, `src/canvas/objectModel.ts`, `src/canvas/objectModel.test.ts`, `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/canvas/tools/shapeTools.ts`, `src/canvas/tools/textTool.ts` | 依存: QE-T10)
   - `ToolId` に `"stamp"`。`EditableShape` に `StampShape`。ハンドル無し、当たり判定は円の内側、移動は中心を半径の分だけ内側に収める、`shapeUndoRect()` は影込みの外接矩形
   - `decidePointerDown()`: スタンプツールではスタンプだけを掴み、空白は `place`(UI 側は QE-T12)。矢印・矩形・円ツールはスタンプも掴める(ARCH §5.3 の表)
   - `pickBurnTarget(objects)`: 重ね順の奥から、番号スタンプを飛ばして最初の注釈(穴は QE-T15 で加える)。`addShapeObject()` は選べなければ追加せず `null` を返し、取り消しの手も積まない。呼び出し元(`shapeTools.ts:291`・`textTool.ts:217`)は `null` のとき何もしない(通知は QE-T12)
@@ -274,7 +274,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 3c(QE-T11 完了後)
 
-- [ ] QE-T12 — スタンプを描く・置く・選ぶ、上限の通知(ARCH §5.2・§7.1 S、UI §2.5・§6)(変更ファイル: `src/canvas/documentSurface.ts`, `src/canvas/tools/shapeTools.ts`, `src/canvas/tools/textTool.ts`, `src/canvas/toolSettings.ts`, `src/canvas/toolSettings.test.ts`, `src/ui/toolbar.ts`, `src/ui/toolKeys.ts`, `src/ui/toolKeys.test.ts`, `src/main.ts` | 依存: QE-T11)
+- [x] QE-T12 — スタンプを描く・置く・選ぶ、上限の通知(ARCH §5.2・§7.1 S、UI §2.5・§6)(変更ファイル: `src/canvas/documentSurface.ts`, `src/canvas/tools/shapeTools.ts`, `src/canvas/tools/textTool.ts`, `src/canvas/toolSettings.ts`, `src/canvas/toolSettings.test.ts`, `src/ui/toolbar.ts`, `src/ui/toolKeys.ts`, `src/ui/toolKeys.test.ts`, `src/main.ts` | 依存: QE-T11)
   - `documentSurface.render()` が `stampNumbers()` を 1 回求めて番号スタンプに渡す。下書きの新しい番号は「今の番号スタンプの数 + 1」
   - `shapeTools.ts`: スタンプツールで押した位置に下書き、離した位置で `addShapeObject()`(1 手)。選択の輪(円の外側 4px、白の実線 + 濃い破線 `[4,3]`)をオーバーレイに。カーソル(上 `move`・空白 `crosshair`)
   - 上限の通知: `bindShapeTools()`・`bindTextTool()` に `onObjectLimit` を渡し、`main.ts` が `showToast("注釈は 50 個までです。いらない注釈を消してから置いてください。", "error")` を結ぶ(`canvas/` → `ui/` を作らない。【要確認】#5)
@@ -286,7 +286,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 3d(QE-T12 完了後)
 
-- [ ] QE-T13 — スタンプの種類の選択・E2E・見た目(UI §2.1・§2.2)(変更ファイル: `src/ui/stampKindPicker.ts`, `src/ui/stampKindPicker.test.ts`, `index.html`, `src/styles.css`, `src/main.ts`, `e2e/stamp.spec.ts`, `e2e/screenshots/quickEdits.visual.ts`, `docs/docs/data-model.md`, `docs/docs/architecture.md`, `docs/docs/development-patterns.md` | 依存: QE-T12)
+- [x] QE-T13 — スタンプの種類の選択・E2E・見た目(UI §2.1・§2.2)(変更ファイル: `src/ui/stampKindPicker.ts`, `src/ui/stampKindPicker.test.ts`, `index.html`, `src/styles.css`, `src/main.ts`, `e2e/stamp.spec.ts`, `e2e/screenshots/quickEdits.visual.ts`, `docs/docs/data-model.md`, `docs/docs/architecture.md`, `docs/docs/development-patterns.md` | 依存: QE-T12)
   - `initStampKindPicker(mount)`: 5 ボタン(`スタンプ 番号` など)、`aria-pressed`、`data-preserve-selection`。スタンプツールの間だけ表示し、重ね順の後ろ(区切り線 1 本)。選択中のスタンプは変えない
   - TDD(先に書くテスト): 種類 → `aria-label` / 表示条件(スタンプツールのときだけ)の純粋関数 / E2E(先に Red): 番号を 3 つ置く → 1・2・3 → 2 番目を消す → 1・2 → ⌘Z で 1・2・3 → 色・文字サイズの変更 → 記号に切り替えて置いても次の番号は 4 → ⌘⇧B で番号が変わらない → 種類を出し入れしても色・文字サイズ・重ね順のボタンの位置が変わらない / 番号の読み取りは画素の比較ではなく、注釈の状態を読むテスト用の口があれば使い、無ければ見た目の比較で確かめる
   - 見た目(`quickEdits.visual.ts`): 番号 1 桁・2 桁と記号 4 種 × 小・中・大、明るい画像・暗い画像、黄の丸の黒い記号、選択の輪
@@ -300,7 +300,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 4a(並行可能。いつ着手してもよい)
 
-- [ ] QE-T14 — 暗くする矩形の集合 `spotlightShadeRects()`(ARCH §1.3 #8)(変更ファイル: `src/canvas/spotlight.ts`, `src/canvas/spotlight.test.ts` | 依存: なし)
+- [x] QE-T14 — 暗くする矩形の集合 `spotlightShadeRects()`(ARCH §1.3 #8)(変更ファイル: `src/canvas/spotlight.ts`, `src/canvas/spotlight.test.ts` | 依存: なし)
   - 穴の端の座標で縦横に区切り、どの穴にも入らないマスを横につないで返す。`SPOTLIGHT_SHADE = "rgba(0, 0, 0, 0.5)"`(UI §3.1)
   - TDD(先に書くテスト): 穴 0 個 → 画像全体の 1 矩形 / 1 個 → 補集合 / 2 個の重なり・接する・離れる / 画像の外へはみ出した穴は画像に切り詰める / 端数の座標 / **性質テスト**: 乱数(固定シード)の穴 1〜50 個で、返す矩形が互いに重ならず、面積の和が「画像 − 穴の和」と一致し、どの穴とも重ならない / 50 個で矩形の数が (2×50+1)² 以下
   - 受け入れ基準:
@@ -309,7 +309,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 4b(Phase 3・QE-T14 完了後)
 
-- [ ] QE-T15 — 穴をオブジェクトの種類に加え、合成に暗さの段を足す(ARCH §1.3 #9・§5.3)(変更ファイル: `src/canvas/canvasState.ts`, `src/canvas/shapeEdit.ts`, `src/canvas/shapeEdit.test.ts`, `src/canvas/objectModel.ts`, `src/canvas/objectModel.test.ts`, `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/canvas/documentSurface.ts` | 依存: QE-T11, QE-T14)
+- [x] QE-T15 — 穴をオブジェクトの種類に加え、合成に暗さの段を足す(ARCH §1.3 #9・§5.3)(変更ファイル: `src/canvas/canvasState.ts`, `src/canvas/shapeEdit.ts`, `src/canvas/shapeEdit.test.ts`, `src/canvas/objectModel.ts`, `src/canvas/objectModel.test.ts`, `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/canvas/documentSurface.ts` | 依存: QE-T11, QE-T14)
   - `ToolId` に `"spotlight"`。`SpotlightShape { kind: "spotlight"; rect }`。四隅のハンドル、未選択時は枠の付近だけ掴める、ツールなしのときも枠の付近だけ(ARCH §5.3 の表)。スポットライトツールでは穴だけを掴む
   - `pickBurnTarget()` が穴も飛ばす。`setSelectedColor()`・`setSelectedFontSize()` は穴では何もしない(`false`)
   - 合成: ベース → `spotlightShadeRects()` を 1 本のパスで 1 回塗る → 穴以外の注釈(重ね順)→ 穴以外の下書き。下書きの穴も暗さに含める。穴そのものは何も描かない
@@ -321,7 +321,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 4c(QE-T15 完了後)
 
-- [ ] QE-T16 — スポットライトのツール・E2E・見た目(UI §3)(変更ファイル: `src/canvas/tools/shapeTools.ts`, `src/ui/toolbar.ts`, `src/ui/toolKeys.ts`, `src/ui/toolKeys.test.ts`, `e2e/spotlight.spec.ts`, `e2e/screenshots/quickEdits.visual.ts`, `docs/docs/data-model.md`, `docs/docs/architecture.md`, `docs/docs/development-patterns.md` | 依存: QE-T15)
+- [x] QE-T16 — スポットライトのツール・E2E・見た目(UI §3)(変更ファイル: `src/canvas/tools/shapeTools.ts`, `src/ui/toolbar.ts`, `src/ui/toolKeys.ts`, `src/ui/toolKeys.test.ts`, `e2e/spotlight.spec.ts`, `e2e/screenshots/quickEdits.visual.ts`, `docs/docs/data-model.md`, `docs/docs/architecture.md`, `docs/docs/development-patterns.md` | 依存: QE-T15)
   - ドラッグで穴の下書き → 離して `addShapeObject()`(上限は QE-T12 の通知)。選択は四隅の丸ハンドル + 白の実線と濃い破線の枠。ツールバーにボタン(UI §1.2、モザイクの後ろ)、`TOOL_KEYS` に `KeyS`
   - TDD(先に書くテスト): 表の整合テストに S / E2E(先に Red): 穴を 2 つ(重なりあり)→ コピーされる画像の画素で、穴の中は元のまま・外は 1 段階(元の画素 × 0.5 ±1)・重なりも暗くない・穴の外の矢印は明るい → 移動・リサイズ・削除がそれぞれ 1 手 → 最後の穴を消すと暗さが消える → 選択の枠がコピーに写らない → 履歴のサムネイルに暗さが写る
   - 見た目: 穴 2 つ(重なり)・選択中の穴、明るい画像・暗い画像
@@ -334,7 +334,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 5a(Phase 4 完了後)
 
-- [ ] QE-T17 — 注釈の大きさを `shapeStyleDiagonal()` から決める(ADR-002「注釈の大きさの基準」)。動作は変えない下準備(変更ファイル: `src/canvas/shapeEdit.ts`, `src/canvas/tools/arrowTool.ts`, `src/canvas/tools/arrowTool.test.ts`, `src/canvas/tools/rectangleTool.ts`, `src/canvas/tools/rectangleTool.test.ts`, `src/canvas/tools/ellipseTool.ts`, `src/canvas/tools/ellipseTool.test.ts`, `src/canvas/tools/textLayout.ts`, `src/canvas/tools/textLayout.test.ts`, `src/canvas/tools/textTool.ts`, `src/canvas/tools/stampShape.ts`, `src/canvas/documentSurface.ts`, `src/canvas/tools/shapeTools.ts`, `src/canvas/documentState.ts`, `project-config.md`(§11) | 依存: QE-T16)
+- [x] QE-T17 — 注釈の大きさを `shapeStyleDiagonal()` から決める(ADR-002「注釈の大きさの基準」)。動作は変えない下準備(変更ファイル: `src/canvas/shapeEdit.ts`, `src/canvas/tools/arrowTool.ts`, `src/canvas/tools/arrowTool.test.ts`, `src/canvas/tools/rectangleTool.ts`, `src/canvas/tools/rectangleTool.test.ts`, `src/canvas/tools/ellipseTool.ts`, `src/canvas/tools/ellipseTool.test.ts`, `src/canvas/tools/textLayout.ts`, `src/canvas/tools/textLayout.test.ts`, `src/canvas/tools/textTool.ts`, `src/canvas/tools/stampShape.ts`, `src/canvas/documentSurface.ts`, `src/canvas/tools/shapeTools.ts`, `src/canvas/documentState.ts`, `project-config.md`(§11) | 依存: QE-T16)
   - 全種類の形に任意の `styleBasis?: number`。太さ・文字の大きさ・直径の関数(ARCH が示す `arrowTool.ts:122-125`・`textLayout.ts:61-68`・`rectangleTool.ts:72-75` など)が幅・高さではなく対角線を受け取り、呼び出し元は `shapeStyleDiagonal(shape, w, h)` を渡す。`setSelectedFontSize()` の測り直しも同じ
   - `shapeUndoRect()`(焼き込み・範囲外の判定に使う)も同じ対角線で線の太さ・影を見積もる
   - TDD(先に書くテスト): 各関数で `styleBasis` 無しのとき今と同じ値(既存テストがそのまま緑)/ `styleBasis` 有りのとき、画像の大きさが変わっても太さ・文字の大きさ・直径が変わらない / `rg -n 'Math\.hypot\(' src/canvas/tools` で、対角線を直接計算する箇所が `styleBasis.ts` 経由に置き換わった(残すものは理由をコメント)
@@ -345,14 +345,14 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 5b(QE-T17 完了後。QE-T18 と QE-T19 は並行可能)
 
-- [ ] QE-T18 — モザイクの粗さを撮った時点の大きさ `captureSize` で決める(ADR-002「モザイクの粗さ」)(変更ファイル: `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/canvas/tools/mosaicTool.ts`, `src/canvas/tools/mosaicTool.test.ts`, `src/ui/autoMask.ts`, `src/ui/autoMask.test.ts` | 依存: QE-T17)
+- [x] QE-T18 — モザイクの粗さを撮った時点の大きさ `captureSize` で決める(ADR-002「モザイクの粗さ」)(変更ファイル: `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/canvas/tools/mosaicTool.ts`, `src/canvas/tools/mosaicTool.test.ts`, `src/ui/autoMask.ts`, `src/ui/autoMask.test.ts` | 依存: QE-T17)
   - `DocumentState`(または `documentState` のモジュール変数)に `captureSize`。`resetDocument()` で画像の大きさ、`restoreDocument()` で退避の値(`DocumentSnapshot` に追加。古い退避で無ければ画像の大きさ)
   - `mosaicTool.ts:306` と `autoMask.ts:277` の `pixelateRect(..., width, height)` を `captureSize` に替える
   - TDD(先に書くテスト): 新規・退避からの復元で `captureSize` が正しい / 退避に入る / ベースの大きさが変わっても(偽の `PixelStore` で大きさを変える)モザイクのブロックの大きさが変わらない / 自動マスキングの一括モザイクも同じ
   - 受け入れ基準:
     - [ ] 上記テストと既存テストが緑、`SMOKE` 緑、`NODEPS` 出力なし、`LAYER`
   - 検証コマンド: `npx vitest run src/canvas/documentState.test.ts src/canvas/tools/mosaicTool.test.ts src/ui/autoMask.test.ts` / `SMOKE` / `NODEPS`
-- [ ] QE-T19 — 範囲の整数化と注釈の計画 `crop.ts`、はみ出した注釈の移動(ARCH §5.1・§5.3・§7.1 C-3)(変更ファイル: `src/canvas/crop.ts`, `src/canvas/crop.test.ts`, `src/canvas/shapeEdit.ts`, `src/canvas/shapeEdit.test.ts` | 依存: QE-T17)
+- [x] QE-T19 — 範囲の整数化と注釈の計画 `crop.ts`、はみ出した注釈の移動(ARCH §5.1・§5.3・§7.1 C-3)(変更ファイル: `src/canvas/crop.ts`, `src/canvas/crop.test.ts`, `src/canvas/shapeEdit.ts`, `src/canvas/shapeEdit.test.ts` | 依存: QE-T17)
   - `normalizeCropRect(rect, w, h)`: 各辺を四捨五入して `[0, 幅] × [0, 高さ]` に収める。幅・高さ 0 または全体と同じなら「何もしない」
   - `planCrop(objects, rect, w, h): CropPlan`: 描画範囲(`shapeUndoRect()`)が範囲と重ならなければ「消す」、重なれば範囲の左上の分だけずらし、`styleBasis` が無ければ切る前の対角線を付ける(有れば変えない)。スタンプは中心、穴は矩形をずらす
   - `moveShape()` の範囲を `[min(0, -左端), max(0, 幅 - 右端)]` に
@@ -364,7 +364,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 5c(QE-T18・QE-T19 完了後)
 
-- [ ] QE-T20 — `crop` コマンドと `applyCrop()`(ARCH §5.4・§7.1 C-3〜5、ADR-002「取り消しの手の形」)(変更ファイル: `src/canvas/commands.ts`, `src/canvas/commands.test.ts`, `src/canvas/documentSurface.ts`, `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/history/documentArchive.ts`, `src/history/documentArchive.test.ts` | 依存: QE-T18, QE-T19)
+- [x] QE-T20 — `crop` コマンドと `applyCrop()`(ARCH §5.4・§7.1 C-3〜5、ADR-002「取り消しの手の形」)(変更ファイル: `src/canvas/commands.ts`, `src/canvas/commands.test.ts`, `src/canvas/documentSurface.ts`, `src/canvas/documentState.ts`, `src/canvas/documentState.test.ts`, `src/history/documentArchive.ts`, `src/history/documentArchive.test.ts` | 依存: QE-T18, QE-T19)
   - `PixelStore.swapAll(image)`(ベースと表示 canvas を `image` の大きさにして書き、前のベース全体を返す)。`{ type: "crop"; rect; image }` の取り消し・やり直しは `swapAll` の入れ替え
   - `applyCrop(rect)`: `normalizeCropRect` → 何もしないなら終わり → `planCrop` → `surface.read(rect)` → `swapAll` → `group[crop, update…(配列順), remove…(先頭から、消した時点の index)]` を 1 手 → 消えた注釈を選んでいたら選択を外す → 通知。`captureSize` は変えない
   - `commandPixelBytes()` が `crop` の `image` を数える
@@ -375,7 +375,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 5d(QE-T20 完了後)
 
-- [ ] QE-T21 — 確定前の範囲 `cropSession` とトリミングツール(ARCH §5.1・§6.3・§7.1 C-1〜2・C-6、UI §4.1)(変更ファイル: `src/canvas/canvasState.ts`, `src/canvas/cropSession.ts`, `src/canvas/cropSession.test.ts`, `src/canvas/tools/cropTool.ts`, `src/canvas/tools/cropTool.test.ts`, `src/ui/toolbar.ts`, `src/ui/toolKeys.ts`, `src/ui/toolKeys.test.ts` | 依存: QE-T20)
+- [x] QE-T21 — 確定前の範囲 `cropSession` とトリミングツール(ARCH §5.1・§6.3・§7.1 C-1〜2・C-6、UI §4.1)(変更ファイル: `src/canvas/canvasState.ts`, `src/canvas/cropSession.ts`, `src/canvas/cropSession.test.ts`, `src/canvas/tools/cropTool.ts`, `src/canvas/tools/cropTool.test.ts`, `src/ui/toolbar.ts`, `src/ui/toolKeys.ts`, `src/ui/toolKeys.test.ts` | 依存: QE-T20)
   - `ToolId` に `"crop"`。`cropSession`: `beginCrop`・`updateCropRect`(画像の内側に収める)・`cancelCrop`・`getCropSession`・`subscribeCropSession`
   - `bindCropTool(canvas)`: ドラッグで範囲、8 つのハンドル(四隅はかぎ形・四辺の中央は棒、当たり半径 10px)でリサイズ、内側で移動、カーソル(UI §4.1)。オーバーレイ(`pointer-events: none`)に範囲外の暗さ `CROP_SHADE = rgba(0,0,0,0.6)`・白の枠・ハンドル。Enter で `applyCrop()` → `cancelCrop()` とトースト「切り抜きました。⌘Z で戻せます。」(通知は `onCropped` で `main.ts` から受ける。【要確認】#5 と同じ形)、Esc で `cancelCrop()`。範囲が無いときの Enter / Esc は何もしない
   - やめる条件の購読: ツールの変化・自動マスキングの開始(`maskSession`)・ドキュメントの大きさの変化で `cancelCrop()`
@@ -387,7 +387,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 5e(QE-T21 完了後)
 
-- [ ] QE-T22 — 確定・やめるの帯と画面への結線(UI §4.2・§4.3、ARCH §11・§15 #4)(変更ファイル: `src/ui/cropBar.ts`, `src/ui/cropBar.test.ts`, `index.html`, `src/styles.css`, `src/main.ts`, `src/ui/undoButton.ts`, `src/ui/undoButton.test.ts`, `src/ui/autoMask.ts`, `src/ui/autoMask.test.ts` | 依存: QE-T21)
+- [x] QE-T22 — 確定・やめるの帯と画面への結線(UI §4.2・§4.3、ARCH §11・§15 #4)(変更ファイル: `src/ui/cropBar.ts`, `src/ui/cropBar.test.ts`, `index.html`, `src/styles.css`, `src/main.ts`, `src/ui/undoButton.ts`, `src/ui/undoButton.test.ts`, `src/ui/autoMask.ts`, `src/ui/autoMask.test.ts` | 依存: QE-T21)
   - `initCropBar(mount)`: `<div id="crop-bar" class="crop-bar" hidden>` をツールバー直後に。トリミングツールを選んだ時点で出す。状態の文(範囲なし / `残す範囲 W × H` + 補足 / `画像全体と同じ範囲です`)、「やめる」`<kbd>esc</kbd>`・「確定」`<kbd>return</kbd>`(何もしない範囲では `disabled`)。`role="status"` の更新はポインタを離したときだけ
   - `main.ts`: `initCropBar()`・`bindCropTool(canvasEl)`(`bindSelectionKeys()` より**前**)、`handleCaptureCompleted`・`reloadHistoryItemIntoCanvas`・`clearEditor` の画像を差し替える前に `cancelCrop()`(`discardMaskSession()` の隣)
   - `undoButton.ts`: 範囲の指定中の ⌘Z / ⇧⌘Z とボタンは `cancelCrop()` だけ
@@ -399,7 +399,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 #### Phase 5f(QE-T22 完了後)
 
-- [ ] QE-T23 — トリミングの E2E・他の機能との組み合わせ・見た目・docs(FR-005〜FR-007、ARCH §10.2)(変更ファイル: `e2e/crop.spec.ts`, `e2e/screenshots/quickEdits.visual.ts`, `e2e/fixtures/tauriMock.ts`(必要時), `docs/docs/project.md`, `docs/docs/architecture.md`, `docs/docs/data-model.md`, `docs/docs/development-patterns.md` | 依存: QE-T22)
+- [x] QE-T23 — トリミングの E2E・他の機能との組み合わせ・見た目・docs(FR-005〜FR-007、ARCH §10.2)(変更ファイル: `e2e/crop.spec.ts`, `e2e/screenshots/quickEdits.visual.ts`, `e2e/fixtures/tauriMock.ts`(必要時), `docs/docs/project.md`, `docs/docs/architecture.md`, `docs/docs/data-model.md`, `docs/docs/development-patterns.md` | 依存: QE-T22)
   - E2E(先に書いて Red を確認し、足りない結線は QE-T22 の範囲で直してコミットに含め、PROGRESS に記す): 範囲を囲む → Esc で変わらない → 囲み直して Enter → canvas の大きさが範囲の整数の大きさ・注釈の位置が合う(画素)→ 完全に外の注釈が消え、番号が詰まる → ⌘Z で大きさ・位置・消えた注釈・番号が戻る → ⇧⌘Z → 確定前の ⌘C は元の大きさ → トリミングより前のモザイクも続けて戻せる → 範囲の指定中の ⌘Z は指定をやめるだけ → 自動マスキングの確認中はトリミングを始められない → 確定後のコピー・履歴のサムネイルは切り詰め後 → 履歴を切り替えて戻っても続きの操作・取り消しができる → 縮めてコピーがオンなら切り詰め後の大きさの半分 → 切る前に描いた矢印の太さが変わらない・モザイクの粗さが変わらない
   - 見た目: トリミングの確定前(明るい地・暗い地)と帯の 3 状態
   - 受け入れ基準:
@@ -421,7 +421,7 @@ rg -n 'localStorage|sessionStorage|indexedDB' src
 
 ### Phase 7 — 仕上げ(QE-T25 は QE-T23 完了後、QE-T26 は QE-T24・QE-T25 完了後。【要確認】#6)
 
-- [ ] QE-T25 — 機能全体のセキュリティ確認とレビュー(`/security-scan`・`/review-sweep`)。指摘の修正は別タスク(QE-T25-F1 …)として PROGRESS に追加する(変更ファイル: `output/reports/security/SECURITY_quick-edits_<日時>.md`, `output/reports/review/REVIEW_quick-edits_<日時>.md` | 依存: QE-T23)
+- [x] QE-T25 — 機能全体のセキュリティ確認とレビュー(`/security-scan`・`/review-sweep`)。指摘の修正は別タスク(QE-T25-F1 …)として PROGRESS に追加する(変更ファイル: `output/reports/security/SECURITY_quick-edits_<日時>.md`, `output/reports/review/REVIEW_quick-edits_<日時>.md` | 依存: QE-T23)
   - 確認項目: ARCH §12 の全項目(保存するのは `shrinkCopy` だけ・設定の書き込みは `SettingsStore` だけ・一時ファイル方式のまま / PNG の解析の境界(チャンク長・ファイルの残り・パニックしない)/ モザイクを弱めない(`captureSize`)/ 新しい文言は `textContent`、スタンプは固定の記号だけ / ログを足していない)/ `NODEPS` 出力なし / `git diff 52b2835 -- src-tauri/tauri.conf.json` が `width` の 1 行だけ / `STORAGE` 0 件 / `LAYER` / 1 キー切替が入力欄・IME・設定画面で効かないこと / 他社の製品名・サービス名が差分に無いこと(目視)
   - `/review-sweep` の観点: 正確性(取り消しの順序・大きさの変化・番号の詰め)、要件(FR・ARCH §15・UI の決定との対応)、テスト、docs の同期
   - 受け入れ基準:

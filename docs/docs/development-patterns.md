@@ -217,7 +217,7 @@ Presentational/Container分離パターン(`docs/development-patterns.md` §1参
 
 - 対話的な外部CLI(`screencapture -i` 等、実行すると画面選択UIが出るもの)を呼ぶロジックは、プロセス起動を `trait` の背後に隠す(例: `CaptureProvider`)。テストではモック実装に差し替え、実プロセスを起動しない
 - OS権限確認等の実行環境に依存する値は、呼び出し元の関数に**注入**する(例: `capture::run_with(provider, check_permission: impl FnOnce() -> ScreenRecordingPermission)`)。新規traitは追加せず、クロージャ/関数ポインタで十分な場合はそちらを使う(過剰な抽象化を避ける)
-- 「プロセスの終了コード」ではなく「副作用の結果(生成物ファイルの有無等)」で分岐を判定するロジックは、プロセス起動を伴わない純粋関数として切り出す(例: `screencapture.rs::outcome_for(dest: &Path) -> CaptureOutcome`)。こうすることでOS依存の分岐(Escキャンセル等)も高速・決定論的にユニットテストできる
+- 「プロセスの終了コード」ではなく「副作用の結果(生成物ファイルの有無等)」で分岐を判定するロジックは、プロセス起動を伴わない純粋関数として切り出す(例: `screencapture.rs::outcome_for(status: ExitStatus, dest: &Path) -> io::Result<CaptureOutcome>`。終了コードは「非 0 かつファイル無し = 撮影の失敗」の区別にだけ使い、終了コード 0 + ファイル無しは Esc キャンセル、ファイルがあれば終了コードに関係なく成功。v1.2.0 で終了コードを見るようにした)。こうすることでOS依存の分岐(Escキャンセル等)も高速・決定論的にユニットテストできる
 
 ### 9.4 日付クレートを追加せず ISO8601(UTC)文字列を生成する
 
@@ -351,7 +351,7 @@ Presentational/Container分離パターン(`docs/development-patterns.md` §1参
 ### 14.2 確定前の範囲は合成に描かない
 
 - 範囲の外の暗さ・枠・ハンドルは Canvas に重ねた `.crop-overlay`(`pointer-events: none`)にだけ描く。合成(`documentSurface.ts`)に描くと確定前の ⌘C・履歴に写る
-- 確定前の範囲 `cropSession` を捨てる条件(ツールの変化・自動マスキングの開始・ドキュメントの大きさの変化)は `cropTool.ts::bindCropCancelConditions()` がまとめて購読し、画像の差し替え(新規キャプチャ・履歴の切替・消去)は `main.ts` が `discardMaskSession()` の隣で `cancelCrop()` する。範囲の指定中の ⌘Z / ⇧⌘Z は範囲をやめるだけ(`undoButton.ts`)
+- 確定前の範囲 `cropSession` を捨てる条件(ツールの変化・自動マスキングの開始・ドキュメントの大きさの変化)は `cropTool.ts::bindCropCancelConditions()` がまとめて購読し、画像の差し替え(新規キャプチャ・履歴の切替・消去)は `main.ts::discardPendingEdits()`(`discardMaskSession()` と `cancelCrop()` をまとめた 1 関数。v1.2.0 で 6 か所の重複を 1 本化)が行う。差し替えの経路を増やすときはこの関数を呼ぶ。範囲の指定中の ⌘Z / ⇧⌘Z は範囲をやめるだけ(`undoButton.ts`)
 - 範囲がある間の Enter / Esc を先に受けるため、`bindCropTool()` は `bindSelectionKeys()` より前に結線する。大きさが変わったら自動マスキングの候補を捨てる防御は `ui/autoMask.ts::bindMaskSessionToDocumentSize()`(`maskSession` は `documentState` を購読しない)
 
 ### 14.3 E2E でトリミングを確かめる

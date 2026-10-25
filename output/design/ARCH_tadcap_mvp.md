@@ -501,3 +501,23 @@ cargo test                 # Rustユニットテスト(src-tauri/配下、新規
 - 【新設 2026-09-24】やり直し(Redo、`Cmd+Shift+Z`)。PRD §10要確認#9でB案(実装)を推奨しているが未回答のため、実装しない場合に備え拡張ポイントとして残す。`undoStack`に対称のRedoスタックを追加し、新規描画操作でクリアする設計になる見込み
 - ショートカットキーの変更UI。`shortcuts.rs` の登録処理を設定値化(現状はコード内定数)すれば対応可能
 - ダークモード対応。§9.3のCSSカスタムプロパティ構成をそのまま流用できる
+
+## 17. 実装での決定(2026-10-26 追記)
+
+v0.1.0〜v1.1.0 の実装・人間の決定で本書の記述から離れた点を、**実装を正**として記録する(v1.2.0 前の見直し)。各節の本文は承認時の記録として残し、ここを優先する。詳細は `docs/docs/project.md`(IPC 一覧)・`docs/docs/architecture.md`(構成)・`project-config.md` §11。
+
+| 節 | 本書の記述 | 実装での決定 | 理由・根拠 |
+| -- | ---------- | ------------ | ---------- |
+| §1.1・§11 7-(a) | `ActivationPolicy::Accessory` で Dock アイコン非表示 | Dock にも表示する通常のアプリ。`RunEvent::Reopen`(Dock のアイコン)でエディタを前面に出す | 人間の決定(2026-10-07、v0.3.1) |
+| §11 8 | `invoke_handler` は 4 コマンド | 13 コマンド: `capture_screen`・`check_screen_recording_permission`・`open_screen_recording_settings`・`write_image_fallback`・`read_capture_image`・`activate_app`・`get_capture_shortcut`・`set_capture_shortcut`・`reset_capture_shortcut`・`set_shortcut_recording`・`scan_sensitive_text`・`get_shrink_copy`・`set_shrink_copy` | 実機不具合の修正(`read_capture_image`・`activate_app`)、ショートカット設定(KS)、自動マスキング(AM)、縮めてコピー(QE)で追加 |
+| §11 | `setup()` は Dock 非表示 → トレイ → ショートカット | トレイ構築 → アプリメニュー(「設定…」⌘,)→ 設定ファイルのキーでグローバルショートカット登録 | KS-T1〜T7 |
+| §12 Capabilities | `global-shortcut:allow-register` 等を `capabilities/default.json` に列挙 | 列挙しない。ショートカットは Rust ネイティブ API(`GlobalShortcutExt`)だけで完結し、フロントから呼ばないため許可が要らない。`clipboard-manager:allow-write-image` と `opener:allow-open-url`(固定 URL のスコープ)だけを足した | `shortcuts.rs` の冒頭、`T17_capabilities_review.md` |
+| §5.2・§7.1 | 失敗系イベントの規定なし | `capture://error`(ペイロードは `AppError` の文字列)をトレイ・ショートカット起点の失敗で emit し、フロントが購読する | T15 で最小追加(`tray.rs::CAPTURE_ERROR_EVENT`) |
+| §5.2 7・§15 #3 | `arboard` を足せば tauri の `image-png` feature は要らない | クリップボードは RGBA8 を生ボディで渡すので feature は要らないが、トレイアイコンの PNG を `Image::from_bytes` で読むために `image-png` feature を有効にしている(`Cargo.toml`)。`arboard` は `image`・`png`・`tiff` に依存する(`Cargo.lock`) | T15(トレイ)。クリップボードの判断自体は変わらない |
+| §14 | `docs/docs/` は既存のスタブ | `docs/docs/project.md` 等 4 ファイルは実装タスクが継続更新している。`CLAUDE.md` の `@docs/*.md` とパスが食い違う状態は未解消(移すと `architecture.md` が毎セッション読み込まれ重くなるため、人間の判断待ち) | 本書 §14 注記のまま |
+| §12 | 一時ファイルは削除しない(T05 時点) | 起動時(`setup`)と終了時(`RunEvent::Exit`)に `tadcap-captures/` 直下の `*.png` だけを削除。起動中は撮るたびに残る(フロントは撮影直後に 1 回だけ読む) | 人間の決定(2026-09-24)。起動中の間引きは v1.2.0 でも未実装(人間の判断待ち) |
+| §7.1(v1.2.0) | Esc キャンセル = ファイル未生成で `Cancelled`。終了コードは見ない | `outcome_for(status, dest)` が終了コードも受け、**非 0 かつファイル無し**だけを撮影の失敗(`Internal`、文言は終了コードのみ・stderr は含めない)にする。0 + ファイル無しは `Cancelled`、ファイルがあれば終了コードに関係なく `Completed`。`screencapture` は `/usr/sbin/screencapture` の絶対パスで起動する | 権限確認は通ったのに撮影が失敗したときに「何も起きない」のを避ける。PATH 先頭の同名ファイルへの差し替えを防ぐ(レビュー 2026-10-26) |
+| §5・KS(v1.2.0) | 記録中フラグはフロントの IPC だけが上げ下げする | Rust 側でも `on_page_load`(Started・Finished とも)と `WindowEvent::CloseRequested`/`Destroyed` で下ろす(`shortcuts::reset_recording`、管理状態が無ければ no-op)。`Focused(false)` では下ろさない | 記録中に webview が再読込・クラッシュしてもキャプチャのキーが戻るように |
+| KS-T1(v1.2.0) | 設定ファイルは `SettingsFile` を丸ごとデシリアライズ | `serde_json::Value` から項目ごとに緩く読む(`captureShortcut` は文字列・`shrinkCopy` は真偽値・`version` は整数のときだけ採用。型違いはその項目だけ既定にして `extra` にも残さず、キー名だけを警告)。`null` は項目なしと同じ | 1 項目の型違いで全項目が既定に戻り、次の保存で上書きされるのを防ぐ |
+| §12(v1.2.0) | 一時ディレクトリは `create_dir_all` の既定権限 | `DirBuilder` + `mode(0o700)` で作る(既にあれば権限を変えない) | 機密を含みうる撮影 PNG の置き場を所有者専用にする |
+
