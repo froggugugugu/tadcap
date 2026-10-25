@@ -15,7 +15,7 @@
 
 ### Rust バックエンド(`src-tauri/src/`)
 
-- `main.rs` → `lib.rs::run()`: `tauri::Builder` を組み立てるエントリーポイント。プラグイン登録(`opener`, `clipboard-manager`(T12)含む)・`setup()`(Dockアイコン非表示 → トレイ構築 → グローバルショートカット登録、T15・T16)・`on_window_event`(ウィンドウを閉じてもプロセス継続、T15)・`invoke_handler`(`commands::greet`, `commands::capture_screen`, `commands::check_screen_recording_permission`, `commands::open_screen_recording_settings`、`commands::write_image_fallback`(T12)を組み立てる。`shortcuts::register_capture_shortcut(app)?` は `#[cfg(desktop)]` ガード付きで `tray::build_tray(app)?` の直後に呼ぶ(ARCH §11 の順序どおり、T16)。v0.3.1(人間の決定 2026-10-07): Dockアイコン非表示(`ActivationPolicy::Accessory`)をやめ、Dockにも表示する通常のアプリにした。`run()`のイベントで`RunEvent::Reopen`(Dockのアイコン)を受けて`window_front::bring_main_window_to_front(UserMenu)`でエディタを前面に出す。終了はトレイの「終了」に加え⌘Q・Dockの「終了」(既定のアプリメニュー)。KS-T1〜T7(2026-10-08): `setup()`は トレイ構築 → アプリメニュー(`app_menu::install_app_menu`、既定メニューのTadcapサブメニューに「設定…」⌘,)→ グローバルショートカット(設定ファイルのキーを登録、管理状態`CaptureShortcutManager`)の順。`Builder::on_menu_event`でアプリメニューの「設定…」を処理
+- `main.rs` → `lib.rs::run()`: `tauri::Builder` を組み立てるエントリーポイント。プラグイン登録(`opener`, `clipboard-manager`(T12)含む)・`setup()`(トレイ構築 → アプリメニュー → グローバルショートカット登録、T15・T16・KS。T15 の Dock アイコン非表示は v0.3.1 で廃止)・`on_window_event`(ウィンドウを閉じてもプロセス継続、T15)・`invoke_handler`(`commands::capture_screen`, `commands::check_screen_recording_permission`, `commands::open_screen_recording_settings`、`commands::write_image_fallback`(T12)を組み立てる。`shortcuts::register_capture_shortcut(app)?` は `#[cfg(desktop)]` ガード付きで `tray::build_tray(app)?` の直後に呼ぶ(ARCH §11 の順序どおり、T16)。v0.3.1(人間の決定 2026-10-07): Dockアイコン非表示(`ActivationPolicy::Accessory`)をやめ、Dockにも表示する通常のアプリにした。`run()`のイベントで`RunEvent::Reopen`(Dockのアイコン)を受けて`window_front::bring_main_window_to_front(UserMenu)`でエディタを前面に出す。終了はトレイの「終了」に加え⌘Q・Dockの「終了」(既定のアプリメニュー)。KS-T1〜T7(2026-10-08): `setup()`は トレイ構築 → アプリメニュー(`app_menu::install_app_menu`、既定メニューのTadcapサブメニューに「設定…」⌘,)→ グローバルショートカット(設定ファイルのキーを登録、管理状態`CaptureShortcutManager`)の順。`Builder::on_menu_event`でアプリメニューの「設定…」を処理
 - `commands.rs`: `#[tauri::command]` 関数を集約するモジュール。新規コマンドは必ずここに追加し、呼び出し口を一元化する(ARCH §3.2)。`capture_screen`(T06、T16で `async fn` 化)は `run_capture()`(T16で `run_capture_and_notify()` から改称・非同期化した共通関数)に処理を委譲する。`run_capture()` は3起点(ボタン/トレイ/ショートカット)共有の実行中排他フラグ(`CAPTURE_IN_PROGRESS: AtomicBool`、`try_begin_capture()`/`end_capture()`)で多重起動を防いだうえで、`capture::run()` を `tauri::async_runtime::spawn_blocking` に包んで実行し(メインスレッド・非同期ワーカーいずれもブロックしない、T16でPJM指摘のスレッド問題に対応)、成功時(画像取得できた場合のみ)`capture://completed` イベントで `CaptureResult` を送出する(ARCH §5.2・§7.1、`tauri::Emitter` トレイトの `AppHandle::emit()` を使用)。アプリ内ボタン(`capture_screen`)・トレイメニュー「キャプチャ」(`tray.rs`、T15)・グローバルショートカット(`shortcuts.rs`、T16)の3経路がこの共通関数を呼ぶため、キャプチャ処理の実装はここに一元化されている。`RunError → AppError` 変換(`app_error_from_run_error`)・`CaptureOutcome → CaptureResult` 構築(`capture_result_for`)・識別子生成(`id_from_path`、一時ファイル名をそのまま流用)・ISO8601(UTC)日時生成(`iso8601_utc_from_unix_millis` / `civil_from_days`、Howard Hinnant のアルゴリズムを `chrono` 等のクレートを使わず std のみで実装)はいずれも Tauri ランタイムに依存しない純粋関数として切り出し、実際に `screencapture` を起動せずユニットテストしてある。T08で `check_screen_recording_permission`(`async fn`。`capture::ensure_screen_recording_access()` を `spawn_blocking` 経由で呼ぶ)・`open_screen_recording_settings`(同期。固定URL定数 `SCREEN_RECORDING_SETTINGS_URL` のみを `tauri_plugin_opener::OpenerExt::opener().open_url()` へ渡す、ARCH §12)を追加した。T12で `write_image_fallback`(`async fn` + `spawn_blocking`。`tauri::ipc::Request` の生ボディ(`InvokeBody::Raw`)+ ヘッダー(`IMAGE_WIDTH_HEADER`/`IMAGE_HEIGHT_HEADER`)でRGBA8画像を受け取り `clipboard::write_image_fallback()` へ委譲)を追加した。ヘッダー文字列のパース(`parse_image_dimensions()`)・エラー変換(`app_error_from_clipboard_error()`)は純粋関数として切り出しユニットテスト対象(`Request` 自体はTauriランタイム依存のため直接構築せずテストしない)。実機不具合②〜⑤の修正で `read_capture_image`(`async fn` + `spawn_blocking`。`capture::read_capture_file()` でキャプチャ専用ディレクトリ直下のPNGだけを読み、`tauri::ipc::Response` で生バイナリを返す)を追加した(asset protocolは撤去)。KS-T4: `get_capture_shortcut`/`set_capture_shortcut`/`reset_capture_shortcut`/`set_shortcut_recording`(キャプチャのショートカット設定。失敗は`shortcut_invalid`・`shortcut_cmd_only`・`shortcut_reserved`・`shortcut_register_failed`・`settings_save_failed`の固定文字列)
 - `error.rs`: コマンド共通エラー型 `AppError`(`thiserror` で `Display` 導出、`serde::Serialize` は手動実装。理由は `AppError` の doc comment 参照)。各コマンドは `Result<T, AppError>` を返す。`Internal(String)`(一般エラー)に加え、`PermissionDenied`(T06)は `Display` の出力を固定文字列 `"permission_denied"` にすることで、文字列シリアライズのままフロントエンドが判別できるようにしてある
 - `tray.rs`(T15): メニューバー常駐トレイを構築するモジュール(FR-009)。`build_tray()` が `TrayIconBuilder`/`Menu`/`MenuItem`(Tauriコア機能 `tray-icon` feature)で「キャプチャ/エディタを開く/終了」3項目メニューを構築し、`on_menu_event` からメニューIDを判定する純粋関数 `tray_menu_action_from_id()` を経由して分岐する(ID判定ロジックのみユニットテスト対象、実際のトレイ・ウィンドウ操作は手動確認チェックリスト#4・#7)。「キャプチャ」選択時、および `shortcuts.rs`(T16)のショートカット押下時はいずれも `run_capture_and_show_editor()` を呼ぶ(T15で切り出し、T16で共有)。同関数は `tauri::async_runtime::spawn` でキャプチャ処理(`commands::run_capture()`)を非同期タスクへ逃がし、完了後に結果に応じて `window_front::bring_main_window_to_front()`(B2、`window_front.rs`)でエディタウィンドウを前面表示する。結果ごとの後続処理は純粋関数 `capture_follow_up()` で決める。失敗時は `capture://error` イベント(`CAPTURE_ERROR_EVENT`、ARCHに規定が無いためT15で最小追加)でエラー種別をフロントへ伝える。「終了」は `app.exit(0)` を呼び、ウィンドウの✕ボタン(`on_window_event`の`hide()`)とは異なる唯一の終了経路にしてある。KS-T6: 「設定…」を追加(4項目)。`open_settings()`(エディタを前面へ → `settings://open`を送出)はアプリメニューと共通
@@ -82,11 +82,14 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 ├── styles.css                # レイアウト・スタイル(T07でgreetスキャフォールド撤去、エディタ画面用に置換)。T08で `.permission-banner` 系を追加。T09で `--arrow-color`・`.tool-toolbar` 系を追加(T10は既存の`--arrow-color`をモザイク選択矩形のプレビュー枠線色として流用、CSS変更なし)。T14で `.main-area`・`.history-sidebar` 系を追加
 ├── history/                  # セッション内履歴のメモリ管理(T14、FR-010)
 │   ├── historyQueue.ts       # 履歴を読み書きする非同期処理(履歴のクリック・削除、キャプチャ完了の取り込み)を1本に並べる直列化キュー(v0.2.2後)
+│   ├── documentArchive.ts    # 履歴項目ごとのドキュメント退避(T34【新設 2026-09-25】、PRD FR-010改訂、ARCH §5.2 T34・§6.4)。
 │   └── historyStore.ts       # HistoryItem[]の追加・選択・上書き・上限超過時の破棄・1件削除・全削除(純粋関数+薄いストア、canvasStateと同じ作法)。`captureHistoryAssets`は`canvas/render.ts`のre-export
 ├── ipc/                      # Rustコマンド呼び出し・イベント購読の薄いラッパー(T07〜)
 │   ├── capture.ts            # startCapture()・onCaptureCompleted()(T07)。T08で onCaptureError()(capture://error購読)を追加
 │   ├── permissions.ts        # checkScreenRecordingPermission()・openScreenRecordingSettings()・isPermissionDeniedError()(T08)
 │   ├── clipboard.ts          # copyToClipboard()(プラグイン優先→Rustフォールバック、T12)
+│   ├── app.ts                # Rustコマンド `activate_app` の呼び出し(v0.2.2、実機不具合「テキスト入力で全角文字が入らない」)。
+│   ├── settings.ts           # キャプチャのショートカット設定(KS-T3)と縮めてコピーの設定(QE-T07)のコマンド・イベントの薄いラッパー。
 │   └── textScan.ts           # scan_sensitive_text の呼び出しと応答の検証(AM-T08、自動マスキング)
 ├── canvas/                   # Canvas状態・描画ロジック(T07〜)
 │   ├── canvasState.ts        # 現在表示中の画像を保持する薄い状態オブジェクト(T07)。T09で選択中ツール・描画中フラグを追加。T14で`CanvasImage.capture`をnullable化(履歴からの再読込対応)
@@ -113,16 +116,18 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 │       ├── ellipseTool.ts    # 円(楕円)枠(塗りつぶしなしの枠線描画、T26、FR-011)
 │       ├── stampShape.ts     # 番号・記号スタンプの寸法・記号の色・番号・描画・当たり判定(QE-T10)
 │       ├── cropTool.ts       # トリミングのポインタ結線・ハンドル・範囲外の暗さのオーバーレイ・Enter/Esc(QE-T21)
+│       ├── textLayout.ts         # テキストの寸法・見た目・入力終了の判定の純粋関数(T27 の `textTool.ts` から T33【改訂 2026-09-24】で分離)。
 │       └── textTool.ts       # テキスト(クリック位置の入力欄→焼き込み、T27、FR-012)
 ├── ui/                       # DOM構築・イベントバインディング(T07〜)
 │   ├── captureButton.ts      # キャプチャ開始ボタン(T07)。T08で onPermissionDenied コールバックを追加
 │   ├── permissionBanner.ts   # 画面収録権限未許可時の案内バナー(T08)
 │   ├── toolbar.ts            # 矢印/矩形/円/モザイクのツール切替UI(T09で矢印のみ、T10でモザイク、T25で矩形、T26で円を有効化)
-│   ├── selectionKeys.ts      # 選択中のオブジェクトのEnter/Esc=選択解除(T31のpendingShapeKeys.tsをT32で置き換え)
-│   ├── colorPicker.ts        # 注釈色のプリセット6色+カラーピッカー(T28、FR-013)
+│   ├── selectionKeys.ts      # 選択中のオブジェクトのEnter/Esc=選択解除(T31のpendingShapeKeys.tsをT32で置き換え)。v1.2.0: 矢印キーで 1px(⇧ で 10px)動かす `selectionMoveDelta()`
+│   ├── colorPicker.ts        # 注釈色のプリセット6色+カラーピッカー(T28、FR-013)。v1.2.0: 数字キーの対応 `colorPresetIndexOfCode()`・ツールチップ `colorPresetLabel()`(`ピンク(1)`)・ボタンとキー共通の `applyPresetColor()`
 │   ├── fontSizePicker.ts     # 文字サイズ小・中・大(T28、FR-013)
 │   ├── stampKindPicker.ts    # スタンプの種類(番号・✓・×・!・?)、スタンプツールの間だけ表示(QE-T13)
-│   ├── toolKeys.ts           # ツールの 1 キー切替の表 TOOL_KEYS と判定(QE-T02、C は QE-T21)
+│   ├── toolKeys.ts           # ツールの 1 キー切替の表 TOOL_KEYS と判定(QE-T02、C は QE-T21)。v1.2.0: 「修飾なしの 1 キーか」の判定 `isPlainShortcutKey()` を colorKeys.ts と共有
+│   ├── colorKeys.ts          # 色のプリセットの数字キー 1〜6 の判定 `colorPresetKeyIndex()` と結線 `bindColorKeys()`(v1.2.0。扱わない条件は toolKeys.ts・ツールボタンと同じ)
 │   ├── cropBar.ts            # トリミングの帯(状態の文・やめる・確定、QE-T22)
 │   ├── undoButton.ts         # 取り消し・やり直しボタン+Cmd+Z/Cmd+Shift+Z(T29、FR-014)
 │   ├── toast.ts              # 右下トーストの自動消去(`showToast()`/`clearToast()`、成功・情報2.5秒/エラー5秒、reduced-motionはフェードなし。v0.2.0後フィードバック)
@@ -130,6 +135,10 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 │   ├── clipboardButton.ts    # 「クリップボードにコピー」ボタン + Cmd+C(T12)。T14で成功時フック`onCopySuccess`を追加。T22で`isEditableTarget()`を`shortcutGuards.ts`へ抽出。v0.2.2後: 戻り値を`ClipboardButtonController`にし、キャプチャ直後の自動コピー`copyAfterCapture`(履歴の上書きフックは呼ばない、トーストは「キャプチャを…」)を追加
 │   ├── sidebar.ts            # セッション内履歴サイドバー(T14、FR-010)。項目クリックでCanvasへ再読込。v0.2.2後: サムネイルのホバーで右上に×(1件削除、表示中なら隣を表示・最後の1件なら空状態)、一覧の上の「すべて削除」(`<dialog>`で確認)。クリックと削除は同じキューで直列化。一覧だけがスクロールする
 │   ├── autoMask.ts           # 自動マスキングのボタン・⌘⇧M・処理中表示・結果バー・一括モザイク(AM-T15)
+│   ├── arrangeButtons.ts     # 選択中のオブジェクトの重ね順: 「最前面へ」「最背面へ」ボタン + ショートカット
+│   ├── captureShortcutLabel.ts # キャプチャのショートカットの表記を、選んだキーへ追従させる(KS-T5)。
+│   ├── settingsDialog.ts     # 設定画面(エディタの上に出す`<dialog>`のモーダル、KS-T5)。キャプチャのショートカット(2026-10-08
+│   ├── shortcutFormat.ts     # キャプチャのショートカットの表記・入力の純粋関数(KS-T2)。
 │   └── maskOverlay.ts        # 自動マスキングの候補の印(Canvas に重ねた DOM のボタン、AM-T12)
 ├── assets/                   # 既存(vite/tauri/typescriptロゴ。index.htmlからは参照撤去済み、T07)
 └── test/
@@ -148,14 +157,14 @@ eval/masking/                 # 自動マスキングの評価セット(架空�
 └── holdout3/                 # ホールドアウト 3(賃貸管理・海外送金、8 枚)。最終確認用。規則の調整に使わない
 src-tauri/src/                # Rustバックエンド
 ├── main.rs                   # 既存。バイナリエントリーポイント
-├── settings.rs               # アプリ設定ファイル(`app_config_dir()/settings.json`、`{version, captureShortcut}`)の読込・原子的書込(KS-T1)
+├── settings.rs               # アプリ設定ファイル(`app_config_dir()/settings.json`、`{version, captureShortcut, shrinkCopy}`)の読込・原子的書込(KS-T1)。QE-T05 で `SettingsStore`(1 項目だけ更新・未知のキーを保持・Mutex で直列化・保存に失敗したらメモリの値を変えない)に集約。v1.2.0: 項目ごとに緩く読む(型違いはその項目だけ既定)
 ├── app_menu.rs               # 既定のアプリメニューに「設定…」(⌘,)を差し込む・メニューID判定(KS-T6)
-├── lib.rs                    # tauri::Builder 組み立て・invoke_handler登録(T02、T06で capture_screen 追加、T15でDockアイコン非表示・トレイ構築・ウィンドウクローズ制御を追加、T16でグローバルショートカット登録を追加、T08で check_screen_recording_permission・open_screen_recording_settings を追加、実機不具合②〜⑤で read_capture_image を追加しasset protocol scopeの動的登録を撤去)
+├── lib.rs                    # tauri::Builder 組み立て・invoke_handler登録(T02、T06で capture_screen 追加、T15でトレイ構築・ウィンドウクローズ制御を追加(Dockアイコン非表示は v0.3.1 で廃止)、T16でグローバルショートカット登録を追加、T08で check_screen_recording_permission・open_screen_recording_settings を追加、実機不具合②〜⑤で read_capture_image を追加しasset protocol scopeの動的登録を撤去)
 ├── commands.rs                # #[tauri::command] 集約(T02)。capture_screen(T06、T16で async fn 化)を追加。T15で run_capture_and_notify() をトレイ等との共通関数として切り出し、T16で run_capture() に改称・spawn_blocking化 + 3起点共有の実行中排他フラグ(CAPTURE_IN_PROGRESS)を追加。T08で check_screen_recording_permission・open_screen_recording_settings を追加。T11で run_capture()/capture_screen() に origin/start(Instant)引数を追加(NFR-001中間計測)
 ├── error.rs                   # コマンド共通エラー型 AppError(T02)。PermissionDenied(T06)を追加
 ├── tray.rs                    # メニューバー常駐トレイの構築(T15、FR-009)。T16でrun_capture_and_show_editor()をasync_runtime::spawn化。T11でorigin/start(Instant)引数を追加(NFR-001中間計測)
 ├── window_front.rs             # エディタウィンドウの前面化処理(B2、tray.rsから分離)。run_on_main_thread + 再試行計画・診断ログ([tadcap:front])
-├── shortcuts.rs                # グローバルショートカット登録(T16、FR-004)。既定キーCmd+Shift+2、tauri-plugin-global-shortcut使用。T11でハンドラ内にInstant::now()記録を追加(NFR-001中間計測)
+├── shortcuts.rs                # グローバルショートカット登録(T16、FR-004)。既定キーCmd+Shift+2、tauri-plugin-global-shortcut使用。T11でハンドラ内にInstant::now()記録を追加(NFR-001中間計測)。v1.2.0: `reset_recording()`(ページ読み込み・ウィンドウを閉じる/破棄で記録中フラグを下ろす)
 ├── masking/                    # 自動マスキング(端末内・メモリのみ。AM-T04〜T25)
 │   ├── mod.rs                  # scan() の入口、MaskCandidate / MaskKind / ScanError、RecognizedPage トレイト
 │   ├── png.rs                  # PNG の署名・IHDR の検証(各辺 16384px・128MiB まで。画像は展開しない)
@@ -176,10 +185,10 @@ src-tauri/src/                # Rustバックエンド
 │   └── mod.rs                  # validate_rgba()・write_image_fallback()(arboard使用)
 └── capture/                   # キャプチャ機能(T03〜T06、T08、T11)
     ├── mod.rs                 # CaptureProvider trait・CaptureResult・CaptureKind・RunError・run()/run_with()(T05・T06)。T08で ensure_screen_recording_access()/ensure_screen_recording_access_with() を追加。T11で計測ログ整形の純粋関数(format_latency_log/duration_to_ms)・CaptureProvider::captureへのon_spawnコールバック引数を追加(NFR-001中間計測)
-    ├── tempfile.rs             # 一時ファイルパス生成(一意性保証、T03)
+    ├── tempfile.rs             # 一時ファイルパス生成(一意性保証、T03)。v1.2.0: `create_capture_dir()` が `0o700` で作る
     ├── permission.rs           # 画面収録権限チェック(CoreGraphics FFI、T04)。T08で request_screen_recording_access() を実使用開始、ScreenRecordingPermission に Serialize(camelCase)を追加
     ├── pixel_ratio.rs          # PNG の pHYs から撮った画面の倍率(72dpi → 1、144dpi → 2、それ以外・無し・壊れ → None)。IDAT より前のチャンク見出しだけを読む(QE-T04)
-    └── screencapture.rs        # ScreenCaptureCli(`screencapture -i` 起動、T05)。T11で status() を spawn()+wait() に分割し、spawn完了直後にon_spawn()を呼ぶ(NFR-001中間計測)
+    └── screencapture.rs        # ScreenCaptureCli(`screencapture -i` 起動、T05)。T11で status() を spawn()+wait() に分割し、spawn完了直後にon_spawn()を呼ぶ(NFR-001中間計測)。v1.2.0: `/usr/sbin/screencapture` の絶対パスで起動し、`outcome_for(status, dest)` が終了コードも見る(非 0 + ファイル無しだけ失敗)
 ```
 
 ## テスト構成
@@ -200,7 +209,7 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `src/canvas/undoStack.test.ts` | 【改訂 2026-09-24 T32】要素を`DocumentCommand`に変更: `withPushedCommand()`(Redoクリア・上限30件)/`withPoppedUndo()`・`withPoppedRedo()`(LIFO・`apply`の戻り値を反対側へ積む・空は`null`で`apply`を呼ばない・Redo側の上限)/`canUndoState()`/`canRedoState()`、ストア(`pushCommand`・`popUndo/popRedo`の往復・新規操作でRedoクリア・`clearUndoStack`・購読解除)(T23、FR-014) |
 | `src/canvas/objectModel.test.ts` | T32: `OBJECT_LIMIT`=50、`insertObject`(範囲外の丸め・イミュータブル)/`removeObject`/`replaceObjectShape`/`findObject`、`hitTestObjectOutline`(矩形・円は線の付近のみ・内側中央と円の外接矩形の角は当たらない・矢印は胴体。矩形の角丸の外側は当たらない)、`pickObjectAt`(最前面優先・外れは`null`) |
 | `src/canvas/commands.test.ts` | T32: add/update/remove の取り消し・やり直し、pixels・flatten の入れ替え方式(往復でピクセルとオブジェクトが戻る)、group は逆順取り消し・順やり直し。QE-T20: `crop`(ベース全体の入れ替え)と `group[crop, update, remove]` の 1 回の取り消し・やり直し |
-| `src/canvas/documentState.test.ts` | T32(偽のサーフェス): `resetDocument`、`addShapeObject`(最前面追加・選択・取り消しで選択解除・やり直し・新規操作でRedoクリア)、上限(50個まで焼き込まない/51個目で最古をベースへ焼き込み1回の取り消しで両方戻る・やり直しは再描画せずピクセルを戻す/超過し続けても50個)、`commitShapeEdit`(update・形が同じなら積まない・存在しないidは無視)、`applyBaseEdit`(ベースだけ変えpixelsで往復・空矩形は無視)、選択は取り消し対象外、下書き・購読通知、サーフェス未登録時。AM-T07: `applyBaseEdits()`(複数の矩形が 1 つの `group` になり、重なっていても 1 回の取り消しで元の画素に戻る・やり直し・0 件は何も積まない・戻り値は加工した件数)。QE-T18: `captureSize`(新規・退避からの復元・古い退避は戻した画像の大きさ・退避に入る)。QE-T20: `applyCrop`(大きさ・位置・消えた注釈・1 回の取り消し・やり直し・トリミングより前の手も続けて戻せる・何もしない範囲で手を積まない・2 回のトリミング) |
+| `src/canvas/documentState.test.ts` | T32(偽のサーフェス): `resetDocument`、`addShapeObject`(最前面追加・選択・取り消しで選択解除・やり直し・新規操作でRedoクリア)、上限(50個まで焼き込まない/51個目で最古をベースへ焼き込み1回の取り消しで両方戻る・やり直しは再描画せずピクセルを戻す/超過し続けても50個)、`commitShapeEdit`(update・形が同じなら積まない・存在しないidは無視)、`applyBaseEdit`(ベースだけ変えpixelsで往復・空矩形は無視)、選択は取り消し対象外、下書き・購読通知、サーフェス未登録時。AM-T07: `applyBaseEdits()`(複数の矩形が 1 つの `group` になり、重なっていても 1 回の取り消しで元の画素に戻る・やり直し・0 件は何も積まない・戻り値は加工した件数)。QE-T18: `captureSize`(新規・退避からの復元・古い退避は戻した画像の大きさ・退避に入る)。QE-T20: `applyCrop`(大きさ・位置・消えた注釈・1 回の取り消し・やり直し・トリミングより前の手も続けて戻せる・何もしない範囲で手を積まない・2 回のトリミング)。v1.2.0: `moveSelected()`(矢印キー: 1 回の呼び出しが 1 手の `update` で取り消せる・選択なしは false・画像の端で動かなければ手を増やさず false・はみ出す分は端で止める・サーフェス無しは何もしない) |
 | `src/history/historyQueue.test.ts` | 前の処理が終わるまで次を始めない/失敗は呼び出し元へ返し後続は止めない |
 | `src/history/documentArchive.test.ts` | T34: `commandPixelBytes`(pixels・flatten・groupの中)、`trimUndoToBudget`(上限以内はそのまま/古い取り消し→遠いやり直しの順に連続して捨てる)、8MB上限、履歴idごとの保存・取得・削除と保存時の上限適用、`archivedDocumentBytes`(実測バイト数)。QE-T20: `commandPixelBytes` が `crop` の `image` を数える、`crop` が捨てられるとそれより古い手も捨てられ後の手は残る |
 | `src/ui/arrangeButtons.test.ts` | T34: `arrangeShortcutCommand`(⇧⌘F=最前面・⇧⌘B=最背面、修飾違い・他キー・入力欄フォーカス中は対象外) |
@@ -237,22 +246,32 @@ TSテストはコロケーション方式で対象ファイルと同じディレ
 | `clipboardButton.test.ts` | `src/ui/` | `isClipboardCopyEnabled()`(画像未読込/読込済みの分岐)、`isCopyShortcut()`(`metaKey`+`c`/`C`の判定、`metaKey`無し・他キーはfalse)、`clipboardCopyFeedbackMessage()`(plugin/fallback/errorごとの文言)(T12)。T22で`isEditableTarget()`のテストは`shortcutGuards.test.ts`へ移設。DOM生成を伴う `initClipboardButton()` は対象外(project-config.md §11参照) |。v0.2.2後: `autoCopyFeedbackMessage()`(自動コピーの成功・失敗文言)
 | `textTool.test.ts` | `src/canvas/tools/` | `computeFontSizePx()`(小・中・大、上下限クランプ)、`textShadowParams()`、`canvasToCssScale()`、`computeTextLineTop()`、`computeBaselineY()`、`computeTextBoundingRect()`(影の余白・クリップ)、`textKeyAction()`/`isImeComposingKey()`(isComposing・composition中・keyCode 229)、`finishTextSession()`(Enter/blur確定・Esc/画像差し替え/空文字は焼き込まない・二重確定しない)(T27) |
 | `textLayout.test.ts` | `src/canvas/tools/` | T33: `textShapeBox()`(行ボックス・字形のはみ出し・文字サイズ段階)、`textShapeBaselineY()`/`textShapeBoundingRect()`(T27と同じ式)、`decideTextEdit()`(新規=追加/何もしない、再編集=変更/同じなら何もしない/空なら削除、Esc・画像差し替えは何もしない) |
-| `selectionKeys.test.ts` | `src/ui/` | `selectionKeyAction()`(T32で`pendingShapeKeys.test.ts`から置き換え: 選択中のみEnter・Esc=選択解除、修飾キー・IME変換中・入力欄では奪わない) |
+| `selectionKeys.test.ts` | `src/ui/` | `selectionKeyAction()`(T32で`pendingShapeKeys.test.ts`から置き換え: 選択中のみEnter・Esc=選択解除、修飾キー・IME変換中・入力欄では奪わない)。v1.2.0: `selectionMoveDelta()`(矢印 4 方向で 1px・Shift で 10px・選択なし/⌘⌥⌃/IME/入力欄/確認中は null・`type=color` は扱う・`selectionKeyAction` は矢印を扱わない) |
 | `toast.test.ts` | `src/ui/` | `toastDurationMs()`(情報2.5秒/エラー5秒)、`showToast()`/`clearToast()`(フェード後に消える・新しい文言でタイマーをやり直す・reduced-motionはフェードなし・空文字はclear。偽タイマー) |
 | `shortcutGuards.test.ts` | `src/ui/` | `isEditableTarget()`(null/undefined/INPUT/TEXTAREA/contentEditable/通常要素の分岐)(T22。`clipboardButton.test.ts`から移設、挙動不変)。T28で`type="color"`等の文字入力でないINPUTはfalse |
-| `colorPicker.test.ts` | `src/ui/` | `COLOR_PRESETS`(6色・先頭が既定ピンク・形式・重複なし)、`colorAtPresetIndex()`、`presetIndexOfColor()`(大小文字無視・プリセット外は-1)、`toColorInputValue()`(T28) |
+| `colorPicker.test.ts` | `src/ui/` | `COLOR_PRESETS`(6色・先頭が既定ピンク・形式・重複なし)、`colorAtPresetIndex()`、`presetIndexOfColor()`(大小文字無視・プリセット外は-1)、`toColorInputValue()`(T28)。v1.2.0: `colorPresetShortcutKey()`/`colorPresetLabel()`(`ピンク(1)` の形・範囲外は null)、`colorPresetIndexOfCode()`(Digit1〜6、Digit7 以降・Digit0・テンキー・英字は null)、`applyPresetColor()`(以後の色を変えて true・範囲外は false・選択中の色の変更が 1 手) |
 | `fontSizePicker.test.ts` | `src/ui/` | `FONT_SIZE_OPTIONS`、`fontSizeGlyphHeight()`(大小比が`FONT_SIZE_MULTIPLIER`に一致)(T28) |
 | `stampKindPicker.test.ts` | `src/ui/` | QE-T13: `STAMP_KIND_OPTIONS`(種類 → `スタンプ 番号` などの名前、5 つの順)・`stampKindLabel()`・`isStampKindPickerVisible()`(スタンプツールのときだけ)・`stampKindIcon()`(塗りの丸 + 地の色で抜いた記号、種類ごとに違う形) |
 | `undoButton.test.ts` | `src/ui/` | `undoShortcutCommand()`(Cmd+Z/Cmd+Shift+Z、修飾・入力欄・type=color)、`undoAvailability()`・`resolveUndoCommand()`(編集中図形=破棄・やり直し無効、ドラッグ中は無効)(T29)。QE-T22: トリミングの範囲の指定中は ⌘Z・⇧⌘Z とも `cancelCrop`(取り消す手が無くてもボタンは有効) |
 | `cropBar.test.ts` | `src/ui/` | QE-T22: `formatCropSize()`(半角・`×` の前後に空白)、`cropBarView()`(ツール以外は隠す・範囲なしは案内だけ・整数の寸法と補足・逆向き・全体と同じは確定不可・0 を含むと確定不可・ドラッグ中は busy)、文言一覧 |
-| `toolKeys.test.ts` | `src/ui/` | QE-T02・T21: `toolKeyTarget()`(各キー・修飾・`repeat`・IME・入力欄・確認中・描画中・画像なし・⌘C を奪わない)、`toolLabel()`、`TOOLS` と `TOOL_KEYS` の整合(トリミングが最後) |
+| `toolKeys.test.ts` | `src/ui/` | QE-T02・T21: `toolKeyTarget()`(各キー・修飾・`repeat`・IME・入力欄・確認中・描画中・画像なし・⌘C を奪わない)、`toolLabel()`、`TOOLS` と `TOOL_KEYS` の整合(トリミングが最後)。v1.2.0: `isPlainShortcutKey()`(修飾・`repeat`・`defaultPrevented`・IME・入力欄で false、`type=color` は true)、数字キーはツールを切り替えない |
+| `colorKeys.test.ts` | `src/ui/` | v1.2.0: `colorPresetKeyIndex()`(Digit1〜6 → 0〜5 でプリセットの数と一致、Digit7 以降・Digit0・テンキー・英字は null、修飾・`repeat`・`defaultPrevented`・IME・入力欄・画像なし・描画中・確認中は null、`type=color` は扱う、全角数字の `key` でも `code` で引く) |
 | `textScan.test.ts` | `src/ipc/` | AM-T08: 生のバイト列での invoke、応答の検証(5 キーちょうど・整数・既知の種類。余分なフィールドや 1 件の不正で全体を `invalid_response`)、`text_scan_busy`/`text_scan_failed` の変換、エラー文言に応答を含めない |
 | `autoMask.test.ts` | `src/ui/` | AM-T15・AM-T25-F1: 開始条件(画像あり・idle・ドラッグ中でない)、⌘⇧M と Esc の判定(入力欄・IME 変換中は奪わない)、結果バーの表示と文言、IPC の応答 → 候補の詰め替え、一括モザイク(実際に加工した件数)、失敗時のトースト、画像の差し替えで候補を破棄。QE-T18: まとめてモザイクの粗さは `captureSize`(無ければ今の大きさ)。QE-T22: `bindMaskSessionToDocumentSize()`(大きさが変わったら候補を捨てる) |
 | `maskOverlay.test.ts` | `src/ui/` | AM-T12: 画像のピクセル → % の矩形、種類ごとの表示・`aria-*`、外した印の `aria-pressed`、ラベルの左右の配置、Tab の順序 |
+| `toolbar.test.ts` | `src/ui/` | QE-T02・QE-T03: `toolButtonState()`(自動マスキング中・描画中などの無効条件、`aria-pressed`)、ボタン名「名前(キー)」と `aria-keyshortcuts`、注釈の組と画像操作の組の並び |
+| `sidebar.test.ts` | `src/ui/` | レビュー MUST-2/SHOULD-3(2026-09-24): `handleItemClick()`(選択中への連打は無視、単発は 捕捉→選択→再読込 の順に 1 回ずつ)、`handleItemDelete()`(履歴の 1 件削除の直列化) |
+| `settingsDialog.test.ts` | `src/ui/` | QE-T09: `shrinkCopyViewAfterSave()`(成功は保存後の値を出し状態の文なし、失敗はチェックを戻して UI 仕様の文言)、`shrinkCopyViewAfterLoad()`(読めた値をそのまま、失敗はオフ) |
+| `shortcutFormat.test.ts` | `src/ui/` | KS-T2: `acceleratorFromKeyEvent()`(⌘⇧2 が既定キーと同じ文字列、修飾キーの並び順、`code` で判定、修飾だけは待つ、`shortcut_invalid`・`shortcut_cmd_only`・`shortcut_reserved`)、`validateShortcut()`、`shortcutLabel()`(⌘ → ⌥ → ⌃ → ⇧ → キー) |
+| `settings.test.ts` | `src/ipc/` | KS-T3・QE-T07: `getCaptureShortcut()`/`setCaptureShortcut()`/`resetCaptureShortcut()`/`setShortcutRecording()`(コマンド名・引数・`null` は既定キー扱い・失敗は固定文字列のまま reject)、`onSettingsOpen()`(`settings://open` の購読)、`getShrinkCopy()`(失敗は false)、`setShrinkCopy()`(`settings_save_failed` → `save_failed`、他は `failed`) |
+| `app.test.ts` | `src/ipc/` | v0.2.2: `requestAppActivation()`(`activate_app` を即時 + 短い遅延(0〜500ms)で 1 回ずつ呼ぶ、失敗しても例外も `console.error` も出さない) |
+| `documentSurface.test.ts` | `src/canvas/` | QE-T12: `stampLabel()`(置いてある番号スタンプは `stampNumbers()` の番号、下書きは「今の番号スタンプの数 + 1」、記号スタンプ・他の注釈は数えない、途中を消すと詰まる、移動中の下書きは自分の番号、記号には `null`) |
+| `shapeTools.test.ts` | `src/canvas/tools/` | QE-T11・QE-T12: `placedStamp()`(押した位置を中心、種類・色・文字サイズ、画像の端では中心を半径の分だけ内側に収める、直径が画像より大きいときは中央)、`addShapeOrNotifyLimit()`(上限で追加できなければ `onObjectLimit` を 1 回呼び `null`、通知先が無くても落ちない) |
+| `thirdPartyLicenses.test.ts` | `src/test/` | v1.0.1: `scripts/gen-third-party-licenses.mjs` の純粋関数(`isLicenseFileName()`、`collectShippedCrates()`(通常の依存だけを辿りビルド用・開発用を含めない)、`mitFallbackText()`、`renderLicenses()`(同じ全文はまとめ、並びは決定的、改行は LF)) |
 
-`src/ui/toolbar.ts`(T09土台・T10でモザイク有効化)はDOM生成・`canvasState`購読を伴うため自動テスト対象外(`permissionBanner.ts`と同じ方針、project-config.md §11参照)。ツール切替のロジック自体は上記`canvasState.test.ts`の`toggleTool()`/`toggleActiveTool()`で検証する。
+`src/ui/toolbar.ts`(T09土台・T10でモザイク有効化)のDOM生成・`canvasState`購読は自動テスト対象外だが、判定の純粋関数は `src/ui/toolbar.test.ts`(QE-T02・QE-T03: `toolButtonState()` の無効条件・名前「名前(キー)」・`aria-keyshortcuts`・2 組の並び)で検証する。ツール切替のロジック自体は上記`canvasState.test.ts`の`toggleTool()`/`toggleActiveTool()`で検証する。
 
-`src/ui/sidebar.ts`(T14)も同じ理由でDOM生成・`historyStore`購読を伴うため自動テスト対象外とする。状態遷移ロジック自体は上記`historyStore.test.ts`で検証し、実際のサイドバーDOM描画・Canvas再読込(項目クリック→画像切替)は手動確認チェックリストへ回す。
+`src/ui/sidebar.ts`(T14)も DOM生成・`historyStore`購読は自動テスト対象外だが、クリック・削除の直列化は `src/ui/sidebar.test.ts`(`handleItemClick()` の連打の無視と 捕捉→選択→再読込 の順、`handleItemDelete()`)で検証する。状態遷移ロジック自体は上記`historyStore.test.ts`で検証し、実際のサイドバーDOM描画・Canvas再読込(項目クリック→画像切替)は E2E(`history-delete.spec.ts` 等)と手動確認チェックリストへ回す。
 
 ### 共有レイヤーテスト
 
@@ -297,6 +316,11 @@ Vite dev server上のページを開き `e2e/fixtures/tauriMock.ts` が `page.ad
 
 | テストファイル | 対象 |
 | -------------- | ---- |
+| `e2e/annotation-tools.spec.ts` | T30: 追加機能(T20〜T29)の横断フロー。色を変えながら矢印・矩形・円・テキストを描くと各領域に選んだ色がありモザイクは色の影響を受けない/矢印→矩形(リサイズ・移動)→円→テキスト→モザイクを混ぜた後 ⌘Z 連打で元画像とバイト一致・⌘⇧Z 連打で最終状態と一致/描いた後のコピーは Canvas と一致しハンドル・入力欄は写らない/新規キャプチャで直前の履歴サムネイルに描いた内容が反映され取り消し・やり直しは空/色・文字サイズ・取り消し/やり直しの aria-label |
+| `e2e/capture-race.spec.ts` | レビュー MUST-1 の回帰: ドラッグ(描画)中に非同期で Canvas の画像が差し替わっても、描きかけの図形が新しい画像へ混ざらない |
+| `e2e/tool-empty-state.spec.ts` | v1.2.0: 起動直後(画像なし)は全ツール disabled・キーでも選べず帯/スタンプの種類なし/1 件入れて削除すると選択ツールが外れ帯と範囲が消える/すべて削除で種類が消え、次のキャプチャでもツール未選択 |
+| `e2e/tool-keys.spec.ts` | QE-T02: ツールボタンの名前・ツールチップが「名前(キー)」の形で `aria-keyshortcuts` が入る/各キーで `aria-pressed` が切り替わり同じキーで外れる/⌘C・⌘Z は奪わない/テキスト入力中の a は文字になる/自動マスキングの確認中・設定画面の間は効かない |
+| `e2e/keyboard-shortcuts.spec.ts` | v1.2.0: 色見本のツールチップが「名前(キー)」の形で `aria-keyshortcuts` が入り `aria-label` は名前のまま/画像なしでは効かず、2 で赤が選択状態になり次に描く矢印が赤・7 は何もしない・選択中の矢印を 6 で青にして ⌘Z で赤に戻る/テキスト入力中の 2 は文字になり色は変わらない/矩形を選んで → ×3 で 3px、⇧→ で 10px、⌘Z で 1 押下ずつ戻り元の位置とバイト一致・選択を外すと動かない・入力欄では文字カーソルが動く/自動マスキングの確認中は色も位置も変わらない |
 | `e2e/tool-settings.spec.ts` | T28: 起動直後ピンク・文字サイズ中が選択状態/選んだ色で以後の描画、描いた後の色変更は焼き込み済みに影響しない/カラーピッカー選択の反映とフォーカスが残ってもCmd+Cが効く/プリセット外の色でピッカーが選択状態 |
 | `e2e/undo-redo.spec.ts` | T29: 矢印→矩形→モザイクをCmd+Z×3で元画像と完全一致・Cmd+Shift+Z×3で描いた後と一致・ボタンでも1操作ずつ/編集中の図形はCmd+Z・ボタンで破棄されやり直し対象にならない(T32で「描いた直後の図形も取り消し後にやり直せる」に変更)/編集中はやり直し無効/テキスト入力中のCmd+ZはCanvasに作用しない/新規キャプチャでスタックが空になる |
 | `e2e/text-tool.spec.ts` | T27: 入力+Enterで注釈色の画素が増え入力欄が消える/Escで何も残らない/IME変換中のEnterでは確定しない/入力中のCmd+Cはアプリのコピーに奪われず、コピーボタンで確定後の画像がコピーされ入力欄の枠(白)は写らない/空のままツール切替で何も焼き込まない |
@@ -307,11 +331,11 @@ Vite dev server上のページを開き `e2e/fixtures/tauriMock.ts` が `page.ad
 | `e2e/object-ops.spec.ts` | T34: Delete/Backspaceで削除・Cmd+Zで戻る・入力欄のBackspaceは文字削除/選択中に色見本で色が変わり選択は外れず取り消せる・以後の描画色も変わる/テキスト選択中に文字サイズ大で大きくなり取り消せる/最前面へ・最背面へ(ボタン・⌘⇧F/⌘⇧B)で交点の色が入れ替わり選択中のみ有効・取り消せる/2枚目をキャプチャして1枚目へ戻っても矩形を選んで動かせ、Cmd+Zで移動→切り替え前の描画の順に戻る・2枚目の矩形も選べる |
 | `e2e/shape-edit.spec.ts` | T31: 編集中の図形はコピー時に確定されて写りハンドル(白)は写らない(コピーRGBA=Canvas、近白画素0)/矩形の右下ハンドルでリサイズ/矢印の胴体ドラッグで移動+Enter確定/Escで破棄/次の図形の描き始めで直前の図形が確定。T32で後ろ2件を「Escは選択解除でCmd+Zで描く前に戻る」「次の図形を描いても前の図形は残り、取り消しは新しい方から」に変更 |
 | `e2e/object-layer.spec.ts` | T32: 確定後の矢印を選び直して移動・リサイズ→Cmd+Z×2で編集前とバイト一致/51個目で最古が焼き込まれ選べなくなり、1回の取り消しで戻る/選択中(ハンドル表示中)のCmd+Cでもコピー結果にハンドルが写らない/モザイクはベースにだけ効き上の矩形は隠れず後から動かせる/テキストはベースへ焼き込まれ矩形より下(T33で「テキストもオブジェクトとして重ね順に入り、後から置けば矩形より上・Cmd+Zで消える」に変更) |
-| `e2e/capture-flow.spec.ts` | v0.2.2後: キャプチャするとボタンを押さずに無編集の画像がクリップボードに入り(Canvasと一致・注釈色なし)、トーストは「キャプチャを…」、後から描いても自動コピーされた画像は変わらない。`e2e/fixtures/captureReady.ts`は自動コピーの1回が済むまで待つ(各specのコピー回数はこの1回を含む)。①「キャプチャ→矢印描画→モザイク適用→クリップボードコピーで履歴に1件表示・選択される」: キャプチャボタン押下 → `capture_screen`モック(`capture://completed`をemit)→ Canvasに画像表示 → 矢印ツールへ切替・ドラッグ(既定色`#FF5C8A`付近の画素を`getImageData()`で検証)→ モザイクツールへ切替(排他確認)・ドラッグ(ブロック平均によるピクセル変化を検証)→「クリップボードにコピー」(`plugin:image|new`→`plugin:clipboard-manager|write_image`呼び出し回数で成功を検証)→ 成功フィードバック表示 → 履歴サイドバー(`#history-sidebar`)に1件・選択状態(`.history-sidebar__item--selected`)。②「画面収録権限が未許可(permission_denied)の場合、キャプチャ実行時に権限バナーが表示される」: `capture_screen`が`"permission_denied"`でrejectする場合に`.permission-banner`が表示されることを検証(T13実装時点で既知の不具合(project-config.md §11参照)により本テストはfailする) |
+| `e2e/capture-flow.spec.ts` | v0.2.2後: キャプチャするとボタンを押さずに無編集の画像がクリップボードに入り(Canvasと一致・注釈色なし)、トーストは「キャプチャを…」、後から描いても自動コピーされた画像は変わらない。`e2e/fixtures/captureReady.ts`は自動コピーの1回が済むまで待つ(各specのコピー回数はこの1回を含む)。①「キャプチャ→矢印描画→モザイク適用→クリップボードコピーで履歴に1件表示・選択される」: キャプチャボタン押下 → `capture_screen`モック(`capture://completed`をemit)→ Canvasに画像表示 → 矢印ツールへ切替・ドラッグ(既定色`#FF5C8A`付近の画素を`getImageData()`で検証)→ モザイクツールへ切替(排他確認)・ドラッグ(ブロック平均によるピクセル変化を検証)→「クリップボードにコピー」(`plugin:image|new`→`plugin:clipboard-manager|write_image`呼び出し回数で成功を検証)→ 成功フィードバック表示 → 履歴サイドバー(`#history-sidebar`)に1件・選択状態(`.history-sidebar__item--selected`)。②「画面収録権限が未許可(permission_denied)の場合、キャプチャ実行時に権限バナーが表示される」: `capture_screen`が`"permission_denied"`でrejectする場合に`.permission-banner`が表示されることを検証(T13実装時点で既知の不具合(project-config.md §11参照)により本テストはfailする)。v1.2.0(+1): トレイ・ショートカット起点の失敗(`capture://error`)は権限以外でもトーストで知らせ、生の文字列は出さない(permission_denied はバナーのまま) |
 | `e2e/shrink-copy.spec.ts` | QE-T08: 設定オン × 倍率 2 で撮った直後の自動コピー・⌘C・コピーボタンの画像が半分(301×201 → 151×101、四捨五入)、元の色が残る/倍率 1・`null`・欠落は元の大きさ/設定オフは元の大きさで Canvas と一致/表示 canvas・履歴のサムネイルは元の大きさ/履歴から開き直してもその項目の倍率で縮む。設定は `tauriMock.ts` の `shrinkCopy`(`get_shrink_copy` の初期値)で切り替える |
 | `e2e/stamp.spec.ts` | QE-T13: 種類の切替はスタンプツールの間だけ出て(N キーでも)、出し入れで色・文字サイズ・重ね順のボタンが動かない・選んだ種類を覚える/番号 1・2・3 → 2 番目を消すと 1・2 → ⌘Z で画素まで戻る → 選択中に種類を変えてもスタンプは変わらない → 色・文字サイズの変更でほかの番号は同じ・1 手で戻る → 記号を挟んでも次は 4 → ⌘⇧B・⌘⇧F で番号が変わらない。番号は 1 色の地でスタンプの周りの画素を同じ番号の見た目と比べて読む(状態を読むテスト用の口は作らない) |
 | `e2e/spotlight.spec.ts` | QE-T16: 穴 2 つ(重なり)+ 穴の外の矢印 → コピーの RGBA で穴の中は元のまま・外は地 × 0.5 ±1・重なりも暗くない・矢印は赤のまま → 移動(選んだ穴は内側から)・リサイズ・削除がそれぞれ ⌘Z 1 回で画素まで戻る → 穴を全部消すと暗さが消える/選択中の穴の枠・ハンドルが ⌘C のコピーに写らない(近白画素 0・Canvas と一致)/新規キャプチャ後の直前の履歴サムネイルに暗さが写る |
-| `e2e/crop.spec.ts` | QE-T23(7 件): 囲む → 確定前の ⌘C は元の大きさで Canvas と一致 → Esc でやめる → 囲み直して Enter で範囲の大きさ・トースト・範囲外のスタンプが消えて番号が詰まる → ⌘Z 1 回で大きさ・位置・番号まで画素一致 → ⇧⌘Z/トリミングより前のモザイク・矢印も続けて戻せる・2 回のトリミング・範囲の指定中の ⌘Z / ⇧⌘Z は範囲をやめるだけ・画像全体と同じ範囲は確定できない/切った後の Canvas は切る前の範囲の部分と画素一致(穴・矢印・テキスト・モザイク・範囲外の注釈の削除。境界をまたぐ矢印の影だけ数階調の差を許す)/切る前の矢印・文字の大きさは変わらず、切った後に描くものは今の大きさ・切った後のモザイクのブロックは撮った時点の大きさ(7px タイルの画像で 23px と読む)/縮めてコピー(確定前は元の半分・確定後は切り詰めた大きさの半分)/履歴を切り替えて戻っても切り詰めたまま続きの取り消しができ、サムネイルは切り詰め後/ツールの切替・自動マスキングの開始で範囲が捨てられ、確認中はトリミングを始められない |
+| `e2e/crop.spec.ts` | QE-T23(7 件): 囲む → 確定前の ⌘C は元の大きさで Canvas と一致 → Esc でやめる → 囲み直して Enter で範囲の大きさ・トースト・範囲外のスタンプが消えて番号が詰まる → ⌘Z 1 回で大きさ・位置・番号まで画素一致 → ⇧⌘Z/トリミングより前のモザイク・矢印も続けて戻せる・2 回のトリミング・範囲の指定中の ⌘Z / ⇧⌘Z は範囲をやめるだけ・画像全体と同じ範囲は確定できない/切った後の Canvas は切る前の範囲の部分と画素一致(穴・矢印・テキスト・モザイク・範囲外の注釈の削除。境界をまたぐ矢印の影だけ数階調の差を許す)/切る前の矢印・文字の大きさは変わらず、切った後に描くものは今の大きさ・切った後のモザイクのブロックは撮った時点の大きさ(7px タイルの画像で 23px と読む)/縮めてコピー(確定前は元の半分・確定後は切り詰めた大きさの半分)/履歴を切り替えて戻っても切り詰めたまま続きの取り消しができ、サムネイルは切り詰め後/ツールの切替・自動マスキングの開始で範囲が捨てられ、確認中はトリミングを始められない。v1.2.0(+2): 帯の「やめる」にフォーカスして Enter では切り詰まらず「確定」で Enter なら 1 回だけ切り詰める(Tab 順 やめる → 確定)/範囲を囲んで自動マスキングを始めると帯が消え、確認を終えるとツールはそのままで帯が戻る |
 | `e2e/auto-mask.spec.ts` | AM-T17・AM-T25-F1(15 件): 開始条件・処理中・印の外す/戻す・まとめてモザイク(外した領域は不変、取り消し 1 回で復元、やり直し)・二重実行・Esc・⌘C に印が写らない・確認中の操作制限・0 件・失敗 3 通り・画像の切替で候補を破棄・表示倍率の変化で印のずれ 1px 以内。`tauriMock.ts` の `scan_sensitive_text` は矩形と種類だけを返す |
 
 fixture画像は `e2e/fixtures/sampleCapturePng.ts` が `node:zlib` のみでチェッカーボードPNGを

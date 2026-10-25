@@ -26,6 +26,7 @@ npm run test               # Vitest（watch）
 npm run test:run           # Vitest 一回実行
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+npm run e2e               # Playwright E2E(chromium のみ。初回は npx playwright install chromium)。Tauri IPC は e2e/fixtures/tauriMock.ts のモック
 npm run mask:fixtures      # 自動マスキングの本番の評価セット(eval/masking/)の画像と truth.json を作り直し、自己検査する(:holdout / :holdout2 / :holdout3 で各ホールドアウト)
 MASK_EVAL_LABEL=<名前> cargo test --manifest-path src-tauri/Cargo.toml masking::eval -- --ignored --nocapture
                            # 実機で検出率を測る(読み取りに OS の文字認識を使うため Mac で実行)。MASK_EVAL_SET=holdout3 等でホールドアウト。使い方と注意は project-config.md §3
@@ -39,8 +40,10 @@ release.yml は Environment `release` の Secrets で Developer ID 署名 + 公�
 スモークテストコマンド(全タスク共通、ゲート3 決定):
 
 ```bash
-npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.toml && cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.toml && cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings && npm run e2e
 ```
+
+(E2E は T13 以降に含める。Bash では先頭に `. "$HOME/.cargo/env" &&` が要る)
 
 ## 技術スタック
 
@@ -62,7 +65,7 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 
 | コマンド | 引数 | 戻り値 | エラー | 送出イベント |
 | -------- | ---- | ------ | ------ | ------------ |
-| `capture_screen`(T06、T16で `async fn` 化) | なし(`AppHandle` は Tauri が自動注入。フロントの `invoke()` 呼び出しに引数不要) | `Option<CaptureResult>`。`CaptureResult = { id: string, sourcePath: string, kind: "range", createdAt: string(ISO8601, UTC, 例: `2024-01-01T00:00:00.000Z`), pixelRatio: 1 | 2 | null }`(`pixelRatio` は撮影 PNG の pHYs から読んだ画面の倍率。分からなければ `null`、QE-T04)。Escキャンセル時、または他起点(トレイ/ショートカット)が実行中で多重起動を防いだ場合は `null`(`Ok(None)`) | `AppError` は文字列としてシリアライズされる。固定文字列 `"permission_denied"` = 画面収録権限未許可(NFR-002。フロント側はこの文字列で専用の案内導線に分岐する、T08) | 撮影成功時(`CaptureResult` が取得できた場合)のみ `capture://completed` に `CaptureResult` と同じペイロードを emit。Escキャンセル時はイベントを送出しない。グローバルショートカット(T16)・トレイメニュー(T15)起点のキャプチャも同じイベントで通知され、フロントエンドは起点を区別しない(ARCH §5.2) |
+| `capture_screen`(T06、T16で `async fn` 化) | なし(`AppHandle` は Tauri が自動注入。フロントの `invoke()` 呼び出しに引数不要) | `Option<CaptureResult>`。`CaptureResult = { id: string, sourcePath: string, kind: "range", createdAt: string(ISO8601, UTC, 例: `2024-01-01T00:00:00.000Z`), pixelRatio: 1 | 2 | null }`(`pixelRatio` は撮影 PNG の pHYs から読んだ画面の倍率。分からなければ `null`、QE-T04)。Escキャンセル時、または他起点(トレイ/ショートカット)が実行中で多重起動を防いだ場合は `null`(`Ok(None)`) | `AppError` は文字列としてシリアライズされる。固定文字列 `"permission_denied"` = 画面収録権限未許可(NFR-002。フロント側はこの文字列で専用の案内導線に分岐する、T08)。v1.2.0: `screencapture` が非 0 で終わりファイルが無いときは `Internal`(「screencapture が失敗しました(終了コード: N)」)。トレイ・ショートカット起点では `capture://error` で届き、フロントは `captureErrorMessage()` を通したトーストで知らせる | 撮影成功時(`CaptureResult` が取得できた場合)のみ `capture://completed` に `CaptureResult` と同じペイロードを emit。Escキャンセル時はイベントを送出しない。グローバルショートカット(T16)・トレイメニュー(T15)起点のキャプチャも同じイベントで通知され、フロントエンドは起点を区別しない(ARCH §5.2) |
 | `check_screen_recording_permission`(T08、`async fn`) | なし | `ScreenRecordingPermission`(camelCaseにシリアライズされ `"granted"`/`"notGranted"` のいずれか)。未許可の場合、Rust側が `request_screen_recording_access()` を1回呼びOSの許可ダイアログ表示とシステム設定「画面収録」一覧へのアプリ登録を行う(PJM決定 2026-09-23) | 発生しない(`spawn_blocking` の `JoinError` のみ `AppError::Internal` に変換) | なし |
 | `read_capture_image`(実機不具合②〜⑤、`async fn`) | `{ path: string }`(`CaptureResult.sourcePath`) | `tauri::ipc::Response`(PNGの生バイナリ。JSは `ArrayBuffer` で受け取る) | `AppError::Internal`(正規化後のパスがキャプチャ専用ディレクトリ直下でない・PNG通常ファイルでない・I/Oエラー) | なし |
 | `activate_app`(v0.2.2、`async fn`) | なし | `()` | 発生しない(OSがアクティブ化を拒否しても成功扱い) | なし。テキスト入力欄のフォーカス時にフロント(`ipc/app.ts::requestAppActivation`、即時+150ms後に1回)が呼ぶ。非アクティブかつウィンドウ表示中のときだけ`NSApplication::activate`を要求(`window_front.rs::should_request_activation`)。`WindowEvent::Focused(true)`でも同じ処理を行う(`lib.rs`) |
@@ -71,13 +74,17 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 | `scan_sensitive_text`(AM-T18、`async fn`) | `tauri::ipc::Request` の生ボディ(ベースの PNG のバイト列。ヘッダーなし、幅・高さは IHDR から読む) | `MaskCandidate[]` = `{ x, y, width, height, kind }`(整数ピクセル・余白込み・画像内、`kind` は 4 分類。文字列は含まない。`docs/data-model.md`) | `"text_scan_busy"`(別の読み取りが実行中)/ `"text_scan_failed"`(生ボディでない・PNG でない・上限超過・読み取りの失敗)。原因の詳細は含めない | なし。`spawn_blocking` で実行し、経過時間だけを `[tadcap:latency] origin=mask scan_ms=<ms> size=<w>x<h>` で標準エラーへ |
 | `get_shrink_copy`(QE-T05、`async fn`) | なし | `boolean`(縮めてコピーがオンか。`settings.json` の `shrinkCopy`) | 発生しない | なし |
 | `set_shrink_copy`(QE-T05、`async fn`) | `{ enabled: boolean }` | `boolean`(保存後の値) | `"settings_save_failed"`(保存に失敗。値は変わらない) | なし。`SettingsStore::update()` で `shrinkCopy` の 1 項目だけを変えて保存する |
-| `greet`(既存スキャフォールド) | `name: string` | `string` | 発生しない | なし |
+| `get_capture_shortcut`(KS-T4、`async fn`) | なし | `CaptureShortcutInfo`(camelCase: `{ accelerator: string(`global-hotkey` 形式、例 `"shift+super+Digit2"`), isDefault: boolean, registered: boolean }`) | 発生しない | なし |
+| `set_capture_shortcut`(KS-T4、`async fn`) | `{ accelerator: string }` | `CaptureShortcutInfo`(変更後の状態) | 固定文字列 `"shortcut_invalid"`(修飾キーなし等)/ `"shortcut_cmd_only"`(⌘ と 1 キーだけ)/ `"shortcut_reserved"`(⌘⇧3/4/5)/ `"shortcut_register_failed"`(OS 登録に失敗。元のキーに巻き戻す)/ `"settings_save_failed"`(保存に失敗) | なし。`shortcuts.rs::swap_registration()` が 登録解除 → 新キー登録 → 保存 の順に進め、途中で失敗したら元のキーを登録し直す |
+| `reset_capture_shortcut`(KS-T4、`async fn`) | なし | `CaptureShortcutInfo`(既定 ⌘⇧2 に戻した状態) | `set_capture_shortcut` と同じ | なし |
+| `set_shortcut_recording`(KS-T4、`async fn`) | `{ recording: boolean }` | `()` | 発生しない | なし。`true` の間はキャプチャのショートカットを押してもキャプチャしない(設定画面の入力欄にフォーカスがある間)。フロントは起動時にも `false` を送って再読込後の記録中を解除する |
 
 トレイメニュー(`src-tauri/src/tray.rs`、T15)・グローバルショートカット(`src-tauri/src/shortcuts.rs`、T16)は
 `#[tauri::command]` ではなく、それぞれ `on_menu_event`/`with_handler` ハンドラから直接
 `tray::run_capture_and_show_editor()`(内部で `commands::run_capture` を呼ぶ共通処理)を呼ぶ。失敗時(画面収録権限未許可 等)は
 `capture://error` イベントに `AppError` と同じ文字列ペイロードを emit したうえでエディタウィンドウを前面表示する
 (ARCHに失敗系イベント名の規定が無いため T15 で最小追加。フロント側は `src/ipc/capture.ts::onCaptureError()` で購読する、T08)。
+トレイメニューとアプリメニューの「設定…」(KS-T6)は `settings://open` イベント(ペイロードなし)を emit し、フロントは `src/ipc/settings.ts::onSettingsOpen()` で購読して設定モーダルを 1 つだけ開く(二重に届いても 1 つ)。
 アプリ内ボタン・トレイ・グローバルショートカットの3起点は `commands::CAPTURE_IN_PROGRESS`(`AtomicBool`)を共有し、
 いずれかが実行中は他の起点からの呼び出しを無視する(多重起動防止、T16)。
 
@@ -104,7 +111,7 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 | `cropSession`(`src/canvas/cropSession.ts`、QE-T21) | 確定前のトリミング範囲(`{ rect } \| null`、画像の内側に収めた小数のまま。整数化は確定時の `normalizeCropRect()`)。取り消し対象外・永続化なし。書き換えるのは `tools/cropTool.ts`(開始・範囲の変更・Enter / Esc・やめる条件の購読: ツールの変化・自動マスキングの開始・ドキュメントの大きさの変化)・`ui/cropBar.ts`(確定・やめる)・`main.ts`(画像を差し替える前の `cancelCrop()`)・`ui/undoButton.ts`(範囲の指定中の ⌘Z)だけ |
 | `maskSession`(`src/canvas/maskSession.ts`、AM-T06) | 自動マスキングの処理の状態(`idle`/`scanning`/`review`)・token・対象の画像の参照・候補(矩形・種類・外したか)。永続化なし(メモリのみ)。読み取った文字列は持たない。書き換えるのは `ui/autoMask.ts`(開始・結果・一括モザイク・やめる)・`ui/maskOverlay.ts`(外す/戻す)・`main.ts`(画像を差し替える前の `discardMaskSession()`)だけ |
 
-## アプリ内のキー操作(ツールの 1 キー切替)
+## アプリ内のキー操作(ツールの 1 キー切替・色のプリセット・矢印キー)
 
 <!-- AIがコードベースから自動生成(QE-T02) -->
 
@@ -120,8 +127,11 @@ npm run build && npm run test:run && cargo test --manifest-path src-tauri/Cargo.
 | `M` | モザイク |
 | `S` | スポットライト(QE-T16) |
 | `C` | トリミング(QE-T21) |
+| `1`〜`6` | 色のプリセット(v1.2.0。`src/ui/colorKeys.ts`。`Digit1`〜`Digit6` → `COLOR_PRESETS` の 1〜6 番目。色見本のボタンと同じ `applyPresetColor()` の経路で、選択中の注釈があればその色も変わる。ツールチップは `ピンク(1)` の形) |
+| 矢印キー | 選択中の注釈を 1px 動かす(`⇧` で 10px。v1.2.0。`src/ui/selectionKeys.ts::selectionMoveDelta()` → `documentState.ts::moveSelected()`。画像の内側に収め、1 押下 = 取り消し 1 手、端で動かなければ手を積まない) |
 
 - 選んでいるツールのキーをもう一度押すと選択が外れる(ボタンと同じ `toggleActiveTool()`)
+- 数字キーが効かない条件はツールの 1 キーと同じ(`toolKeys.ts::isPlainShortcutKey()` と `currentToolButtonContext()` を共有)。矢印キーは選択中のみで、⌘・⌥・⌃ 付き・IME の変換中・入力欄・自動マスキングの処理中/確認中は扱わない(`Shift` と押し続けは許す)
 - 効かないとき: 修飾キー付き(⌘C・⌘Z など)・押しっぱなしの繰り返し・IME の変換中・入力欄への入力中・画像が無いとき・ツールボタンが押せないとき(描画中・自動マスキングの処理中/確認中)・設定画面を開いている間
 - トリミングの範囲がある間(QE-T22): `Enter` で確定(`applyCrop()`。トースト「切り抜きました。⌘Z で戻せます。」)、`Esc` でやめる。範囲が無いときの `Enter` / `Esc` は既存の選択の操作へ渡す(`bindCropTool()` を `bindSelectionKeys()` より前に結線)。範囲の指定中の ⌘Z / ⇧⌘Z と取り消しボタンは範囲をやめるだけ(`ui/undoButton.ts::resolveUndoCommand()` の `cancelCrop`)
 

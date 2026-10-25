@@ -15,7 +15,7 @@
 //! 本モジュールと`undoStack`に集まっている。履歴切替時にこれらを退避・復元すればよい。
 
 import { redoCommand, undoCommand, type DocumentCommand, type PixelStore } from "./commands";
-import { clipRectToCanvas, roundRect, type Rect } from "./coords";
+import { clipRectToCanvas, roundRect, type Point, type Rect } from "./coords";
 import { normalizeCropRect, planCrop } from "./crop";
 import {
   OBJECT_LIMIT,
@@ -27,7 +27,7 @@ import {
   replaceObjectShape,
   type AnnotationObject,
 } from "./objectModel";
-import { shapeUndoRect, type EditableShape, type TextMetricsSnapshot } from "./shapeEdit";
+import { moveShape, shapeUndoRect, type EditableShape, type TextMetricsSnapshot } from "./shapeEdit";
 import { shapeStyleDiagonal } from "./styleBasis";
 import { fontSizePxForDiagonal } from "./tools/textLayout";
 import type { FontSize } from "./toolSettings";
@@ -339,6 +339,20 @@ export function setSelectedColor(color: string): boolean {
     return false;
   }
   return commitShapeEdit(selected.id, { ...selected.shape, color });
+}
+
+/**
+ * 選択中のオブジェクトを `delta`(画像のピクセル)だけ動かす(矢印キー、v1.2.0、`ui/selectionKeys.ts`)。
+ * `moveShape()` で画像の内側に収め、形が変わっていれば取り消せる 1 手の `update`(`commitShapeEdit`)。
+ * 選択が無い・サーフェスが無い・端で動かなければ `false`(手は増えない)。
+ */
+export function moveSelected(delta: Point): boolean {
+  const selected = findObject(state.objects, state.selectedId);
+  if (!selected || !surface) {
+    return false;
+  }
+  const { width, height } = surface.size();
+  return commitShapeEdit(selected.id, moveShape(selected.shape, delta, width, height));
 }
 
 /** 選択中のオブジェクトを指定色で下書き表示する(カラーピッカー操作中、確定は`setSelectedColor`)。 */

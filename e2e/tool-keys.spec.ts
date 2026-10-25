@@ -94,8 +94,8 @@ test.describe("ツールの 1 キー切替(QE-T02)", () => {
     const last = TOOL_KEYS[TOOL_KEYS.length - 1];
     await page.keyboard.press(last.key);
     await expect(toolButton(page, last.name)).toHaveAttribute("aria-pressed", "false");
-    // 割り当てのないキー・まだ無いツールのキーは何もしない。
-    for (const key of ["z", "1"]) {
+    // 割り当てのないキーは何もしない(1〜6 は v1.2.0 で色のプリセットのキー。`keyboard-shortcuts.spec.ts`)。
+    for (const key of ["z", "7"]) {
       await page.keyboard.press(key);
     }
     await expect(page.locator(".tool-toolbar__button[aria-pressed='true']")).toHaveCount(0);

@@ -9,6 +9,9 @@
 //! `toolLabel()` を読むため、循環を避けて可否の判定は `bindToolKeys()` の引数で受け取る(`main.ts` が
 //! `toolButtonState()` を渡す)。
 //!
+//! 「修飾キーなしの 1 キーとして扱えるか」の判定(`isPlainShortcutKey()`)は色のプリセットの数字キー
+//! (`colorKeys.ts`、v1.2.0)と共有する。数字キー `Digit1`〜`Digit6` は色に割り当て済みなので、ツールには使わない。
+//!
 //! 新しいツールは、ツールを追加するタスクで `TOOL_KEYS` に 1 行足す(PRD_quick-edits §9 Phase 1)。
 //! スタンプ `KeyN` は QE-T13、スポットライト `KeyS` は QE-T16、トリミング `KeyC` は QE-T21 で足した
 //! (修飾なしの C だけ。⌘C のコピーは修飾キー付きなので奪わない)。
@@ -78,11 +81,12 @@ export interface ToolKeyContext {
 const IME_PROCESS_KEY_CODE = 229;
 
 /**
- * keydown が切り替えるツール。扱わないときは `null`(ARCH_quick-edits §7.1 手順 K)。
- * 修飾キー付き(⌘C・⌘Z など)・押しっぱなし・IME の変換中・入力欄への入力は奪わない。
+ * 修飾キーなしの 1 キー(ツール切替・色のプリセット)として扱える keydown か。ほかの処理が `preventDefault()`
+ * したもの・押しっぱなし(`repeat`)・修飾キー付き(⌘C・⌘Z など)・IME の変換中・入力欄への入力は奪わない
+ * (ARCH_quick-edits §7.1 手順 K)。`colorKeys.ts` の数字キーも同じ判定を使う(v1.2.0)。
  */
-export function toolKeyTarget(event: ToolKeyEvent, context: ToolKeyContext): ToolId | null {
-  if (
+export function isPlainShortcutKey(event: ToolKeyEvent): boolean {
+  return !(
     event.defaultPrevented ||
     event.repeat ||
     event.metaKey ||
@@ -92,7 +96,32 @@ export function toolKeyTarget(event: ToolKeyEvent, context: ToolKeyContext): Too
     event.isComposing ||
     event.keyCode === IME_PROCESS_KEY_CODE ||
     isEditableTarget(event.target)
-  ) {
+  );
+}
+
+/** `KeyboardEvent` から判定に使う部分を抜き出す(`bindToolKeys()`・`colorKeys.ts::bindColorKeys()` が使う)。 */
+export function toToolKeyEvent(event: KeyboardEvent): ToolKeyEvent {
+  return {
+    code: event.code,
+    key: event.key,
+    metaKey: event.metaKey,
+    ctrlKey: event.ctrlKey,
+    altKey: event.altKey,
+    shiftKey: event.shiftKey,
+    repeat: event.repeat,
+    isComposing: event.isComposing,
+    keyCode: event.keyCode,
+    defaultPrevented: event.defaultPrevented,
+    target: event.target as EditableTargetLike | null,
+  };
+}
+
+/**
+ * keydown が切り替えるツール。扱わないときは `null`(ARCH_quick-edits §7.1 手順 K)。
+ * 修飾キー付き(⌘C・⌘Z など)・押しっぱなし・IME の変換中・入力欄への入力は奪わない(`isPlainShortcutKey`)。
+ */
+export function toolKeyTarget(event: ToolKeyEvent, context: ToolKeyContext): ToolId | null {
+  if (!isPlainShortcutKey(event)) {
     return null;
   }
   const entry = TOOL_KEYS.find((candidate) => candidate.code === event.code);
@@ -108,22 +137,7 @@ export function toolKeyTarget(event: ToolKeyEvent, context: ToolKeyContext): Too
  */
 export function bindToolKeys(isToolDisabled: (id: ToolId) => boolean): () => void {
   const handleKeydown = (event: KeyboardEvent): void => {
-    const tool = toolKeyTarget(
-      {
-        code: event.code,
-        key: event.key,
-        metaKey: event.metaKey,
-        ctrlKey: event.ctrlKey,
-        altKey: event.altKey,
-        shiftKey: event.shiftKey,
-        repeat: event.repeat,
-        isComposing: event.isComposing,
-        keyCode: event.keyCode,
-        defaultPrevented: event.defaultPrevented,
-        target: event.target as EditableTargetLike | null,
-      },
-      { isToolDisabled },
-    );
+    const tool = toolKeyTarget(toToolKeyEvent(event), { isToolDisabled });
     if (!tool) {
       return;
     }

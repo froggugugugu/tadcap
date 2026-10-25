@@ -59,6 +59,7 @@ import {
 } from "./ipc/permissions";
 import { captureErrorMessage, initCaptureButton } from "./ui/captureButton";
 import { initClipboardButton, isClipboardCopyEnabled } from "./ui/clipboardButton";
+import { bindColorKeys } from "./ui/colorKeys";
 import { initColorPicker } from "./ui/colorPicker";
 import { initFontSizePicker } from "./ui/fontSizePicker";
 import { initStampKindPicker } from "./ui/stampKindPicker";
@@ -457,6 +458,8 @@ window.addEventListener("DOMContentLoaded", () => {
     // QE-T02: ツールの 1 キー切替(A・R・O・T・N・M。N は QE-T13)。`bindSelectionKeys()` の後に登録する(ARCH_quick-edits §11)。
     // 押せるかどうかはツールボタンと同じ `toolButtonState()` で決める。
     bindToolKeys((id) => toolButtonState(id, currentToolButtonContext()).disabled);
+    // v1.2.0: 数字キー 1〜6 で色のプリセット。扱わない条件(画像なし・描画中・自動マスキング中)はツールボタンと同じ文脈で決める。
+    bindColorKeys(currentToolButtonContext);
     // T29: 取り消し・やり直し(ボタン + Cmd+Z/Cmd+Shift+Z)。Undo/Redoスタックのクリアは
     // 画像差し替え完了後の`resetDocument()`(`handleCaptureCompleted`/`reloadHistoryItemIntoCanvas`)。
     const undoButtonEl = document.querySelector<HTMLButtonElement>("#undo-button");

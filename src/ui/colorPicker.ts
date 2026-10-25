@@ -66,6 +66,52 @@ export function toColorInputValue(color: string): string {
 }
 
 /**
+ * プリセットの数字キー(v1.2.0、UI_quick-edits §7)。`index` 番目のプリセットは `Digit{index + 1}`(1 番目が `1`)で、
+ * ツールチップ・`aria-keyshortcuts` も同じ対応から組み立てる。`KeyboardEvent.code` で引くので日本語入力がオンでも
+ * 同じキーで動く。テンキー(`Numpad1`)は使わない。判定の結線は `colorKeys.ts`。
+ */
+const PRESET_KEY_CODE = /^Digit([1-9])$/;
+
+/** `aria-keyshortcuts`・ツールチップに入れるキー(`0` 番目が `1`)。範囲外・非整数は `null`。 */
+export function colorPresetShortcutKey(index: number): string | null {
+  return colorAtPresetIndex(index) === null ? null : String(index + 1);
+}
+
+/** 色見本のツールチップ(`ピンク(1)`。ツールボタンの `矢印(A)` と同じ半角かっこ・空白なし)。範囲外は `null`。 */
+export function colorPresetLabel(index: number): string | null {
+  const preset = COLOR_PRESETS[index];
+  const key = colorPresetShortcutKey(index);
+  return preset && key ? `${preset.label}(${key})` : null;
+}
+
+/** `KeyboardEvent.code` に対応するプリセットのインデックス(`Digit3` → `2`)。プリセットの数を超えるキー・テンキー・英字は `null`。 */
+export function colorPresetIndexOfCode(code: string): number | null {
+  const match = PRESET_KEY_CODE.exec(code);
+  if (!match) {
+    return null;
+  }
+  const index = Number(match[1]) - 1;
+  return colorAtPresetIndex(index) === null ? null : index;
+}
+
+/**
+ * プリセットの色を選ぶ(色見本のボタンと数字キーの共通の経路、v1.2.0)。以後に描く色を変え、オブジェクトを
+ * 選択中ならその色も変える(取り消せる操作、T34)。自動マスキングの処理中・確認中は Canvas に効かせない
+ * (UI_auto-masking §6、AM-T25-F1 SHOULD-2)。範囲外のインデックスは何もせず `false`。
+ */
+export function applyPresetColor(index: number): boolean {
+  const color = colorAtPresetIndex(index);
+  if (color === null) {
+    return false;
+  }
+  setColor(color);
+  if (!isMaskSessionActive()) {
+    setSelectedColor(color);
+  }
+  return true;
+}
+
+/**
  * 色見本ボタンとカラーピッカーを `mount` 配下に構築し、`toolSettings` と結線する。
  */
 export function initColorPicker(mount: HTMLElement): void {
@@ -74,19 +120,16 @@ export function initColorPicker(mount: HTMLElement): void {
     button.type = "button";
     button.className = "color-swatch";
     button.style.setProperty("--swatch-color", preset.color);
+    // 名前(`aria-label`)は色の名前のまま。キーはツールチップと `aria-keyshortcuts` に出す(ツールボタンと同じ形、v1.2.0)。
     button.setAttribute("aria-label", preset.label);
-    button.title = preset.label;
+    button.title = colorPresetLabel(index) ?? preset.label;
+    const shortcutKey = colorPresetShortcutKey(index);
+    if (shortcutKey !== null) {
+      button.setAttribute("aria-keyshortcuts", shortcutKey);
+    }
     button.setAttribute("aria-pressed", "false");
     button.addEventListener("click", () => {
-      const color = colorAtPresetIndex(index);
-      if (color) {
-        setColor(color);
-        // T34: オブジェクトを選択中なら、その色も変える(取り消せる操作)。自動マスキングの処理中・
-        // 確認中は Canvas に効かせない(UI_auto-masking §6、AM-T25-F1 SHOULD-2)。
-        if (!isMaskSessionActive()) {
-          setSelectedColor(color);
-        }
-      }
+      applyPresetColor(index);
     });
     mount.appendChild(button);
     return button;

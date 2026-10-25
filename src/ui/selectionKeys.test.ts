@@ -1,9 +1,64 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { beginScan, discardMaskSession, isMaskSessionActive } from "../canvas/maskSession";
-import { selectionKeyAction } from "./selectionKeys";
+import { MOVE_STEP, MOVE_STEP_SHIFT, selectionKeyAction, selectionMoveDelta } from "./selectionKeys";
 
 const plain = { metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, isComposing: false };
+
+// v1.2.0: 矢印キーで選択中のオブジェクトを 1px(⇧ で 10px)動かす。移動そのもの(画像の内側に収める・取り消し 1 手)は
+// `documentState.test.ts` の `moveSelected`、`window` への結線は E2E `keyboard-shortcuts.spec.ts`。
+describe("selectionMoveDelta(矢印キー)", () => {
+  it("選択中なら矢印キーの向きに 1px", () => {
+    expect(MOVE_STEP).toBe(1);
+    expect(selectionMoveDelta({ ...plain, key: "ArrowLeft" }, true, null)).toEqual({ x: -1, y: 0 });
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, null)).toEqual({ x: 1, y: 0 });
+    expect(selectionMoveDelta({ ...plain, key: "ArrowUp" }, true, null)).toEqual({ x: 0, y: -1 });
+    expect(selectionMoveDelta({ ...plain, key: "ArrowDown" }, true, null)).toEqual({ x: 0, y: 1 });
+  });
+
+  it("Shift を押しながらなら 10px", () => {
+    expect(MOVE_STEP_SHIFT).toBe(10);
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight", shiftKey: true }, true, null)).toEqual({ x: 10, y: 0 });
+    expect(selectionMoveDelta({ ...plain, key: "ArrowUp", shiftKey: true }, true, null)).toEqual({ x: 0, y: -10 });
+  });
+
+  it("選択が無ければ何もしない(画面のスクロールなど既定動作のまま)", () => {
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, false, null)).toBeNull();
+  });
+
+  it("⌘・⌥・⌃ 付きは奪わない(Shift だけは許す)", () => {
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight", metaKey: true }, true, null)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight", altKey: true }, true, null)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight", ctrlKey: true }, true, null)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight", shiftKey: true, metaKey: true }, true, null)).toBeNull();
+  });
+
+  it("IME 変換中・入力欄(文字カーソルが動く)では奪わない。文字入力でない input は扱う", () => {
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight", isComposing: true }, true, null)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, { tagName: "INPUT" })).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, { tagName: "TEXTAREA" })).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, { tagName: "INPUT", type: "color" })).toEqual({
+      x: 1,
+      y: 0,
+    });
+  });
+
+  it("自動マスキングの処理中・確認中は扱わない", () => {
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, null, true)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "ArrowRight" }, true, null, false)).toEqual({ x: 1, y: 0 });
+  });
+
+  it("矢印キー以外は対象外(Enter・Delete は selectionKeyAction の役目)", () => {
+    expect(selectionMoveDelta({ ...plain, key: "Enter" }, true, null)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "Delete" }, true, null)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "a" }, true, null)).toBeNull();
+    expect(selectionMoveDelta({ ...plain, key: "Left" }, true, null)).toBeNull();
+  });
+
+  it("selectionKeyAction は矢印キーを扱わない(二重に反応しない)", () => {
+    expect(selectionKeyAction({ ...plain, key: "ArrowRight" }, true, null)).toBeNull();
+  });
+});
 
 // 【改訂 2026-09-24 T32】T31の「Enter=確定・Esc=破棄」を、オブジェクト化に合わせて
 // 「Enter/Esc=選択解除」に変えた(削除はT34のDelete/Backspace、取り消しはCmd+Z)。

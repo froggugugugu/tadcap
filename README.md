@@ -27,7 +27,7 @@
 - **機密らしい箇所を探す(自動マスキング)**: `⌘⇧M` かツールバーのボタンで、画像の中の機密らしい箇所(連絡先・認証情報・識別子・金額や口座)に色付きの印を付けます。モザイクをかけたくない印はクリックで外し、「まとめてモザイク」で残りに一度にモザイクをかけます。`⌘Z` 1 回で全部戻せます。詳しくは[自動マスキング](#自動マスキング機密らしい箇所を探す)
 - **クリップボードへコピー**: `⌘C` で描き込んだ画像をコピーし、そのまま他のアプリへ貼り付け
 - **セッション内の履歴**: 起動中に撮った画像をサムネイルで一覧し、描き込んだ状態で呼び戻せる
-- **メニューバー常駐**: メニューから「キャプチャ」「エディタを開く」「終了」。Dock にも表示し、アイコンを押すとエディタが開く
+- **メニューバー常駐**: メニューから「キャプチャ」「エディタを開く」「設定…」「終了」。Dock にも表示し、アイコンを押すとエディタが開く
 - **何も残さない**: 画像はディスクに保存しない。履歴はメモリのみで終了時に破棄、一時ファイルは起動時・終了時に自動削除。外部との通信なし
 
 ## インストール
@@ -65,7 +65,7 @@ curl -fsSL https://froggugugugu.github.io/tadcap/install.sh | bash
 - macOS 14 以降
 - Xcode Command Line Tools（`xcode-select --install`）
 - Rust（stable。[rustup](https://rustup.rs/) で導入）
-- Node.js 20 以降と npm
+- Node.js 20.19 以降(または 22.12 以降)と npm
 
 ```bash
 git clone https://github.com/froggugugugu/tadcap.git && cd tadcap
@@ -172,6 +172,8 @@ npm run tauri build -- --bundles app
 | `Enter` / `Esc` | 選択を外す(テキスト入力中は `Enter` で確定、`Esc` で取り消し) | エディタ |
 | `Delete` / `⌫` | 選択中のオブジェクトを削除 | オブジェクト選択中 |
 | `⌘⇧F` / `⌘⇧B` | 選択中のオブジェクトを最前面 / 最背面へ | オブジェクト選択中 |
+| `1`〜`6` | 色のプリセット(`1` がピンク、`6` が青。選択中の注釈があればその色も変わる) | エディタ(画像があるとき。効かない条件はツールの切り替えと同じ) |
+| 矢印キー | 選択中の注釈を 1px 動かす(`⇧` で 10px) | オブジェクト選択中 |
 | `⌘,` | 設定画面を開く(ショートカットの変更・縮めてコピー) | Tadcap が前面のとき |
 | ダブルクリック | テキストを打ち直す | テキストの上 |
 | `Shift`＋ドラッグ | 正方形・正円にする | 矩形・円を描く／大きさを変えるとき |
@@ -213,7 +215,7 @@ npm run e2e           # E2E テスト(Playwright。Tauri IPC はモック)
 npm run dist:mac      # 配布物(release/Tadcap-<版>-arm64.dmg / .zip)を作る
 ```
 
-リリースの手順: `package.json`・`src-tauri/tauri.conf.json`・`src-tauri/Cargo.toml` の `version` を揃えて上げ、`cargo check --manifest-path src-tauri/Cargo.toml` で `Cargo.lock` も更新してからコミットして push したあと、`git tag v<版>` → `git push origin v<版>` します。タグの push で `.github/workflows/release.yml` が動き、テスト・ビルド・署名の検証を通った DMG と zip を GitHub Releases に公開します。タグと 3 ファイルの版が食い違うと失敗します。
+リリースの手順: `package.json`・`src-tauri/tauri.conf.json`・`src-tauri/Cargo.toml` の `version` を揃えて上げ、`npm install --package-lock-only` で `package-lock.json` を、`cargo check --manifest-path src-tauri/Cargo.toml` で `src-tauri/Cargo.lock` も更新してからコミットして push したあと、`git tag v<版>` → `git push origin v<版>` します。タグの push で `.github/workflows/release.yml` が動き、テスト・ビルド・署名の検証を通った DMG と zip を GitHub Releases に公開します。タグと 3 ファイルの版が食い違うと失敗し、2 つのロックファイルの更新漏れは `--locked` のチェックで失敗します。
 
 | ディレクトリ | 内容 |
 | ------------ | ---- |

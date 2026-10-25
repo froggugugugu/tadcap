@@ -510,7 +510,7 @@
           </div>
           <div class="mt-10 max-w-3xl">
             <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold"><i data-lucide="code-2" class="h-4 w-4 text-muted-foreground"></i>ソースからビルドする</h3>
-            <p class="mb-3 text-sm text-muted-foreground">Intel の Mac や、手元でビルドしたい場合。macOS 14 以降、Xcode Command Line Tools（<code class="font-mono">xcode-select --install</code>）、Rust（stable、<a href="https://rustup.rs/" class="underline decoration-border underline-offset-4 hover:text-foreground" target="_blank" rel="noopener">rustup</a> で入れます）、Node.js 20 以降と npm が必要です。</p>
+            <p class="mb-3 text-sm text-muted-foreground">Intel の Mac や、手元でビルドしたい場合。macOS 14 以降、Xcode Command Line Tools（<code class="font-mono">xcode-select --install</code>）、Rust（stable、<a href="https://rustup.rs/" class="underline decoration-border underline-offset-4 hover:text-foreground" target="_blank" rel="noopener">rustup</a> で入れます）、Node.js 20.19 以降（または 22.12 以降）と npm が必要です。</p>
             <div data-code class="group relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-50 shadow-sm">
               <div class="flex h-9 items-center justify-between border-b border-zinc-800 px-3">
                 <span class="font-mono text-xs text-zinc-400">Terminal</span>
@@ -603,6 +603,8 @@ open src-tauri/target/release/bundle/macos</code></pre>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Enter</kbd> / <kbd class="kbd">Esc</kbd></td><td class="px-4 py-3">選択を外す(テキスト入力中は <kbd class="kbd">Enter</kbd> で確定、<kbd class="kbd">Esc</kbd> で取り消し)</td><td class="px-4 py-3 text-muted-foreground">エディタ</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Delete</kbd> / <kbd class="kbd">⌫</kbd></td><td class="px-4 py-3">選択中のオブジェクトを削除</td><td class="px-4 py-3 text-muted-foreground">オブジェクト選択中</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘⇧F</kbd> / <kbd class="kbd">⌘⇧B</kbd></td><td class="px-4 py-3">選択中のオブジェクトを最前面 / 最背面へ</td><td class="px-4 py-3 text-muted-foreground">オブジェクト選択中</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">1</kbd>〜<kbd class="kbd">6</kbd></td><td class="px-4 py-3">色のプリセット（<kbd class="kbd">1</kbd> がピンク、<kbd class="kbd">6</kbd> が青。選択中の注釈があればその色も変わる）</td><td class="px-4 py-3 text-muted-foreground">エディタ（画像があるとき。効かない条件はツールの切り替えと同じ）</td></tr>
+                <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">←</kbd> <kbd class="kbd">→</kbd> <kbd class="kbd">↑</kbd> <kbd class="kbd">↓</kbd></td><td class="px-4 py-3">選択中の注釈を 1px 動かす（<kbd class="kbd">⇧</kbd> で 10px）</td><td class="px-4 py-3 text-muted-foreground">オブジェクト選択中</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">⌘,</kbd></td><td class="px-4 py-3">設定画面を開く（ショートカットの変更・縮めてコピー）</td><td class="px-4 py-3 text-muted-foreground">Tadcap が前面のとき</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3">ダブルクリック</td><td class="px-4 py-3">テキストを打ち直す</td><td class="px-4 py-3 text-muted-foreground">テキストの上</td></tr>
                 <tr><td class="whitespace-nowrap px-4 py-3"><kbd class="kbd">Shift</kbd>＋ドラッグ</td><td class="px-4 py-3">正方形・正円にする</td><td class="px-4 py-3 text-muted-foreground">矩形・円を描く／大きさを変えるとき</td></tr>

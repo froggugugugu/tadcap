@@ -9,6 +9,7 @@ import {
   arrangeSelected,
   exportDocumentBase,
   getCaptureSize,
+  moveSelected,
   previewSelectedColor,
   restoreDocument,
   setSelectedColor,
@@ -353,6 +354,50 @@ describe("選択中のオブジェクトの操作(T34)", () => {
     undoDocument();
     expect(shapeColor(getDocumentState().objects[0]?.shape)).toBe(COLOR);
     expect(getDocumentState().selectedId).toBe(o.id);
+  });
+
+  // v1.2.0: 矢印キーの移動(`ui/selectionKeys.ts`)。
+  it("moveSelected: 選択中を動かす update を積み、1 回の呼び出しが 1 手で、取り消せる。選択が無ければ何もしない", () => {
+    const rectOf = (index = 0): Rect => (getDocumentState().objects[index]!.shape as BoxShape).rect;
+    expect(moveSelected({ x: 1, y: 0 })).toBe(false);
+    const o = add(box(10));
+    const depth = getUndoStackState().undo.length;
+    expect(moveSelected({ x: 3, y: 0 })).toBe(true);
+    expect(rectOf()).toEqual({ x: 13, y: 10, width: 20, height: 20 });
+    expect(moveSelected({ x: 0, y: 10 })).toBe(true);
+    expect(rectOf()).toEqual({ x: 13, y: 20, width: 20, height: 20 });
+    expect(getUndoStackState().undo.length).toBe(depth + 2);
+    undoDocument();
+    expect(rectOf()).toEqual({ x: 13, y: 10, width: 20, height: 20 });
+    undoDocument();
+    expect(rectOf()).toEqual({ x: 10, y: 10, width: 20, height: 20 });
+    expect(getDocumentState().selectedId).toBe(o.id);
+  });
+
+  it("moveSelected: 画像の端で動かなければ手を増やさず false。はみ出す分は端で止める", () => {
+    const rectOf = (): Rect => (getDocumentState().objects[0]!.shape as BoxShape).rect;
+    add(box(3, 0));
+    const depth = getUndoStackState().undo.length;
+    expect(moveSelected({ x: 0, y: -1 })).toBe(false);
+    expect(moveSelected({ x: 0, y: -10 })).toBe(false);
+    expect(rectOf()).toEqual({ x: 3, y: 0, width: 20, height: 20 });
+    expect(getUndoStackState().undo.length).toBe(depth);
+    // 左へ 10 は 3 までしか動けない(端で止める。1 手)。
+    expect(moveSelected({ x: -10, y: 0 })).toBe(true);
+    expect(rectOf()).toEqual({ x: 0, y: 0, width: 20, height: 20 });
+    expect(getUndoStackState().undo.length).toBe(depth + 1);
+    // 右下の端も同じ。
+    expect(moveSelected({ x: W, y: H })).toBe(true);
+    expect(rectOf()).toEqual({ x: W - 20, y: H - 20, width: 20, height: 20 });
+    expect(moveSelected({ x: 1, y: 1 })).toBe(false);
+    expect(getUndoStackState().undo.length).toBe(depth + 2);
+  });
+
+  it("moveSelected: サーフェスが無ければ何もしない", () => {
+    add(box(10));
+    setDocumentSurface(null);
+    expect(moveSelected({ x: 1, y: 0 })).toBe(false);
+    expect((getDocumentState().objects[0]!.shape as BoxShape).rect.x).toBe(10);
   });
 
   it("previewSelectedColor: 下書きで色だけを見せ、モデル・取り消しは変えない", () => {

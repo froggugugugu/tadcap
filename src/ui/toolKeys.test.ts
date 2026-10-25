@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { ToolId } from "../canvas/canvasState";
 import { TOOL_IDS, toolButtonState, toolGroupOf, type ToolButtonContext } from "./toolbar";
-import { TOOL_KEYS, toolKeyTarget, toolLabel, type ToolKeyContext, type ToolKeyEvent } from "./toolKeys";
+import {
+  TOOL_KEYS,
+  isPlainShortcutKey,
+  toolKeyTarget,
+  toolLabel,
+  type ToolKeyContext,
+  type ToolKeyEvent,
+} from "./toolKeys";
 
 // 修飾キーなしの 1 キーでツールを切り替える判定(QE-T02、ARCH_quick-edits §7.1 手順 K、FR-013)。
 // `window` への結線(`bindToolKeys`)は E2E `tool-keys.spec.ts` で確認する。
@@ -104,8 +111,13 @@ describe("toolKeyTarget", () => {
     expect(toolKeyTarget(keyEvent("KeyC"), context({ hasImage: false }))).toBeNull();
   });
 
-  it("割り当てのないキー(KeyZ・Digit1)は扱わない", () => {
+  // Digit1〜Digit6 は v1.2.0 で色のプリセット(`colorKeys.ts`)に割り当てた。ここでは割り当てのないキーで確かめる。
+  it("割り当てのないキー(KeyZ・Digit7)は扱わない", () => {
     expect(toolKeyTarget(keyEvent("KeyZ"), context())).toBeNull();
+    expect(toolKeyTarget(keyEvent("Digit7"), context())).toBeNull();
+  });
+
+  it("数字キーはツールを切り替えない(色のプリセットのキー、v1.2.0)", () => {
     expect(toolKeyTarget(keyEvent("Digit1"), context())).toBeNull();
   });
 
@@ -124,6 +136,30 @@ describe("toolKeyTarget", () => {
   it("event.key が日本語入力の文字でも event.code で引ける", () => {
     expect(toolKeyTarget(keyEvent("KeyA", { key: "あ" }), context())).toBe("arrow");
     expect(toolKeyTarget(keyEvent("KeyT", { key: "か" }), context())).toBe("text");
+  });
+});
+
+// v1.2.0: 「修飾キーなしの 1 キーとして扱えるか」の判定を切り出し、色のプリセットのキー(`colorKeys.ts`)と共有する。
+describe("isPlainShortcutKey", () => {
+  it("修飾なし・単発・IME でない・入力欄でないキーは true", () => {
+    expect(isPlainShortcutKey(keyEvent("KeyA"))).toBe(true);
+    expect(isPlainShortcutKey(keyEvent("Digit1"))).toBe(true);
+    expect(isPlainShortcutKey(keyEvent("KeyA", { target: { tagName: "INPUT", type: "color" } }))).toBe(true);
+  });
+
+  it.each([
+    ["⌘", { metaKey: true }],
+    ["⇧", { shiftKey: true }],
+    ["⌥", { altKey: true }],
+    ["⌃", { ctrlKey: true }],
+    ["repeat", { repeat: true }],
+    ["defaultPrevented", { defaultPrevented: true }],
+    ["isComposing", { isComposing: true }],
+    ["keyCode 229", { keyCode: 229 }],
+    ["入力欄", { target: { tagName: "INPUT", type: "text" } }],
+    ["contenteditable", { target: { tagName: "DIV", isContentEditable: true } }],
+  ] as const)("%s は false", (_name, overrides) => {
+    expect(isPlainShortcutKey(keyEvent("KeyA", overrides))).toBe(false);
   });
 });
 
