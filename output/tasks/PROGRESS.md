@@ -9,7 +9,7 @@
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 最終更新 | 2026-10-31(v1.2.0 のタグを push 済み。`release.yml` が Environment `release` の承認待ち。結果は §4 の最新ログ) |
+| 最終更新 | 2026-11-01(v1.2.0 を公証付きで公開。DMG / zip の Notarized を手元で確認。結果は §4 の最新ログ) |
 | 入力 | `docs/requirements.md`(要求メモ・ドラフト) |
 | 承認モード | 通常(各ゲートで人間承認を待つ) / 実装モード: 逐次 |
 | ブランチ | `main`(origin = https://github.com/froggugugugu/tadcap、push 済み)。リリースはタグ `v<版>` の push(`release.yml`) |
@@ -147,7 +147,8 @@
 - **見直し**: fresh context のレビュー subagent 3 本(フロント / Rust / ドキュメント)。MUST 0、SHOULD はフロント 4・Rust 7、ドキュメントの誤記 11 件。実装後にリリース前レビュー 1 本(MUST: Esc の終了コードの仮定 → stderr の有無でも判定するよう修正 / SHOULD: ドラッグ中の矢印キー・選択中のボタン上 Enter → 修正)
 - **補完(コミット)**: `build:` 依存を範囲内で更新(Tauri 2.12.5・プラグイン・Playwright 1.64.1・Vite 8.3.5。npm audit 0・署名検証 OK・OSV は macOS の依存木に無い Linux 系 5 件のみ)/ `fix:` Rust 5 件(撮影失敗の通知・絶対パス起動・設定の緩い読み込み・記録中フラグのリセット・一時ディレクトリ 0o700・最前面アプリ ID をリリースでは出さない)/ `fix:` フロント 4 件(画像なしのツール無効・フォーカス中ボタンの Enter・マスキング中の帯・キャプチャ失敗のトースト)/ `feat:` 数字キー 1〜6 で色・矢印キーで注釈の移動(⇧ で 10px)/ `docs:` QE-T26 の仕上げ(ADR-002 実装後記録・ARCH_quick-edits §17・ARCH_tadcap_mvp §17・IPC/テスト/構成の抜け・PROGRESS/TASK の鮮度)
 - **検証**: build 0 / vitest 1127 / cargo test 503 + doc 2 / clippy 0 / licenses:check OK / e2e 115(すべて green、`--locked`)。コミット: build 1・fix 4・feat 1・docs 1・chore 1(v1.1.0 → v1.2.0)
-- **デプロイ(2026-10-30〜、人間待ち)**: main push(HEAD `ffee5a1`)→ `v1.2.0` タグ push。`pages.yml`(run 41006102286)は success。`release.yml`(run 41006103608、https://github.com/froggugugugu/tadcap/actions/runs/41006103608)は Environment `release` の必須レビュアー承認待ち(2026-10-31 17:00 時点で約 36 時間 waiting。AI は承認しない)。人間が Actions の「Review deployments」で `release` を承認すると build/publish job が DMG / zip を署名・公証して Release `v1.2.0` を作る。承認後に成果物(DMG / zip、Notarized)と job の成功を確認して本ノートに追記する
+- **デプロイ(2026-10-30 タグ push → 2026-11-01 承認)**: main push(HEAD `ffee5a1`)→ `v1.2.0` タグ push。`pages.yml`(run 41006102286)は success。`release.yml`(run 41006103608、https://github.com/froggugugugu/tadcap/actions/runs/41006103608)は Environment `release` の必須レビュアー承認待ち(2026-10-31 17:00 時点で約 36 時間 waiting。AI は承認しない)。人間が Actions の「Review deployments」で `release` を承認すると build/publish job が DMG / zip を署名・公証して Release `v1.2.0` を作る。承認後に成果物(DMG / zip、Notarized)と job の成功を確認して本ノートに追記する
+- **公開(2026-11-01)**: 人間が 18:01 JST に `release` を承認 → run 41006103608 は build / publish とも success(18:16 JST 完了)。Release https://github.com/froggugugugu/tadcap/releases/tag/v1.2.0(2026-11-01 09:06 UTC 公開、draft / pre-release ではない)に `Tadcap-1.2.0-arm64.dmg`(3,421,681 B、sha256 `fef2b3b2…3ac2`)と `Tadcap-1.2.0-arm64.zip`(3,107,616 B、sha256 `4a6fb262…e51b`)。手元でダウンロードして `xcrun stapler validate` が両方とも「The validate action worked!」、`spctl -a -t open --context context:primary-signature`(DMG)と `spctl -a -vv`(zip 内の `Tadcap.app`)が「accepted / source=Notarized Developer ID」、`Info.plist` の `CFBundleShortVersionString` = 1.2.0 を確認。リリースノートは `--generate-notes` の既定(PR が無いので Full Changelog の比較リンクのみ。v1.1.0 と同じ)。紹介ページは `pages.yml` が ffee5a1・d1cac18 とも success
 - **人間の判断待ち(未着手)**: `panic = "abort"` の是非 / 起動中に溜まる一時 PNG の間引き / 単一起動の保証(依存追加)/ capabilities・CSP(`base-uri`/`form-action`)・`withGlobalTauri` の絞り込み(実機確認が要る)/ `MACOSX_DEPLOYMENT_TARGET` 未指定 / `docs/docs/` の移動と CLAUDE.md の `@` import / git-conventions.md の「Release Please」記述と実態(手作業の版上げ)の不一致 / 全画面キャプチャ(PRD F-03)・遅延撮影などの機能追加
 - **実機確認待ち**: QE-T24(新ツール一通り・縮めてコピー・倍率 1 の外部画面・日本語入力オンのキー切替)/ 記録中フラグのリセット(設定モーダルで記録中に再読込 → ⌘⇧2 で撮れる)/ `$TMPDIR/tadcap-captures` が `drwx------` / 新しいキー(1〜6・矢印) / **Esc キャンセル時の `screencapture -i` の終了コード**(端末で `screencapture -i /tmp/x.png; echo $?` → Esc。判定は stderr の有無も見るので 0 でも非 0 でも動くが、記録を残す)/ 設定モーダルで記録中にウィンドウを閉じて再表示したとき、記録中の表示が解除されているか
 
