@@ -148,7 +148,8 @@
 - **対応**: 依存を範囲内で更新し 7 日クールダウンを適用(Cargo は `scripts/cargo-cooldown.mjs` で 18 クレートを戻した。npm は `--min-release-age=7`、Playwright 1.65.0・Vite 8.3.6・Vitest 5.1.0)。TypeScript 7 はメジャーなので 6.0.3 に据え置き / LOW の修正(既存ディレクトリも確かめ、緩ければ締め直し・他ユーザー所有やリンクなら拒否)/ CSP に `object-src 'none'`・`base-uri 'none'`・`form-action 'none'`、`withGlobalTauri: false`(フロントは `@tauri-apps/api` の import のみで `window.__TAURI__` 未使用)/ Actions の SHA ピンを setup-node v7.1.0・upload-artifact v7.0.2・download-artifact v8.0.2 へ
 - **週次 CI**: `.github/workflows/weekly-deps.yml`(月曜 03:17 UTC)。update ジョブ(読取専用・secrets なし)→ publish ジョブ(リポジトリのコードを実行せず、パッチが lockfile・ライセンス一覧・版の行だけか、npm/crates.io 以外の取得元が無いかを検証して main + タグを push、`release.yml`・`pages.yml` を dispatch)。`release.yml` に `workflow_dispatch` を追加(v* タグ以外では build しない)。Actions は `.github/dependabot.yml`(7 日クールダウンの PR)。actionlint 1.7.12 で weekly-deps は指摘 0(release.yml の既存 SC2046 は意図的)
 - **検証**: build 0 / vitest 1127 / test:scripts 6 / cargo test 506 + doc 2 / clippy 0 / licenses:check OK / e2e 115(Playwright 1.65 用 chromium を導入後)。`tauri build --bundles app` 成功、実アプリ起動で画面描画・一時ディレクトリ `drwx------` を確認
-- **未完了 / 申し送り**: リリース `v1.2.1` は Environment `release` の承認待ち(人間)。週次 CI の初回実行結果の確認
+- **公開(2026-11-14)**: main push(`0fbc625`)→ `v1.2.1` タグ push → 人間が `release` を承認 → run 43560981932 は build / publish とも success。Release https://github.com/froggugugugu/tadcap/releases/tag/v1.2.1(05:38 UTC 公開、draft / pre-release ではない)に `Tadcap-1.2.1-arm64.dmg`(3,440,380 B、sha256 `52cb84f9…`)と `.zip`(3,127,171 B、sha256 `37a5d1a0…`)。手元でダウンロードして `stapler validate` が両方とも成功、`spctl` が DMG・zip 内の app とも「source=Notarized Developer ID」、`codesign --verify --deep --strict` OK、版 1.2.1 を確認。pages も success
+- **未完了 / 申し送り**: 週次 CI(weekly-deps)の初回実行結果の確認 / 手元の `/Applications/Tadcap.app` は 0.4.0(入れ直しは人間)
 
 ### 2026-10-26 — v1.2.0: 実装の見直し・補完・依存更新・リリース
 
