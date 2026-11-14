@@ -33,10 +33,14 @@ pub fn generate_capture_path() -> std::io::Result<PathBuf> {
     Ok(dir.join(unique_filename()))
 }
 
-/// キャプチャ用一時ディレクトリ(とその親)を作る。既にあれば何もしない(権限も変えない)。
+/// キャプチャ用一時ディレクトリ(とその親)を作り、所有者だけが読み書きできる状態にする。
 ///
 /// 撮った画面の画像を置く場所なので、所有者だけが読み書きできる `0o700` を明示する
 /// (`create_dir_all` の既定は umask 依存で、通常 `0o755` = 他ユーザーも読める)。
+/// `DirBuilder::mode` は新しく作るときにしか効かないため、作った後(既にあった場合も)に
+/// [`capture_dir_action`] で確かめる。v1.1.0 以前が `0o755` で作ったディレクトリは締め直し、
+/// 他ユーザーの持ち物やシンボリックリンクなら撮影を止める(`TMPDIR` が `/tmp` になる環境で、
+/// 他ユーザーが先に作ったディレクトリへ画像を書かない)。
 /// 本アプリは macOS 専用のため `#[cfg(unix)]` で十分。
 fn create_capture_dir(dir: &Path) -> std::io::Result<()> {
     let mut builder = std::fs::DirBuilder::new();
@@ -46,7 +50,78 @@ fn create_capture_dir(dir: &Path) -> std::io::Result<()> {
         use std::os::unix::fs::DirBuilderExt;
         builder.mode(0o700);
     }
-    builder.create(dir)
+    builder.create(dir)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::{MetadataExt, PermissionsExt};
+        let meta = std::fs::symlink_metadata(dir)?;
+        let state = CaptureDirState {
+            is_dir: meta.file_type().is_dir(),
+            is_symlink: meta.file_type().is_symlink(),
+            owner_uid: meta.uid(),
+            mode: meta.mode(),
+        };
+        match capture_dir_action(&state, current_euid()) {
+            CaptureDirAction::Ok => {}
+            CaptureDirAction::Tighten => {
+                std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))?
+            }
+            CaptureDirAction::Reject(reason) => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::PermissionDenied,
+                    format!("キャプチャ用ディレクトリを使えません({reason}): {}", dir.display()),
+                ))
+            }
+        }
+    }
+    Ok(())
+}
+
+/// このプロセスの実効ユーザー ID。
+#[cfg(unix)]
+fn current_euid() -> u32 {
+    // geteuid(2) は常に成功し、副作用もない(新しいクレートを足さずに呼ぶ)
+    unsafe extern "C" {
+        safe fn geteuid() -> u32;
+    }
+    geteuid()
+}
+
+/// キャプチャ用ディレクトリの実体の状態(`lstat` で得たもの)。
+#[cfg(unix)]
+#[derive(Debug, Clone, Copy)]
+struct CaptureDirState {
+    is_dir: bool,
+    is_symlink: bool,
+    owner_uid: u32,
+    mode: u32,
+}
+
+/// キャプチャ用ディレクトリをどう扱うか。
+#[cfg(unix)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CaptureDirAction {
+    /// そのまま使ってよい
+    Ok,
+    /// 自分の持ち物だが他ユーザーにも開いているので `0o700` に締め直す
+    Tighten,
+    /// 使わない(撮影を止める)
+    Reject(&'static str),
+}
+
+/// [`CaptureDirState`] から扱いを決める純粋関数。
+#[cfg(unix)]
+fn capture_dir_action(state: &CaptureDirState, euid: u32) -> CaptureDirAction {
+    if state.is_symlink || !state.is_dir {
+        return CaptureDirAction::Reject("ディレクトリではない");
+    }
+    if state.owner_uid != euid {
+        return CaptureDirAction::Reject("持ち主が別のユーザー");
+    }
+    if state.mode & 0o077 != 0 {
+        return CaptureDirAction::Tighten;
+    }
+    CaptureDirAction::Ok
 }
 
 /// プロセスID・ナノ秒タイムスタンプ・連番を組み合わせた一意なファイル名を返す
@@ -265,9 +340,10 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn create_capture_dir_は既にあるディレクトリの権限を変えない() {
+    fn create_capture_dir_は既にある緩い権限のディレクトリを0o700に締め直す() {
         use std::os::unix::fs::PermissionsExt;
 
+        // v1.1.0 以前が既定の umask(0o755)で作ったディレクトリが残っている想定
         let dir = unique_test_dir("mode-existing");
         std::fs::create_dir_all(&dir).expect("ディレクトリの作成に失敗した");
         std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).expect("権限の変更に失敗した");
@@ -276,7 +352,48 @@ mod tests {
 
         let mode = std::fs::metadata(&dir).expect("metadata が取れない").permissions().mode();
         std::fs::remove_dir_all(&dir).ok();
-        assert_eq!(mode & 0o777, 0o755, "mode = {mode:o}");
+        assert_eq!(mode & 0o777, 0o700, "mode = {mode:o}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_capture_dir_はシンボリックリンクのディレクトリを拒否する() {
+        let base = unique_test_dir("mode-symlink");
+        let target = base.join("target");
+        std::fs::create_dir_all(&target).expect("ディレクトリの作成に失敗した");
+        let link = base.join("tadcap-captures");
+        std::os::unix::fs::symlink(&target, &link).expect("シンボリックリンクの作成に失敗した");
+
+        let err = create_capture_dir(&link).expect_err("リンクは拒否されるはず");
+        std::fs::remove_dir_all(&base).ok();
+        assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn capture_dir_action_は持ち主と権限で扱いを決める() {
+        let mine = CaptureDirState { is_dir: true, is_symlink: false, owner_uid: 501, mode: 0o40700 };
+        assert_eq!(capture_dir_action(&mine, 501), CaptureDirAction::Ok);
+        let loose = CaptureDirState { mode: 0o40755, ..mine };
+        assert_eq!(capture_dir_action(&loose, 501), CaptureDirAction::Tighten);
+        // 他ユーザーが先に作った(`TMPDIR` が `/tmp` の環境)なら、権限が 0o777 でも締め直さず拒否する
+        let others = CaptureDirState { owner_uid: 502, mode: 0o40777, ..mine };
+        assert!(matches!(capture_dir_action(&others, 501), CaptureDirAction::Reject(_)));
+        let link = CaptureDirState { is_symlink: true, is_dir: false, ..mine };
+        assert!(matches!(capture_dir_action(&link, 501), CaptureDirAction::Reject(_)));
+        let file = CaptureDirState { is_dir: false, ..mine };
+        assert!(matches!(capture_dir_action(&file, 501), CaptureDirAction::Reject(_)));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn current_euid_は自分で作ったディレクトリの持ち主と一致する() {
+        use std::os::unix::fs::MetadataExt;
+        let dir = unique_test_dir("euid");
+        std::fs::create_dir_all(&dir).expect("ディレクトリの作成に失敗した");
+        let uid = std::fs::metadata(&dir).expect("metadata が取れない").uid();
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(uid, current_euid());
     }
 
     #[test]
