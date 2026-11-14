@@ -1,0 +1,19 @@
+# GitHub Actions used by the workflows: weekly pull requests, only for releases at least 7 days old.
+# npm and Cargo are updated by .github/workflows/weekly-deps.yml (same 7-day rule); the workflow files themselves
+# cannot be pushed with GITHUB_TOKEN, so Actions go through Dependabot and are merged by hand.
+# Dependabot keeps the commit-SHA pins and updates the version comment next to them.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:17"
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

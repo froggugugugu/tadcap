@@ -1,0 +1,172 @@
+name: weekly-deps
+on:
+  schedule:
+    # Mondays 03:17 UTC (12:17 JST). Off the hour, when scheduled runs are less delayed.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+# Weekly dependency check and update, followed by a release when anything changed.
+#   update  (read-only, no secrets): updates package-lock.json and Cargo.lock to versions published at least
+#           7 days ago (npm --min-release-age / scripts/cargo-cooldown.mjs), lets security fixes through without
+#           the wait, audits both, bumps the patch version, regenerates THIRD_PARTY_LICENSES.md and runs the same
+#           checks as release.yml. The result leaves the job as a patch file only.
+#   publish (contents: write, actions: write): runs no repository code. It checks that the patch touches only the
+#           lockfiles, the license list and the version lines, commits it on top of the commit update tested,
+#           pushes main and the tag, then starts release.yml on the tag (a push made with GITHUB_TOKEN starts no
+#           workflow). release.yml still waits for approval in the "release" environment before anything is signed.
+# Nothing changed: update still audits the current lockfiles and fails on a known vulnerability (GitHub mails a
+# failed scheduled run). GitHub Actions in the workflows are updated by Dependabot (.github/dependabot.yml), because
+# GITHUB_TOKEN cannot push workflow files.
+# Actions are pinned to commit SHAs (version in the comment); runner images are pinned too.
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-deps
+  cancel-in-progress: false
+
+env:
+  COOLDOWN_DAYS: 7
+
+jobs:
+  update:
+    runs-on: macos-26
+    timeout-minutes: 90
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+      version: ${{ steps.bump.outputs.version }}
+      base: ${{ steps.base.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: 24 }
+      - name: Rust toolchain and cargo-audit (RustSec)
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy
+          rustup default stable
+          rustc --version
+          cargo install cargo-audit --locked --version 0.23.0
+      - run: npm ci --ignore-scripts
+      - name: Update to versions at least ${{ env.COOLDOWN_DAYS }} days old
+        run: |
+          npm update --min-release-age="$COOLDOWN_DAYS" --ignore-scripts
+          cargo update --manifest-path src-tauri/Cargo.toml
+          node scripts/cargo-cooldown.mjs --days="$COOLDOWN_DAYS"
+      # A fix for a known vulnerability is taken right away, without the wait.
+      - name: Security fixes skip the cooldown
+        run: |
+          npm audit --audit-level=low || npm audit fix --ignore-scripts
+          cd src-tauri
+          for c in $(cargo audit --json | jq -r '.vulnerabilities.list[].package.name' | sort -u); do
+            echo "security update: $c"
+            cargo update -p "$c"
+          done
+      - name: Audit (fails on a known vulnerability; unmaintained / unsound warnings are listed only)
+        run: |
+          npm audit --audit-level=low
+          npm audit signatures
+          (cd src-tauri && cargo audit)
+      - id: diff
+        run: |
+          if git diff --quiet -- package-lock.json src-tauri/Cargo.lock; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"; echo "no dependency updates"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"; git diff --stat
+          fi
+      - name: Bump the patch version (package.json, package-lock.json, tauri.conf.json, Cargo.toml, Cargo.lock)
+        id: bump
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          next="$(node -p "const [a,b,c]=require('./package.json').version.split('.').map(Number); [a,b,c+1].join('.')")"
+          npm version "$next" --no-git-tag-version --ignore-scripts
+          # shellcheck disable=SC2016 # the node script uses JavaScript template literals
+          node -e '
+            const fs = require("fs"), v = process.argv[1];
+            const conf = "src-tauri/tauri.conf.json";
+            fs.writeFileSync(conf, fs.readFileSync(conf, "utf8").replace(/"version": "[^"]+"/, `"version": "${v}"`));
+            const toml = "src-tauri/Cargo.toml";
+            fs.writeFileSync(toml, fs.readFileSync(toml, "utf8").replace(/^version = "[^"]+"$/m, `version = "${v}"`));
+          ' "$next"
+          cargo update --manifest-path src-tauri/Cargo.toml --workspace
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+      - name: Regenerate THIRD_PARTY_LICENSES.md
+        if: steps.diff.outputs.changed == 'true'
+        run: npm run licenses
+      - name: Checks (same as release.yml, plus the script tests)
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          npm run build
+          npm run test:run
+          npm run test:scripts
+          cargo test --locked --manifest-path src-tauri/Cargo.toml
+          cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings
+          npm run licenses:check
+      - name: Write the patch
+        if: steps.diff.outputs.changed == 'true'
+        run: git diff > "$RUNNER_TEMP/update.patch" && git diff --stat
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.diff.outputs.changed == 'true'
+        with:
+          name: update-patch
+          path: ${{ runner.temp }}/update.patch
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: update
+    if: needs.update.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write   # push main and the tag
+      actions: write    # start release.yml and pages.yml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { ref: "${{ needs.update.outputs.base }}" }
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with: { name: update-patch, path: "${{ runner.temp }}/patch" }
+      - name: Apply the patch only if it touches the lockfiles, the license list and the version lines
+        env:
+          VERSION: ${{ needs.update.outputs.version }}
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad version: $VERSION"; exit 1; }
+          tag="v$VERSION"
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null && { echo "$tag already exists"; exit 1; }
+          patch="$RUNNER_TEMP/patch/update.patch"
+          git apply --check "$patch"
+          git apply "$patch"
+          allowed='^(package\.json|package-lock\.json|THIRD_PARTY_LICENSES\.md|src-tauri/Cargo\.toml|src-tauri/Cargo\.lock|src-tauri/tauri\.conf\.json)$'
+          bad="$(git diff --name-only | grep -Ev "$allowed" || true)"
+          [ -z "$bad" ] || { echo "the patch touches files outside the allowed list: $bad"; exit 1; }
+          git ls-files --others --exclude-standard | grep . && { echo "the patch adds files"; exit 1; }
+          # In package.json, tauri.conf.json and Cargo.toml only the version line may change.
+          for f in package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml; do
+            other="$(git diff -U0 -- "$f" | grep -E '^[-+][^-+]' | grep -Ev '^[-+](  "version": "[0-9.]+",|version = "[0-9.]+")$' || true)"
+            [ -z "$other" ] || { echo "$f changes more than its version: $other"; exit 1; }
+          done
+          # Dependencies come from the public registries only.
+          node -e '
+            const lock = require("./package-lock.json");
+            const bad = Object.entries(lock.packages).filter(([k, p]) => k && (
+              (p.resolved && !p.resolved.startsWith("https://registry.npmjs.org/")) || (!p.link && !p.integrity)));
+            if (bad.length) { console.error("package-lock.json entries outside the npm registry:", bad.map(([k]) => k)); process.exit(1); }'
+          if grep -E '^source = ' src-tauri/Cargo.lock | grep -v '^source = "registry+https://github.com/rust-lang/crates.io-index"$'; then
+            echo "Cargo.lock has sources other than crates.io"; exit 1
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+      - name: Commit, tag and push (fails if main moved since the tested commit; the next run retries)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -a -m "build(deps): 依存を更新し ${TAG} にする" \
+            -m "weekly-deps: 公開から ${COOLDOWN_DAYS} 日以上たった版(脆弱性の修正は即時)へ更新し、監査とチェックを通したもの。run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "HEAD:refs/heads/main" "refs/tags/$TAG"
+      - name: Start the release and refresh the site
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"
+          gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main

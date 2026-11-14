@@ -10,6 +10,8 @@
     "tauri": "tauri",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "deps:cooldown": "node scripts/cargo-cooldown.mjs",
     "e2e": "playwright test",
     "e2e:screenshots:before": "UI_SCREENSHOT_LABEL=before playwright test --config=e2e/screenshots/playwright.config.ts",
     "e2e:screenshots:after": "UI_SCREENSHOT_LABEL=after playwright test --config=e2e/screenshots/playwright.config.ts",
