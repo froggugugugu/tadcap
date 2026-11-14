@@ -10,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "windows": [
       {
         "title": "Tadcap",
@@ -23,7 +23,10 @@
         "default-src": "'self'",
         "connect-src": "'self' ipc: http://ipc.localhost",
         "img-src": "'self' blob:",
-        "style-src": "'self'"
+        "style-src": "'self'",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'"
       }
     }
   },
