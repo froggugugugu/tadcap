@@ -9,7 +9,7 @@
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 最終更新 | 2026-11-01(v1.2.0 を公証付きで公開。DMG / zip の Notarized を手元で確認。結果は §4 の最新ログ) |
+| 最終更新 | 2026-11-14(v1.2.1: セキュリティ・サプライチェーン見直し + 週次依存更新 CI。結果は §4 の最新ログ) |
 | 入力 | `docs/requirements.md`(要求メモ・ドラフト) |
 | 承認モード | 通常(各ゲートで人間承認を待つ) / 実装モード: 逐次 |
 | ブランチ | `main`(origin = https://github.com/froggugugugu/tadcap、push 済み)。リリースはタグ `v<版>` の push(`release.yml`) |
@@ -141,6 +141,15 @@
 
 ## 4. セッションログ(新しいものを上に)
 
+### 2026-11-14 — v1.2.1: セキュリティ・サプライチェーンの見直しと週次の依存更新 CI
+
+- **人間の指示**: セキュリティ・サプライチェーン(CVE・最新/安定版)の観点で包括的に見直して対応し、リビルド・プッシュ。週 1 回チェックしてビルド&プッシュする CI を構築。人間の回答: 最新の適用は 7 日のクールダウンを入れる / 更新があれば自動リリース
+- **監査結果**: npm audit 0・`npm audit signatures` 45 署名 + 26 attestation 検証 OK。`cargo audit`(cargo-audit 0.23.0 を `--locked` で導入)は脆弱性 0。警告は `rustix` unsound(1.1.6 で解消)・`async-executor` yanked(解消)と、macOS の依存木に無い Linux 専用の gtk/zbus 系 5 件(unmaintained/unsound、上流待ち)。fresh context の security-reviewer(v1.1.0→v1.2.0 差分)は Critical/High/Medium 0・LOW 1(既存の一時ディレクトリに 0o700 が効かない)
+- **対応**: 依存を範囲内で更新し 7 日クールダウンを適用(Cargo は `scripts/cargo-cooldown.mjs` で 18 クレートを戻した。npm は `--min-release-age=7`、Playwright 1.65.0・Vite 8.3.6・Vitest 5.1.0)。TypeScript 7 はメジャーなので 6.0.3 に据え置き / LOW の修正(既存ディレクトリも確かめ、緩ければ締め直し・他ユーザー所有やリンクなら拒否)/ CSP に `object-src 'none'`・`base-uri 'none'`・`form-action 'none'`、`withGlobalTauri: false`(フロントは `@tauri-apps/api` の import のみで `window.__TAURI__` 未使用)/ Actions の SHA ピンを setup-node v7.1.0・upload-artifact v7.0.2・download-artifact v8.0.2 へ
+- **週次 CI**: `.github/workflows/weekly-deps.yml`(月曜 03:17 UTC)。update ジョブ(読取専用・secrets なし)→ publish ジョブ(リポジトリのコードを実行せず、パッチが lockfile・ライセンス一覧・版の行だけか、npm/crates.io 以外の取得元が無いかを検証して main + タグを push、`release.yml`・`pages.yml` を dispatch)。`release.yml` に `workflow_dispatch` を追加(v* タグ以外では build しない)。Actions は `.github/dependabot.yml`(7 日クールダウンの PR)。actionlint 1.7.12 で weekly-deps は指摘 0(release.yml の既存 SC2046 は意図的)
+- **検証**: build 0 / vitest 1127 / test:scripts 6 / cargo test 506 + doc 2 / clippy 0 / licenses:check OK / e2e 115(Playwright 1.65 用 chromium を導入後)。`tauri build --bundles app` 成功、実アプリ起動で画面描画・一時ディレクトリ `drwx------` を確認
+- **未完了 / 申し送り**: リリース `v1.2.1` は Environment `release` の承認待ち(人間)。週次 CI の初回実行結果の確認
+
 ### 2026-10-26 — v1.2.0: 実装の見直し・補完・依存更新・リリース
 
 - **人間の指示**: 現在の実装を見直して補完できる所を補完し、マイナーバージョンを上げてデプロイまで
@@ -149,7 +158,7 @@
 - **検証**: build 0 / vitest 1127 / cargo test 503 + doc 2 / clippy 0 / licenses:check OK / e2e 115(すべて green、`--locked`)。コミット: build 1・fix 4・feat 1・docs 1・chore 1(v1.1.0 → v1.2.0)
 - **デプロイ(2026-10-30 タグ push → 2026-11-01 承認)**: main push(HEAD `ffee5a1`)→ `v1.2.0` タグ push。`pages.yml`(run 41006102286)は success。`release.yml`(run 41006103608、https://github.com/froggugugugu/tadcap/actions/runs/41006103608)は Environment `release` の必須レビュアー承認待ち(2026-10-31 17:00 時点で約 36 時間 waiting。AI は承認しない)。人間が Actions の「Review deployments」で `release` を承認すると build/publish job が DMG / zip を署名・公証して Release `v1.2.0` を作る。承認後に成果物(DMG / zip、Notarized)と job の成功を確認して本ノートに追記する
 - **公開(2026-11-01)**: 人間が 18:01 JST に `release` を承認 → run 41006103608 は build / publish とも success(18:16 JST 完了)。Release https://github.com/froggugugugu/tadcap/releases/tag/v1.2.0(2026-11-01 09:06 UTC 公開、draft / pre-release ではない)に `Tadcap-1.2.0-arm64.dmg`(3,421,681 B、sha256 `fef2b3b2…3ac2`)と `Tadcap-1.2.0-arm64.zip`(3,107,616 B、sha256 `4a6fb262…e51b`)。手元でダウンロードして `xcrun stapler validate` が両方とも「The validate action worked!」、`spctl -a -t open --context context:primary-signature`(DMG)と `spctl -a -vv`(zip 内の `Tadcap.app`)が「accepted / source=Notarized Developer ID」、`Info.plist` の `CFBundleShortVersionString` = 1.2.0 を確認。リリースノートは `--generate-notes` の既定(PR が無いので Full Changelog の比較リンクのみ。v1.1.0 と同じ)。紹介ページは `pages.yml` が ffee5a1・d1cac18 とも success
-- **人間の判断待ち(未着手)**: `panic = "abort"` の是非 / 起動中に溜まる一時 PNG の間引き / 単一起動の保証(依存追加)/ capabilities・CSP(`base-uri`/`form-action`)・`withGlobalTauri` の絞り込み(実機確認が要る)/ `MACOSX_DEPLOYMENT_TARGET` 未指定 / `docs/docs/` の移動と CLAUDE.md の `@` import / git-conventions.md の「Release Please」記述と実態(手作業の版上げ)の不一致 / 全画面キャプチャ(PRD F-03)・遅延撮影などの機能追加
+- **人間の判断待ち(未着手)**: `panic = "abort"` の是非 / 起動中に溜まる一時 PNG の間引き / 単一起動の保証(依存追加)/ ~~capabilities・CSP(`base-uri`/`form-action`)・`withGlobalTauri` の絞り込み~~(2026-11-14 v1.2.1 で対応)/ `MACOSX_DEPLOYMENT_TARGET` 未指定 / `docs/docs/` の移動と CLAUDE.md の `@` import / git-conventions.md の「Release Please」記述と実態(手作業の版上げ)の不一致 / 全画面キャプチャ(PRD F-03)・遅延撮影などの機能追加
 - **実機確認待ち**: QE-T24(新ツール一通り・縮めてコピー・倍率 1 の外部画面・日本語入力オンのキー切替)/ 記録中フラグのリセット(設定モーダルで記録中に再読込 → ⌘⇧2 で撮れる)/ `$TMPDIR/tadcap-captures` が `drwx------` / 新しいキー(1〜6・矢印) / **Esc キャンセル時の `screencapture -i` の終了コード**(端末で `screencapture -i /tmp/x.png; echo $?` → Esc。判定は stderr の有無も見るので 0 でも非 0 でも動くが、記録を残す)/ 設定モーダルで記録中にウィンドウを閉じて再表示したとき、記録中の表示が解除されているか
 
 ### 2026-10-10 — v1.1.0 公開・紹介ページ刷新・QE-T23/T25 完了

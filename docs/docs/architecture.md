@@ -148,6 +148,7 @@ src/                          # フロントエンド(Vanilla TS + Canvas)
 scripts/
 ├── latency-summary.mjs       # NFR-001中間計測ログ([tadcap:latency]行)の集計スクリプト(依存追加なし、T11)
 ├── gen-third-party-licenses.mjs # 依存のライセンス全文 THIRD_PARTY_LICENSES.md の生成・照合(`npm run licenses` / `licenses:check`、依存追加なし)
+├── cargo-cooldown.mjs       # v1.2.1: Cargo.lock の公開 7 日未満の版を互換範囲の古い版へ戻す(`npm run deps:cooldown`、index.crates.io の pubtime を参照、依存追加なし)。テストは同階層の cargo-cooldown.test.mjs(`npm run test:scripts`)
 └── mask-eval-fixtures.mjs    # 自動マスキングの評価用画像と正解 eval/masking/ の生成・自己検査(AM-T05、既存の Playwright のみ)
 eval/masking/                 # 自動マスキングの評価セット(架空データのみ。MASK_EVAL_SET で選ぶ)
 ├── pages/                    # 本番(規則の調整に使う)の架空画面の HTML(正解を <span data-mask="種類/細分"> で囲む。トークン形は実行時に組み立てる)
@@ -186,7 +187,7 @@ src-tauri/src/                # Rustバックエンド
 │   └── mod.rs                  # validate_rgba()・write_image_fallback()(arboard使用)
 └── capture/                   # キャプチャ機能(T03〜T06、T08、T11)
     ├── mod.rs                 # CaptureProvider trait・CaptureResult・CaptureKind・RunError・run()/run_with()(T05・T06)。T08で ensure_screen_recording_access()/ensure_screen_recording_access_with() を追加。T11で計測ログ整形の純粋関数(format_latency_log/duration_to_ms)・CaptureProvider::captureへのon_spawnコールバック引数を追加(NFR-001中間計測)
-    ├── tempfile.rs             # 一時ファイルパス生成(一意性保証、T03)。v1.2.0: `create_capture_dir()` が `0o700` で作る
+    ├── tempfile.rs             # 一時ファイルパス生成(一意性保証、T03)。v1.2.0: `create_capture_dir()` が `0o700` で作る。v1.2.1: 既存ディレクトリも確かめ、自分の持ち物で緩ければ `0o700` に締め直し、他ユーザーの持ち物・シンボリックリンクなら撮影を止める(`capture_dir_action()`)
     ├── permission.rs           # 画面収録権限チェック(CoreGraphics FFI、T04)。T08で request_screen_recording_access() を実使用開始、ScreenRecordingPermission に Serialize(camelCase)を追加
     ├── pixel_ratio.rs          # PNG の pHYs から撮った画面の倍率(72dpi → 1、144dpi → 2、それ以外・無し・壊れ → None)。IDAT より前のチャンク見出しだけを読む(QE-T04)
     └── screencapture.rs        # ScreenCaptureCli(`screencapture -i` 起動、T05)。T11で status() を spawn()+wait() に分割し、spawn完了直後にon_spawn()を呼ぶ(NFR-001中間計測)。v1.2.0: `/usr/sbin/screencapture` の絶対パスで起動し、stderr を回収して `outcome_for(status, stderr_is_blank, dest)` で判定(非 0 + stderr あり + ファイル無しだけ失敗。Esc の終了コードに依存しない)

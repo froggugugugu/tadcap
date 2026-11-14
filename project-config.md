@@ -127,6 +127,8 @@ npm run preview            # ビルド済みプレビュー
 npm run tauri              # Tauri CLI（dev/build 等）
 npm run test               # Vitest（watch、T01 で追加）
 npm run test:run           # Vitest 一回実行（T01 で追加）
+npm run test:scripts       # scripts/*.test.mjs を node --test で実行（依存追加なし）
+npm run deps:cooldown      # Cargo.lock の公開 7 日未満の版を戻す（scripts/cargo-cooldown.mjs、--check で確認のみ）。週次は .github/workflows/weekly-deps.yml が実行
 npm run latency:summary -- <ログファイル>  # NFR-001計測ログ(標準エラー)を集計（T11 で追加、依存追加なし）
 npm run mask:fixtures      # 自動マスキングの評価用画像と正解(eval/masking/)を作り直す（scripts/mask-eval-fixtures.mjs、既存の Playwright のみ・通信なし）
 npm run mask:fixtures:holdout3  # ホールドアウト(eval/masking/holdout3/)を作り直す（:holdout / :holdout2 も同様。本番の 28 枚・truth.json は変えない）

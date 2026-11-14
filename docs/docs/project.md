@@ -24,6 +24,8 @@ npm run dev                # Vite 開発サーバー
 npm run build              # tsc && vite build
 npm run test               # Vitest（watch）
 npm run test:run           # Vitest 一回実行
+npm run test:scripts       # scripts/*.test.mjs(node --test)
+npm run deps:cooldown      # Cargo.lock の公開 7 日未満の版を互換範囲の古い版へ戻す(--check で確認だけ)。npm 側は npm update --min-release-age=7
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 npm run e2e               # Playwright E2E(chromium のみ。初回は npx playwright install chromium)。Tauri IPC は e2e/fixtures/tauriMock.ts のモック
@@ -36,6 +38,7 @@ npm run dist:mac           # 配布物 release/Tadcap-<版>-arm64.dmg / .zip(APP
 
 リリース: 3 ファイル(`package.json`・`src-tauri/tauri.conf.json`・`src-tauri/Cargo.toml`)の版を揃えてコミット → `git tag v<版>` → タグを push。`.github/workflows/release.yml` が検証して GitHub Releases に公開し、`scripts/install.sh`(紹介ページから配信)が最新版を入れる。
 release.yml は Environment `release` の Secrets で Developer ID 署名 + 公証し、公証されていなければ失敗する。手順と Secrets は `docs/release-notarization.md`。
+週次の依存更新: `.github/workflows/weekly-deps.yml`(毎週月曜 03:17 UTC)が公開 7 日以上の版へ更新(脆弱性の修正は即時)→ 監査 → パッチ版上げ → release.yml と同じチェックを読取専用ジョブで行い、更新があれば別ジョブが lockfile・ライセンス一覧・版の行だけであることを検証して main とタグ `v<版>` を push し、release.yml を起動する(公開前に Environment `release` の承認が要る)。GitHub Actions の更新は `.github/dependabot.yml`(7 日クールダウンの PR)。
 
 スモークテストコマンド(全タスク共通、ゲート3 決定):
 
